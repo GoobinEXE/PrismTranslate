@@ -28,6 +28,9 @@ Package.resolved
 *.pkg
 *.dmg
 swiftly.pkg
+AGENTS.md
+REALEASING.md
+
 
 # IDE
 .idea/
