@@ -1,0 +1,4 @@
+{
+	"com.apple.security.app-sandbox" = NO;
+	"com.apple.security.network.client" = YES;
+}

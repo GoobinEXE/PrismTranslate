@@ -1,0 +1,74 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "xcodebuild: QuickTranslate (Debug)",
+      "type": "shell",
+      "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "args": [
+        "-project",
+        "QuickTranslate.xcodeproj",
+        "-scheme",
+        "QuickTranslate",
+        "-configuration",
+        "Debug",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "xcodebuild: QuickTranslate (Release)",
+      "type": "shell",
+      "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "args": [
+        "-project",
+        "QuickTranslate.xcodeproj",
+        "-scheme",
+        "QuickTranslate",
+        "-configuration",
+        "Release",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+        }
+      },
+      "group": "build",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "xcode-build-server: configure",
+      "type": "shell",
+      "command": "xcode-build-server config -project QuickTranslate.xcodeproj -scheme QuickTranslate",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer",
+          "PATH": "/Applications/Xcode.app/Contents/Developer/usr/bin:${env:PATH}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "open: Xcode",
+      "type": "shell",
+      "command": "open -a Xcode QuickTranslate.xcodeproj",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

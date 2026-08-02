@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode / build
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+.build/
+
+# Archives / installers (local artifacts)
+*.pkg
+*.dmg
+swiftly.pkg
+
+# IDE
+.idea/
+*.swp
+*~.nib
+
+# SourceKit / xcode-build-server (buildServer.json is committed; keep index local)
+.buildServer/
+*.xcindex
+*.xcuserdatad/

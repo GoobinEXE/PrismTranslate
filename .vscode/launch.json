@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb-dap",
+      "request": "launch",
+      "name": "QuickTranslate",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/QuickTranslate-anoeyhcnaiwgaybsaalekpptbrrf/Build/Products/Debug/QuickTranslate.app/Contents/MacOS/QuickTranslate",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "xcodebuild: QuickTranslate (Debug)",
+      "env": {
+        "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+      }
+    },
+    {
+      "type": "lldb-dap",
+      "request": "attach",
+      "name": "Attach QuickTranslate",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/QuickTranslate-anoeyhcnaiwgaybsaalekpptbrrf/Build/Products/Debug/QuickTranslate.app/Contents/MacOS/QuickTranslate"
+    }
+  ]
+}
