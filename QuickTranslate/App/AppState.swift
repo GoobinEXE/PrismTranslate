@@ -31,6 +31,9 @@ final class AppState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
+        // Touch the log store early so session file + startup entry exist.
+        _ = AppLogStore.shared
+
         let settings = AppSettings.load()
         self.settings = settings
         self.engine = TranslationEngine(settings: settings, appleBridge: appleBridge)
@@ -40,6 +43,15 @@ final class AppState: ObservableObject {
             textIO: textIO
         )
         self.hotkeyMonitor = HotkeyMonitor()
+
+        AppLog.info(
+            .app,
+            "AppState init — provider=\(settings.providerKind.displayName), enabled=\(settings.isEnabled), enterMode=\(settings.enterTranslatesAndSends), popup=\(settings.popupModeEnabled), macOS=\(ProcessInfo.processInfo.operatingSystemVersionString)"
+        )
+        AppLog.info(
+            .permissions,
+            "AX=\(Permissions.isAccessibilityTrusted()), InputMonitoring=\(Permissions.isInputMonitoringGranted())"
+        )
 
         textIO.withInjection = { [weak self] work in
             self?.hotkeyMonitor.withInjection(work)
@@ -60,6 +72,10 @@ final class AppState: ObservableObject {
             .dropFirst()
             .sink { [weak self] newSettings in
                 guard let self else { return }
+                AppLog.info(
+                    .settings,
+                    "settings salvos — provider=\(newSettings.providerKind.rawValue), enabled=\(newSettings.isEnabled), incoming=\(newSettings.incomingSourceLanguage ?? "auto")→\(newSettings.incomingTargetLanguage), outgoing=\(newSettings.outgoingSourceLanguage ?? "auto")→\(newSettings.outgoingTargetLanguage)"
+                )
                 newSettings.save()
                 self.engine.updateSettings(newSettings)
                 self.orchestrator.updateSettings(newSettings)
@@ -76,16 +92,25 @@ final class AppState: ObservableObject {
 
         hotkeyMonitor.onTranslateOnly = { [weak self] in
             Task { @MainActor in
-                await self?.orchestrator.translateFocusedText(sendAfter: false)
+                AppLog.info(.hotkey, "callback onTranslateOnly → orchestrator")
+                await self?.orchestrator.translateFocusedText(presentation: .replaceInPlace(sendAfter: false))
             }
         }
         hotkeyMonitor.onTranslateAndSend = { [weak self] in
             Task { @MainActor in
-                await self?.orchestrator.translateFocusedText(sendAfter: true)
+                AppLog.info(.hotkey, "callback onTranslateAndSend → orchestrator")
+                await self?.orchestrator.translateFocusedText(presentation: .replaceInPlace(sendAfter: true))
+            }
+        }
+        hotkeyMonitor.onPopup = { [weak self] in
+            Task { @MainActor in
+                AppLog.info(.hotkey, "callback onPopup → orchestrator")
+                await self?.orchestrator.translateFocusedText(presentation: .popup)
             }
         }
         hotkeyMonitor.onTapStatusChange = { [weak self] active in
             Task { @MainActor in
+                AppLog.info(.hotkey, "tap status → \(active ? "ativo" : "inativo")")
                 self?.hotkeysActive = active
             }
         }
@@ -103,9 +128,11 @@ final class AppState: ObservableObject {
             if OnboardingController.hasCompleted {
                 Permissions.promptIfNeeded()
                 if !Permissions.isInputMonitoringGranted() {
+                    AppLog.warning(.permissions, "Input Monitoring ausente — solicitando")
                     _ = Permissions.requestInputMonitoring()
                 }
             } else {
+                AppLog.info(.app, "onboarding pendente — exibindo tutorial")
                 OnboardingController.shared.showIfNeeded()
             }
         }
@@ -154,9 +181,15 @@ final class AppState: ObservableObject {
         settings.enterTranslatesAndSends.toggle()
     }
 
-    func setTargetLanguage(_ code: String) {
+    func setOutgoingTargetLanguage(_ code: String) {
         var updated = settings
-        updated.targetLanguage = code
+        updated.outgoingTargetLanguage = code
+        settings = updated
+    }
+
+    func setIncomingTargetLanguage(_ code: String) {
+        var updated = settings
+        updated.incomingTargetLanguage = code
         settings = updated
     }
 
@@ -175,7 +208,9 @@ final class AppState: ObservableObject {
             enabled: settings.isEnabled,
             enterTranslatesAndSends: settings.enterTranslatesAndSends,
             translateOnly: settings.translateOnlyHotkey,
-            translateAndSend: settings.translateAndSendHotkey
+            translateAndSend: settings.translateAndSendHotkey,
+            popupModeEnabled: settings.popupModeEnabled,
+            popup: settings.popupHotkey
         )
     }
 
@@ -192,18 +227,22 @@ final class AppState: ObservableObject {
         self.status = status
         switch status {
         case .error(let message):
+            AppLog.error(.app, "status=error — \(message)")
             lastErrorMessage = message
             statusResetTask = Task {
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .success:
+            AppLog.info(.app, "status=success")
             lastErrorMessage = nil
             statusResetTask = Task {
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
-        case .idle, .translating:
+        case .translating:
+            AppLog.info(.app, "status=translating")
+        case .idle:
             break
         }
     }

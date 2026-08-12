@@ -1,9 +1,7 @@
 import Foundation
-import os
 
 @MainActor
 final class TranslationEngine {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "Engine")
     private var settings: AppSettings
     private let appleBridge: AppleTranslationBridge
 
@@ -16,7 +14,7 @@ final class TranslationEngine {
 
     /// Small LRU of recent translations (same phrase re-translated instantly).
     private var cacheOrder: [CacheKey] = []
-    private var cacheValues: [CacheKey: String] = [:]
+    private var cacheValues: [CacheKey: TranslationOutcome] = [:]
     private static let maxCacheEntries = 64
 
     init(settings: AppSettings, appleBridge: AppleTranslationBridge) {
@@ -27,32 +25,80 @@ final class TranslationEngine {
     func updateSettings(_ settings: AppSettings) {
         let providerChanged = settings.providerKind != self.settings.providerKind
         let languagesChanged =
-            settings.resolvedSourceLanguage != self.settings.resolvedSourceLanguage
-            || settings.targetLanguage != self.settings.targetLanguage
+            settings.incomingSourceLanguage != self.settings.incomingSourceLanguage
+            || settings.incomingTargetLanguage != self.settings.incomingTargetLanguage
+            || settings.outgoingSourceLanguage != self.settings.outgoingSourceLanguage
+            || settings.outgoingTargetLanguage != self.settings.outgoingTargetLanguage
         self.settings = settings
         if providerChanged || languagesChanged {
+            AppLog.info(
+                .engine,
+                "settings mudaram — limpando cache (providerChanged=\(providerChanged), languagesChanged=\(languagesChanged), provider=\(settings.providerKind.rawValue))"
+            )
             clearCache()
         }
     }
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         let key = CacheKey(
             text: text,
             from: from,
             to: to,
             provider: settings.providerKind.rawValue
         )
+        AppLog.debug(
+            .engine,
+            "translate pedido — provider=\(settings.providerKind.rawValue), from=\(from ?? "auto"), to=\(to), chars=\(text.count), cacheSize=\(cacheValues.count)"
+        )
         if let cached = cacheValues[key] {
             touchCache(key)
-            Self.logger.info("⚡ [Cache] tradução retornada do cache em memória (sem chamar API)")
+            AppLog.info(.engine, "cache HIT — retornando sem chamar provider (\(cached.text.count) chars)")
+            if from == nil, cached.detectedSourceLanguage == nil,
+               let detected = LanguageDetector.detect(in: text)
+            {
+                let enriched = TranslationOutcome(
+                    text: cached.text,
+                    detectedSourceLanguage: detected
+                )
+                storeCache(key, value: enriched)
+                AppLog.info(.engine, "cache enriquecido com detecção local: \(detected)")
+                return enriched
+            }
             return cached
         }
 
         let provider = makeProvider()
-        Self.logger.info("🚀 executando tradução via '\(provider.displayName, privacy: .public)'")
-        let translated = try await provider.translate(text, from: from, to: to)
-        storeCache(key, value: translated)
-        return translated
+        AppLog.info(
+            .engine,
+            "cache MISS — chamando provider '\(provider.displayName)' (id=\(provider.id))"
+        )
+        let started = Date()
+        do {
+            var outcome = try await provider.translate(text, from: from, to: to)
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            if from == nil, outcome.detectedSourceLanguage == nil,
+               let detected = LanguageDetector.detect(in: text)
+            {
+                outcome = TranslationOutcome(
+                    text: outcome.text,
+                    detectedSourceLanguage: detected
+                )
+                AppLog.info(.engine, "idioma detectado localmente (NL): \(detected)")
+            }
+            storeCache(key, value: outcome)
+            AppLog.info(
+                .engine,
+                "provider OK em \(ms)ms — outChars=\(outcome.text.count), detected=\(outcome.detectedSourceLanguage ?? "nil")"
+            )
+            return outcome
+        } catch {
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            AppLog.error(
+                .engine,
+                "provider '\(provider.displayName)' falhou após \(ms)ms: \(error.localizedDescription) | \(String(describing: error))"
+            )
+            throw error
+        }
     }
 
     private func clearCache() {
@@ -67,7 +113,7 @@ final class TranslationEngine {
         cacheOrder.append(key)
     }
 
-    private func storeCache(_ key: CacheKey, value: String) {
+    private func storeCache(_ key: CacheKey, value: TranslationOutcome) {
         if cacheValues[key] == nil {
             cacheOrder.append(key)
         } else {
@@ -86,6 +132,7 @@ final class TranslationEngine {
             if #available(macOS 15.0, *) {
                 return AppleTranslationProvider(bridge: appleBridge)
             }
+            AppLog.warning(.engine, "Apple Translation indisponível — requer macOS 15+")
             return UnavailableProvider(
                 id: ProviderKind.apple.rawValue,
                 displayName: ProviderKind.apple.displayName,
@@ -123,7 +170,8 @@ private struct UnavailableProvider: TranslationProvider {
     let displayName: String
     let message: String
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
+        AppLog.error(.engine, "provider indisponível: \(message)")
         throw TranslationError.providerUnavailable(message)
     }
 }

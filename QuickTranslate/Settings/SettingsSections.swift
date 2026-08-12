@@ -16,19 +16,50 @@ struct GeneralSettingsView: View {
                     isOn: appState.settingsBinding(\.enterTranslatesAndSends))
             }
 
-            Section("Idiomas") {
-                Picker("Idioma origem", selection: appState.settingsBinding(\.sourceLanguage)) {
-                    Text("Automático").tag(String?.none)
+            Section("Mensagens recebidas") {
+                Picker(
+                    "Traduzir de",
+                    selection: appState.settingsBinding(\.incomingSourceLanguage)
+                ) {
+                    Text("Detectar idioma").tag(String?.none)
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(String?.some(language.id))
                     }
                 }
-
-                Picker("Idioma destino", selection: appState.settingsBinding(\.targetLanguage)) {
+                Picker(
+                    "Traduzir para",
+                    selection: appState.settingsBinding(\.incomingTargetLanguage)
+                ) {
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(language.id)
                     }
                 }
+                Text("Usado em texto só leitura e no painel ao ler conversas.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Suas mensagens") {
+                Picker(
+                    "Traduzir de",
+                    selection: appState.settingsBinding(\.outgoingSourceLanguage)
+                ) {
+                    Text("Detectar idioma").tag(String?.none)
+                    ForEach(LanguageCode.commonTargets) { language in
+                        Text(language.displayName).tag(String?.some(language.id))
+                    }
+                }
+                Picker(
+                    "Traduzir para",
+                    selection: appState.settingsBinding(\.outgoingTargetLanguage)
+                ) {
+                    ForEach(LanguageCode.commonTargets) { language in
+                        Text(language.displayName).tag(language.id)
+                    }
+                }
+                Text("Usado ao substituir texto em campos editáveis.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Sistema") {
@@ -89,7 +120,7 @@ struct ProviderSettingsView: View {
             }
             .task(
                 id:
-                    "\(appState.settings.targetLanguage)-\(appState.settings.sourceLanguage ?? "auto")"
+                    "\(appState.settings.outgoingTargetLanguage)-\(appState.settings.outgoingSourceLanguage ?? "auto")-\(appState.settings.incomingTargetLanguage)-\(appState.settings.incomingSourceLanguage ?? "auto")"
             ) {
                 await refreshApplePackState()
             }
@@ -168,20 +199,33 @@ struct ProviderSettingsView: View {
 
     private func refreshApplePackState() async {
         applePackState = .checking
-        let pair = AppleTranslationBridge.defaultPackPair(settings: appState.settings)
-        applePackState = await appState.appleBridge.languagePackState(
-            from: pair.source,
-            to: pair.target
-        )
+        var worst: LanguagePackState = .installed
+        for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
+            let state = await appState.appleBridge.languagePackState(
+                from: pair.source,
+                to: pair.target
+            )
+            worst = Self.mergePackState(worst, state)
+            if case .unsupported = worst { break }
+            if worst.isFailed { break }
+        }
+        applePackState = worst
     }
 
     private func prepareApplePacks() async {
         applePackState = .downloading
-        let pair = AppleTranslationBridge.defaultPackPair(settings: appState.settings)
-        do {
-            try await appState.appleBridge.ensureLanguagePacks(from: pair.source, to: pair.target)
-            applePackState = .installed
-        } catch {
+        var lastError: Error?
+        var anyNeedsWork = false
+        for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
+            do {
+                try await appState.appleBridge.ensureLanguagePacks(from: pair.source, to: pair.target)
+            } catch {
+                lastError = error
+                anyNeedsWork = true
+            }
+        }
+        if let lastError, anyNeedsWork {
+            let pair = AppleTranslationBridge.defaultPackPair(settings: appState.settings)
             let current = await appState.appleBridge.languagePackState(
                 from: pair.source,
                 to: pair.target
@@ -189,8 +233,25 @@ struct ProviderSettingsView: View {
             applePackState =
                 current == .installed
                 ? .installed
-                : .failed(error.localizedDescription)
+                : .failed(lastError.localizedDescription)
+        } else {
+            applePackState = .installed
         }
+    }
+
+    private static func mergePackState(_ a: LanguagePackState, _ b: LanguagePackState) -> LanguagePackState {
+        // Prefer the more actionable / worse status for the UI badge.
+        let rank: (LanguagePackState) -> Int = { state in
+            switch state {
+            case .installed: return 0
+            case .checking: return 1
+            case .needsDownload: return 2
+            case .downloading: return 3
+            case .unsupported: return 4
+            case .failed: return 5
+            }
+        }
+        return rank(b) > rank(a) ? b : a
     }
 
     private func persistSecrets() {
@@ -205,6 +266,27 @@ struct ProviderSettingsView: View {
 struct ShortcutsSettingsView: View {
     @EnvironmentObject private var appState: AppState
 
+    private var translateConflicts: [HotkeyChord] {
+        [
+            appState.settings.translateAndSendHotkey,
+            appState.settings.popupHotkey,
+        ]
+    }
+
+    private var sendConflicts: [HotkeyChord] {
+        [
+            appState.settings.translateOnlyHotkey,
+            appState.settings.popupHotkey,
+        ]
+    }
+
+    private var popupConflicts: [HotkeyChord] {
+        [
+            appState.settings.translateOnlyHotkey,
+            appState.settings.translateAndSendHotkey,
+        ]
+    }
+
     var body: some View {
         Form {
             Section("Atalhos globais") {
@@ -213,7 +295,7 @@ struct ShortcutsSettingsView: View {
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateOnlyHotkey),
-                        otherChord: appState.settings.translateAndSendHotkey
+                        conflictingChords: translateConflicts
                     )
                 }
                 HStack {
@@ -221,12 +303,33 @@ struct ShortcutsSettingsView: View {
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateAndSendHotkey),
-                        otherChord: appState.settings.translateOnlyHotkey
+                        conflictingChords: sendConflicts
                     )
                 }
-                Button("Restaurar padrões (⌃⌥T / ⌃⌥⏎)") {
+                Button("Restaurar padrões (⌃⌥T / ⌃⌥⏎ / ⌃⌥Y)") {
                     appState.resetHotkeysToDefaults()
                 }
+            }
+
+            Section("Modo popup") {
+                Toggle(
+                    "Ativar modo popup",
+                    isOn: appState.settingsBinding(\.popupModeEnabled)
+                )
+                HStack {
+                    Text("Atalho do popup")
+                    Spacer()
+                    HotkeyRecorderButton(
+                        chord: appState.settingsBinding(\.popupHotkey),
+                        conflictingChords: popupConflicts
+                    )
+                    .disabled(!appState.settings.popupModeEnabled)
+                }
+                Text(
+                    "Mostra a tradução num painel. Em campos editáveis, permite Copiar ou Substituir."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section {
@@ -238,6 +341,11 @@ struct ShortcutsSettingsView: View {
                 Text("Com “Enter traduz e envia” ligado, Enter sozinho também traduz e envia.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text(
+                    "No atalho principal, texto só leitura abre o painel (Copiar). O atalho de popup funciona em qualquer seleção."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -325,8 +433,8 @@ struct TestSettingsView: View {
                 TextField("Texto", text: $testText)
                 LabeledContent("Motor atual", value: appState.settings.providerKind.displayName)
                 LabeledContent(
-                    "Destino",
-                    value: LanguageCode.displayName(for: appState.settings.targetLanguage)
+                    "Destino (suas)",
+                    value: LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)
                 )
                 Button(isTesting ? "Traduzindo…" : "Testar tradução") {
                     Task { await runTest() }
@@ -378,15 +486,18 @@ struct TestSettingsView: View {
     private func runTest() async {
         isTesting = true
         defer { isTesting = false }
+        AppLog.info(.settings, "teste manual iniciado — chars=\(testText.count), provider=\(appState.settings.providerKind.displayName)")
         do {
             let result = try await appState.engine.translate(
                 testText,
-                from: appState.settings.resolvedSourceLanguage,
-                to: appState.settings.targetLanguage
+                from: appState.settings.resolvedOutgoingSourceLanguage,
+                to: appState.settings.outgoingTargetLanguage
             )
-            testResult = .success(result)
+            testResult = .success(result.text)
+            AppLog.info(.settings, "teste manual OK — \(result.text.count) chars")
         } catch {
             testResult = .failure(error)
+            AppLog.error(.settings, "teste manual falhou: \(error.localizedDescription)")
         }
     }
 }
@@ -429,6 +540,10 @@ struct AboutSettingsView: View {
                 LabeledContent(
                     "Traduzir e enviar",
                     value: appState.settings.translateAndSendHotkey.displayString)
+                if appState.settings.popupModeEnabled {
+                    LabeledContent(
+                        "Popup", value: appState.settings.popupHotkey.displayString)
+                }
             }
 
             Section("Ajuda") {

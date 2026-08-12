@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import os
 import SwiftUI
 import Translation
 
@@ -23,7 +22,6 @@ enum LanguagePackState: Equatable {
 @MainActor
 @available(macOS 15.0, *)
 final class AppleTranslationBridge: ObservableObject {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "AppleTranslationBridge")
     struct Request {
         let id: UUID
         let text: String
@@ -85,7 +83,7 @@ final class AppleTranslationBridge: ObservableObject {
         let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
         let targetLang = Locale.Language(identifier: normalize(to))
         guard pending == nil else { return }
-        Self.logger.info("🍏 prewarming session for \(self.pairKey(source: sourceLang, target: targetLang), privacy: .public)")
+        AppLog.info(.apple, "🍏 prewarming session for \(self.pairKey(source: sourceLang, target: targetLang))")
         publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
         Task { [weak self] in
             guard let self else { return }
@@ -140,16 +138,16 @@ final class AppleTranslationBridge: ObservableObject {
             pending = request
             scheduleTimeout(for: request.id)
 
-            Self.logger.info("🍏 enqueuing translation request \(request.id.uuidString, privacy: .public)")
+            AppLog.info(.apple, "🍏 enqueuing translation request \(request.id.uuidString)")
             publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
         }
     }
 
     func handle(session: TranslationSession) async {
-        Self.logger.info("🍏 handle(session:) received session!")
+        AppLog.info(.apple, "🍏 handle(session:) received session!")
         guard let request = pending else {
             // Prewarm / leftover session — keep configuration warm, ignore.
-            Self.logger.debug("🍏 handle(session:) with no pending request — keeping warm session")
+            AppLog.debug(.apple, "🍏 handle(session:) with no pending request — keeping warm session")
             return
         }
         pending = nil
@@ -157,7 +155,7 @@ final class AppleTranslationBridge: ObservableObject {
         timeoutTask = nil
         do {
             let translated = try await translateRespectingSystemMode(session: session, request: request)
-            Self.logger.info("🍏 translation session returned successfully!")
+            AppLog.info(.apple, "🍏 translation session returned successfully!")
             // Packs that were missing are now likely installed after a successful prepare path.
             if request.packsLikelyMissing || request.forcePrepare {
                 cacheAvailability(
@@ -168,7 +166,7 @@ final class AppleTranslationBridge: ObservableObject {
             }
             request.continuation.resume(returning: translated)
         } catch {
-            Self.logger.error("🍏 translation session error: \(error.localizedDescription, privacy: .public)")
+            AppLog.error(.apple, "🍏 translation session error: \(error.localizedDescription)")
             // Stale "installed" cache can hide a missing pack — recheck next time.
             if Self.isMissingLanguagePack(error) {
                 invalidateAvailabilityCache(
@@ -284,12 +282,29 @@ final class AppleTranslationBridge: ObservableObject {
 
     // MARK: - Language packs
 
-    /// Language pair the app will most likely use: configured source (or system
-    /// language) → target. Falls back to auto-detect when both would be equal.
+    /// Language pairs the app will most likely use (outgoing + incoming).
     static func defaultPackPair(settings: AppSettings) -> (source: String?, target: String) {
-        let target = settings.targetLanguage
-        let source = settings.resolvedSourceLanguage ?? LanguageCode.systemLanguage
+        // Prefer outgoing for Apple prewarm (writing path); packs for incoming are
+        // prepared on demand / via Preferências.
+        let target = settings.outgoingTargetLanguage
+        let source = settings.resolvedOutgoingSourceLanguage ?? LanguageCode.systemLanguage
         return source == target ? (nil, target) : (source, target)
+    }
+
+    /// All distinct pairs worth checking for download readiness.
+    static func packPairs(settings: AppSettings) -> [(source: String?, target: String)] {
+        var pairs: [(String?, String)] = []
+        let outgoing = defaultPackPair(settings: settings)
+        pairs.append(outgoing)
+
+        let inSource = settings.resolvedSourceLanguage(outgoing: false) ?? LanguageCode.systemLanguage
+        let inTarget = settings.incomingTargetLanguage
+        let incomingSource: String? = inSource == inTarget ? nil : inSource
+        let incomingTarget = inTarget
+        if incomingSource != outgoing.source || incomingTarget != outgoing.target {
+            pairs.append((incomingSource, incomingTarget))
+        }
+        return pairs
     }
 
     /// Pack state for a pair; source nil = auto-detect from a sample phrase.
@@ -335,7 +350,7 @@ final class AppleTranslationBridge: ObservableObject {
         let key = pairKey(source: source, target: target)
         if let cached = availabilityCache[key],
            Date().timeIntervalSince(cached.checkedAt) < Self.availabilityCacheTTL {
-            Self.logger.debug("🍏 availability cache hit for \(key, privacy: .public)")
+            AppLog.debug(.apple, "🍏 availability cache hit for \(key)")
             return cached.packsLikelyMissing
         }
 
@@ -424,13 +439,13 @@ final class AppleTranslationBridge: ObservableObject {
         if !forceNew,
            publishedPairKey == key,
            var config = configuration {
-            Self.logger.info("🍏 invalidating warm configuration for \(key, privacy: .public)")
+            AppLog.info(.apple, "🍏 invalidating warm configuration for \(key)")
             config.invalidate()
             configuration = config
             return
         }
 
-        Self.logger.info("🍏 publishing new configuration for \(key, privacy: .public)")
+        AppLog.info(.apple, "🍏 publishing new configuration for \(key)")
         publishedPairKey = key
         configuration = TranslationSession.Configuration(
             source: source,
@@ -468,7 +483,8 @@ struct AppleTranslationProvider: TranslationProvider {
     let displayName = ProviderKind.apple.displayName
     let bridge: AppleTranslationBridge
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
-        try await bridge.translate(text, from: from, to: to)
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
+        let text = try await bridge.translate(text, from: from, to: to)
+        return TranslationOutcome(text: text)
     }
 }

@@ -33,6 +33,12 @@ struct HotkeyChord: Equatable, Hashable, Codable {
         modifiers: .preferred
     )
 
+    /// ⌃⌥Y — show translation in a popup panel.
+    static let popupDefault = HotkeyChord(
+        keyCode: UInt16(kVK_ANSI_Y),
+        modifiers: .preferred
+    )
+
     // MARK: Matching
 
     func matches(keyCode: Int64, flags: CGEventFlags) -> Bool {

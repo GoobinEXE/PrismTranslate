@@ -75,15 +75,31 @@ struct MenuBarView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Picker(
                     selection: Binding(
-                        get: { appState.settings.targetLanguage },
-                        set: { appState.setTargetLanguage($0) }
+                        get: { appState.settings.incomingTargetLanguage },
+                        set: { appState.setIncomingTargetLanguage($0) }
                     )
                 ) {
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(language.id)
                     }
                 } label: {
-                    Label("Idioma destino", systemImage: "character.bubble")
+                    Label("Recebidas →", systemImage: "arrow.down.left")
+                        .font(QTDesign.Fonts.body)
+                }
+
+                Divider()
+
+                Picker(
+                    selection: Binding(
+                        get: { appState.settings.outgoingTargetLanguage },
+                        set: { appState.setOutgoingTargetLanguage($0) }
+                    )
+                ) {
+                    ForEach(LanguageCode.commonTargets) { language in
+                        Text(language.displayName).tag(language.id)
+                    }
+                } label: {
+                    Label("Suas →", systemImage: "arrow.up.right")
                         .font(QTDesign.Fonts.body)
                 }
 

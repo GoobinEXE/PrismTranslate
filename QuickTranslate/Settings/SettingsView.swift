@@ -8,6 +8,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case shortcuts
     case permissions
     case test
+    case logs
     case about
 
     var id: String { rawValue }
@@ -19,6 +20,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .shortcuts: return "Atalhos"
         case .permissions: return "Permissões"
         case .test: return "Teste"
+        case .logs: return "Logs"
         case .about: return "Sobre"
         }
     }
@@ -30,6 +32,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .shortcuts: return "keyboard"
         case .permissions: return "lock.shield"
         case .test: return "checkmark.seal"
+        case .logs: return "text.alignleft"
         case .about: return "info.circle"
         }
     }
@@ -98,6 +101,7 @@ struct SettingsView: View {
             case .shortcuts: ShortcutsSettingsView()
             case .permissions: PermissionsSettingsView()
             case .test: TestSettingsView()
+            case .logs: LogsSettingsView()
             case .about: AboutSettingsView()
             }
         }

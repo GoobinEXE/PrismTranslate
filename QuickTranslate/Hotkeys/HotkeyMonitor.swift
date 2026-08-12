@@ -1,13 +1,12 @@
 import AppKit
 import Carbon.HIToolbox
 import Foundation
-import os
 
 /// Global hotkey / Enter interceptor via CGEvent tap.
 final class HotkeyMonitor {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "HotkeyMonitor")
     var onTranslateOnly: (() -> Void)?
     var onTranslateAndSend: (() -> Void)?
+    var onPopup: (() -> Void)?
     /// Fired on the main queue whenever tap install state changes.
     var onTapStatusChange: ((Bool) -> Void)?
 
@@ -21,10 +20,12 @@ final class HotkeyMonitor {
     private let lock = NSLock()
     private var enabled = true
     private var enterTranslatesAndSends = false
+    private var popupModeEnabled = false
     private var injectionDepth = 0
     private var isRecordingHotkey = false
     private var translateOnly = HotkeyChord.translateOnlyDefault
     private var translateAndSend = HotkeyChord.translateAndSendDefault
+    private var popupChord = HotkeyChord.popupDefault
 
     var isTapActive: Bool {
         lock.lock()
@@ -36,13 +37,17 @@ final class HotkeyMonitor {
         enabled: Bool,
         enterTranslatesAndSends: Bool,
         translateOnly: HotkeyChord,
-        translateAndSend: HotkeyChord
+        translateAndSend: HotkeyChord,
+        popupModeEnabled: Bool = false,
+        popup: HotkeyChord = .popupDefault
     ) {
         lock.lock()
         self.enabled = enabled
         self.enterTranslatesAndSends = enterTranslatesAndSends
         self.translateOnly = translateOnly
         self.translateAndSend = translateAndSend
+        self.popupModeEnabled = popupModeEnabled
+        self.popupChord = popup
         lock.unlock()
     }
 
@@ -151,6 +156,7 @@ final class HotkeyMonitor {
             callback: callback,
             userInfo: refcon
         ) else {
+            AppLog.error(.hotkey, "falha ao criar event tap — Input Monitoring provavelmente negado")
             if !didPromptInputMonitoring {
                 didPromptInputMonitoring = true
                 DispatchQueue.main.async {
@@ -167,13 +173,14 @@ final class HotkeyMonitor {
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        AppLog.info(.hotkey, "event tap instalado com sucesso")
         DispatchQueue.main.async { self.onTapStatusChange?(true) }
         return true
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            Self.logger.warning("⚠️ event tap desabilitado (\(type == .tapDisabledByTimeout ? "timeout" : "user input")) — reabilitando")
+            AppLog.warning(.hotkey, "⚠️ event tap desabilitado (\(type == .tapDisabledByTimeout ? "timeout" : "user input")) — reabilitando")
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
@@ -183,10 +190,12 @@ final class HotkeyMonitor {
         lock.lock()
         let isEnabled = enabled
         let enterMode = enterTranslatesAndSends
+        let popupEnabled = popupModeEnabled
         let injecting = injectionDepth > 0
         let recording = isRecordingHotkey
         let onlyChord = translateOnly
         let sendChord = translateAndSend
+        let popup = popupChord
         lock.unlock()
 
         if !isEnabled || injecting || recording || type != .keyDown {
@@ -198,15 +207,22 @@ final class HotkeyMonitor {
 
         // Configured: translate only
         if onlyChord.matches(keyCode: keyCode, flags: flags) {
-            Self.logger.info("🎯 hotkey translateOnly matched (keyCode=\(keyCode))")
+            AppLog.info(.hotkey, "🎯 hotkey translateOnly matched (keyCode=\(keyCode))")
             Task { @MainActor in self.onTranslateOnly?() }
             return nil
         }
 
         // Configured: translate and send
         if sendChord.matches(keyCode: keyCode, flags: flags) {
-            Self.logger.info("🎯 hotkey translateAndSend matched (keyCode=\(keyCode))")
+            AppLog.info(.hotkey, "🎯 hotkey translateAndSend matched (keyCode=\(keyCode))")
             Task { @MainActor in self.onTranslateAndSend?() }
+            return nil
+        }
+
+        // Configured: popup panel (opt-in)
+        if popupEnabled, popup.matches(keyCode: keyCode, flags: flags) {
+            AppLog.info(.hotkey, "🎯 hotkey popup matched (keyCode=\(keyCode))")
+            Task { @MainActor in self.onPopup?() }
             return nil
         }
 
@@ -217,9 +233,9 @@ final class HotkeyMonitor {
            !flags.contains(.maskAlternate),
            !flags.contains(.maskControl) {
             let editable = FocusedTextIO.isFocusedTextEditable()
-            Self.logger.debug("⏎ Enter-mode: isFocusedTextEditable=\(editable)")
+            AppLog.debug(.hotkey, "⏎ Enter-mode: isFocusedTextEditable=\(editable)")
             if editable {
-                Self.logger.info("🎯 Enter-mode triggered — translateAndSend")
+                AppLog.info(.hotkey, "🎯 Enter-mode triggered — translateAndSend")
                 Task { @MainActor in self.onTranslateAndSend?() }
                 return nil
             }

@@ -264,8 +264,8 @@ final class DockIconController {
 // #region agent log
 enum AgentDebugLog {
     private static let path =
-        "/Users/marcelopessoa/CODES/QuickTranslate/.cursor/debug-f73f3a.log"
-    private static let sessionId = "f73f3a"
+        "/Users/marcelopessoa/CODES/QuickTranslate/.cursor/debug-c075f1.log"
+    private static let sessionId = "c075f1"
 
     static func write(
         hypothesisId: String,

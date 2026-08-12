@@ -1,9 +1,6 @@
 import Foundation
-import os
 
 struct CustomHTTPProvider: TranslationProvider {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "CustomHTTPProvider")
-
     let id = ProviderKind.customHTTP.rawValue
     let displayName = ProviderKind.customHTTP.displayName
     let url: String
@@ -12,12 +9,15 @@ struct CustomHTTPProvider: TranslationProvider {
     let bodyTemplate: String
     let responseJSONPath: String
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard let endpoint = URL(string: url), !url.isEmpty else {
             throw TranslationError.invalidConfiguration("Configure a URL do Custom HTTP")
         }
 
-        Self.logger.info("📡 [Custom HTTP] enviando requisição \(self.method.uppercased(), privacy: .public) para \(url, privacy: .public)")
+        AppLog.info(
+            .customHTTP,
+            "📡 [Custom HTTP] \(method.uppercased()) \(url) — chars=\(text.count), from=\(from ?? "auto"), to=\(to), path=\(responseJSONPath)"
+        )
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = method.uppercased()
@@ -52,7 +52,7 @@ struct CustomHTTPProvider: TranslationProvider {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            Self.logger.error("❌ [Custom HTTP] HTTP \(http.statusCode): \(bodyText, privacy: .public)")
+            AppLog.error(.customHTTP, "❌ [Custom HTTP] HTTP \(http.statusCode): \(bodyText)")
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
@@ -60,14 +60,14 @@ struct CustomHTTPProvider: TranslationProvider {
             guard let raw = String(data: data, encoding: .utf8), !raw.isEmpty else {
                 throw TranslationError.emptyResponse
             }
-            return raw
+            return TranslationOutcome(text: raw)
         }
 
         let json = try JSONSerialization.jsonObject(with: data)
         guard let extracted = Self.extract(path: responseJSONPath, from: json) else {
             throw TranslationError.emptyResponse
         }
-        return extracted
+        return TranslationOutcome(text: extracted)
     }
 
     /// Walks a dot-separated path ("data.translations.0.text") through parsed JSON.

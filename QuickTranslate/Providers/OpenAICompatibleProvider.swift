@@ -1,16 +1,13 @@
 import Foundation
-import os
 
 struct OpenAICompatibleProvider: TranslationProvider {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "OpenAICompatibleProvider")
-
     let id = ProviderKind.openAICompatible.rawValue
     let displayName = ProviderKind.openAICompatible.displayName
     let baseURL: String
     let model: String
     let apiKey: String
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         let trimmedBase = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !trimmedBase.isEmpty, !model.isEmpty else {
@@ -21,7 +18,10 @@ struct OpenAICompatibleProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("Base URL inválida")
         }
 
-        Self.logger.info("📡 [OpenAI-compatible] enviando requisição HTTP POST para \(url.absoluteString, privacy: .public) (modelo: \(self.model, privacy: .public))")
+        AppLog.info(
+            .openAI,
+            "📡 [OpenAI-compatible] POST \(url.absoluteString) — model=\(model), chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
+        )
 
         let targetName = LanguageCode.displayName(for: to)
         let sourceHint = from.map { LanguageCode.displayName(for: $0) } ?? "auto-detect"
@@ -54,11 +54,12 @@ struct OpenAICompatibleProvider: TranslationProvider {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            Self.logger.error("❌ [OpenAI-compatible] HTTP \(http.statusCode): \(bodyText, privacy: .public)")
+            AppLog.error(.openAI, "❌ [OpenAI-compatible] HTTP \(http.statusCode): \(bodyText)")
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
-        return try Self.parseChatContent(from: data)
+        let content = try Self.parseChatContent(from: data)
+        return TranslationOutcome(text: content)
     }
 
     /// Parses a chat/completions response and returns the first choice's trimmed content.

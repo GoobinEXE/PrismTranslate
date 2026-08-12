@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		0BFA32D2CA6B4B4EA6133528 /* DeepLProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D4BB6E8544104A59DE275 /* DeepLProvider.swift */; };
 		104CD3FFD7534D10BA56B4AF /* KeyboardSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A5CC12252B4761AC9FADCB /* KeyboardSimulator.swift */; };
+		E2F3A4B5C6D74819A0B1C2D3 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E84920B1C2D3E4 /* LanguageDetector.swift */; };
+		B3C4D5E6F7A84922D3E4F5A6 /* AppLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B4C5D6E7F84921C2D3E4F5 /* AppLogStore.swift */; };
+		D3E4F5A6B7C84924F5A6B7C8 /* LogsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B84923E4F5A6B7 /* LogsSettingsView.swift */; };
 		18127F93A9E44DBAAFC1E9CB /* AppleTranslationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F387A855B7F45F69660F842 /* AppleTranslationProvider.swift */; };
 		1B1E43DAAA864618B6A9AD24 /* CustomHTTPProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B025127A0DD84CD09F963C78 /* CustomHTTPProvider.swift */; };
 		324FB0F3FA2545FABA74289A /* TranslationOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */; };
@@ -34,6 +37,8 @@
 		C2D3E4F5A6B74890C1D2E3F4 /* OnboardingWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4F5A6B7C84901D2E3F4A5 /* OnboardingWindowController.swift */; };
 		C6D7E8F9A0B14213C4D5E6F7 /* HotkeyRecorderButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E8F9A0B1C24314D5E6F7A8 /* HotkeyRecorderButton.swift */; };
 		CC4E385301B942E2BE5847B1 /* TranslationHostPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */; };
+		C9D0E1F2A3B44517C8D9E0F1 /* TranslationResultPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */; };
+		D0E1F2A3B4C54618D9E0F1A2 /* TranslationResultPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */; };
 		E7F539D921AC4DBFB0DACE66 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3776FCBBFCB4DB594C2A352 /* SettingsView.swift */; };
 		E83A33EA6757496AAAC165B0 /* QuickTranslateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0956634C894D4AB5D6A0CC /* QuickTranslateApp.swift */; };
 		F1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift */; };
@@ -46,10 +51,15 @@
 		2276258A2DAB44F99FF9BADC /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
 		2875B2DFBD2243CF9F389B8A /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		28A5CC12252B4761AC9FADCB /* KeyboardSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSimulator.swift; sourceTree = "<group>"; };
+		F2A3B4C5D6E84920B1C2D3E4 /* LanguageDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetector.swift; sourceTree = "<group>"; };
+		A3B4C5D6E7F84921C2D3E4F5 /* AppLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogStore.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B84923E4F5A6B7 /* LogsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogsSettingsView.swift; sourceTree = "<group>"; };
 		47A8B965635449DD8CF5270C /* GoogleTranslateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateProvider.swift; sourceTree = "<group>"; };
 		5F387A855B7F45F69660F842 /* AppleTranslationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationProvider.swift; sourceTree = "<group>"; };
 		713B1DD7A24C4F3998C32D9C /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationHostPanelController.swift; sourceTree = "<group>"; };
+		A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationResultPanelView.swift; sourceTree = "<group>"; };
+		B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationResultPanelController.swift; sourceTree = "<group>"; };
 		80A8750D021B4B2F8E4D7376 /* FocusedTextIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedTextIO.swift; sourceTree = "<group>"; };
 		810BB203E2784953BF911806 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		84B5B826F0CD4AD39FE94DDA /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -96,6 +106,8 @@
 				D3E4F5A6B7C84901D2E3F4A5 /* OnboardingWindowController.swift */,
 				CB0956634C894D4AB5D6A0CC /* QuickTranslateApp.swift */,
 				7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */,
+				B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */,
+				A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */,
 				03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */,
 			);
 			path = App;
@@ -122,7 +134,9 @@
 		3869AEC2994C491FAA27F3E5 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				A3B4C5D6E7F84921C2D3E4F5 /* AppLogStore.swift */,
 				28A5CC12252B4761AC9FADCB /* KeyboardSimulator.swift */,
+				F2A3B4C5D6E84920B1C2D3E4 /* LanguageDetector.swift */,
 				2875B2DFBD2243CF9F389B8A /* KeychainStore.swift */,
 				2276258A2DAB44F99FF9BADC /* Permissions.swift */,
 			);
@@ -159,6 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				84B5B826F0CD4AD39FE94DDA /* AppSettings.swift */,
+				C3D4E5F6A7B84923E4F5A6B7 /* LogsSettingsView.swift */,
 				DE51A11AA0143D0A00000004 /* SettingsSections.swift */,
 				A3776FCBBFCB4DB594C2A352 /* SettingsView.swift */,
 			);
@@ -280,6 +295,8 @@
 				8A18CAC0B8274CB3A4E93373 /* MenuBarView.swift in Sources */,
 				E83A33EA6757496AAAC165B0 /* QuickTranslateApp.swift in Sources */,
 				CC4E385301B942E2BE5847B1 /* TranslationHostPanelController.swift in Sources */,
+				D0E1F2A3B4C54618D9E0F1A2 /* TranslationResultPanelController.swift in Sources */,
+				C9D0E1F2A3B44517C8D9E0F1 /* TranslationResultPanelView.swift in Sources */,
 				324FB0F3FA2545FABA74289A /* TranslationOrchestrator.swift in Sources */,
 				900C80CD3E5A4A5FA922542A /* HotkeyMonitor.swift in Sources */,
 				A4B5C6D7E8F94011A2B3C4D5 /* HotkeyChord.swift in Sources */,
@@ -296,6 +313,9 @@
 				6C52D4A56C15440F8C35183A /* TranslationEngine.swift in Sources */,
 				51206E4A80E34785999CC398 /* TranslationProvider.swift in Sources */,
 				104CD3FFD7534D10BA56B4AF /* KeyboardSimulator.swift in Sources */,
+				E2F3A4B5C6D74819A0B1C2D3 /* LanguageDetector.swift in Sources */,
+				B3C4D5E6F7A84922D3E4F5A6 /* AppLogStore.swift in Sources */,
+				D3E4F5A6B7C84924F5A6B7C8 /* LogsSettingsView.swift in Sources */,
 				8CA21A4E024F4FDCA562FB90 /* KeychainStore.swift in Sources */,
 				C070E4798C104F5199487AD8 /* Permissions.swift in Sources */,
 				A1B2C3D4E5F64789A0B1C2D3 /* OnboardingView.swift in Sources */,

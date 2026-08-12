@@ -93,7 +93,7 @@ struct OnboardingView: View {
         .onReceive(timer) { _ in
             refreshPermissions()
         }
-        .onChange(of: appState.settings.targetLanguage) { _, _ in
+        .onChange(of: appState.settings.outgoingTargetLanguage) { _, _ in
             didAutoAttemptDownload = false
             packState = .checking
             refreshLanguagePack()
@@ -221,10 +221,10 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
                 GlassSurface {
                     Picker(
-                        "Idioma destino",
+                        "Idioma destino (suas mensagens)",
                         selection: Binding(
-                            get: { appState.settings.targetLanguage },
-                            set: { appState.setTargetLanguage($0) }
+                            get: { appState.settings.outgoingTargetLanguage },
+                            set: { appState.setOutgoingTargetLanguage($0) }
                         )
                     ) {
                         ForEach(LanguageCode.commonTargets) { language in
@@ -412,7 +412,7 @@ struct OnboardingView: View {
                 checklistRow(
                     ok: languagesReady,
                     text:
-                        "Idiomas de tradução (\(LanguageCode.displayName(for: appState.settings.targetLanguage)))",
+                        "Idiomas de tradução (\(LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)))",
                     fix: nil
                 )
                 checklistRow(ok: true, text: "Ícone do globo na barra de menus", fix: nil)
@@ -477,7 +477,7 @@ struct OnboardingView: View {
     }
 
     private var packTitle: String {
-        let target = LanguageCode.displayName(for: appState.settings.targetLanguage)
+        let target = LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)
         switch packState {
         case .checking: return "Verificando idiomas…"
         case .installed: return "Idiomas prontos (destino: \(target))"

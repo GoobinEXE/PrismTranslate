@@ -21,6 +21,13 @@ final class HotkeyChordTests: XCTestCase {
         XCTAssertTrue(chord.isReturnKey)
     }
 
+    func testPopupDefaultIsControlOptionY() {
+        let chord = HotkeyChord.popupDefault
+        XCTAssertEqual(chord.keyCode, UInt16(kVK_ANSI_Y))
+        XCTAssertEqual(chord.modifiers, [.control, .option])
+        XCTAssertFalse(chord.isReturnKey)
+    }
+
     // MARK: Matching
 
     func testMatchesExactKeyAndModifiers() {
@@ -85,6 +92,7 @@ final class HotkeyChordTests: XCTestCase {
     func testDisplayStringForDefaults() {
         XCTAssertEqual(HotkeyChord.translateOnlyDefault.displayString, "⌃⌥T")
         XCTAssertEqual(HotkeyChord.translateAndSendDefault.displayString, "⌃⌥⏎")
+        XCTAssertEqual(HotkeyChord.popupDefault.displayString, "⌃⌥Y")
     }
 
     func testDisplayStringModifierOrder() {

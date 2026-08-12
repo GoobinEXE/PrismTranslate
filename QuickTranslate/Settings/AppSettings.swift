@@ -4,9 +4,21 @@ import ServiceManagement
 struct AppSettings: Equatable {
     var isEnabled: Bool = true
     var enterTranslatesAndSends: Bool = false
-    var targetLanguage: String = LanguageCode.systemDefaultTarget
+
+    // MARK: Idiomas — mensagens recebidas (só leitura / popup de leitura)
+
+    /// nil = detecção automática.
+    var incomingSourceLanguage: String? = nil
+    /// Idioma para o qual traduzir o que você lê (padrão = idioma do sistema).
+    var incomingTargetLanguage: String = LanguageCode.systemLanguage
+
+    // MARK: Idiomas — suas mensagens (campo editável / replace)
+
     /// nil = detecção automática; padrão = idioma do sistema.
-    var sourceLanguage: String? = LanguageCode.systemLanguage
+    var outgoingSourceLanguage: String? = LanguageCode.systemLanguage
+    /// Idioma para o qual traduzir o que você escreve (padrão = inglês, ou pt se o sistema for en).
+    var outgoingTargetLanguage: String = LanguageCode.systemDefaultTarget
+
     var providerKind: ProviderKind = .apple
     var openAtLogin: Bool = false
 
@@ -14,6 +26,10 @@ struct AppSettings: Equatable {
     var translateOnlyHotkey: HotkeyChord = .translateOnlyDefault
     /// ⌃⌥⏎ by default — avoids ⌥⏎ (newline / IDE quick-fix).
     var translateAndSendHotkey: HotkeyChord = .translateAndSendDefault
+    /// Dedicated popup mode (selection → panel). Off by default (opt-in).
+    var popupModeEnabled: Bool = false
+    /// ⌃⌥Y by default — show translation popup.
+    var popupHotkey: HotkeyChord = .popupDefault
 
     // DeepL
     var deeplUseFreeAPI: Bool = true
@@ -29,18 +45,30 @@ struct AppSettings: Equatable {
     var customHTTPBodyTemplate: String = #"{"text":"{{text}}","target":"{{to}}","source":"{{from}}"}"#
     var customHTTPResponsePath: String = "translatedText"
 
-    /// Source language to send to providers; nil (auto) when unset or empty.
-    var resolvedSourceLanguage: String? {
-        guard let sourceLanguage, !sourceLanguage.isEmpty else { return nil }
-        return sourceLanguage
+    /// Source to send to providers for a direction; nil means auto-detect.
+    func resolvedSourceLanguage(outgoing: Bool) -> String? {
+        let raw = outgoing ? outgoingSourceLanguage : incomingSourceLanguage
+        guard let raw, !raw.isEmpty else { return nil }
+        return raw
+    }
+
+    func targetLanguage(outgoing: Bool) -> String {
+        outgoing ? outgoingTargetLanguage : incomingTargetLanguage
+    }
+
+    /// Convenience for call sites that still think in “your messages” terms.
+    var resolvedOutgoingSourceLanguage: String? {
+        resolvedSourceLanguage(outgoing: true)
     }
 
     private static let defaultsKey = "AppSettings"
     private static let migratedSourceToSystemKey = "didMigrateSourceLanguageToSystem"
+    private static let migratedDualLanguageKey = "didMigrateDualLanguagePairs"
 
     mutating func resetHotkeysToDefaults() {
         translateOnlyHotkey = .translateOnlyDefault
         translateAndSendHotkey = .translateAndSendDefault
+        popupHotkey = .popupDefault
     }
 
     func save() {
@@ -58,25 +86,44 @@ struct AppSettings: Equatable {
         } else {
             settings = AppSettings()
         }
-        return migrateSourceLanguageIfNeeded(settings)
+        return migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
     }
 
-    /// One-time: old default was `nil` (auto). Switch to the system language once,
-    /// without overriding a later explicit choice of “Automático”.
+    /// One-time: old default was `nil` (auto). Switch outgoing source to the system language once.
     private static func migrateSourceLanguageIfNeeded(_ settings: AppSettings) -> AppSettings {
         guard !UserDefaults.standard.bool(forKey: migratedSourceToSystemKey) else {
             return settings
         }
         var migrated = settings
-        if migrated.sourceLanguage == nil {
-            migrated.sourceLanguage = LanguageCode.systemLanguage
-            // Avoid source == target after migration (old target often matched system language).
-            if migrated.targetLanguage == migrated.sourceLanguage {
-                migrated.targetLanguage = LanguageCode.systemDefaultTarget
+        if migrated.outgoingSourceLanguage == nil {
+            migrated.outgoingSourceLanguage = LanguageCode.systemLanguage
+            if migrated.outgoingTargetLanguage == migrated.outgoingSourceLanguage {
+                migrated.outgoingTargetLanguage = LanguageCode.systemDefaultTarget
             }
             migrated.save()
         }
         UserDefaults.standard.set(true, forKey: migratedSourceToSystemKey)
+        return migrated
+    }
+
+    /// One-time: seed incoming pair if this install only had a single source/target.
+    private static func migrateDualLanguageIfNeeded(_ settings: AppSettings) -> AppSettings {
+        guard !UserDefaults.standard.bool(forKey: migratedDualLanguageKey) else {
+            return settings
+        }
+        var migrated = settings
+        // Incoming defaults: detect → your language (typical “reading foreign chat”).
+        if migrated.incomingTargetLanguage.isEmpty {
+            migrated.incomingTargetLanguage = LanguageCode.systemLanguage
+        }
+        if migrated.incomingTargetLanguage == migrated.outgoingTargetLanguage,
+           migrated.incomingSourceLanguage == nil,
+           migrated.outgoingSourceLanguage != nil {
+            // Keep outgoing as configured; incoming stays detect → system.
+            migrated.incomingTargetLanguage = LanguageCode.systemLanguage
+        }
+        migrated.save()
+        UserDefaults.standard.set(true, forKey: migratedDualLanguageKey)
         return migrated
     }
 
@@ -98,12 +145,19 @@ struct AppSettings: Equatable {
 private struct CodableSettings: Codable {
     var isEnabled: Bool
     var enterTranslatesAndSends: Bool
-    var targetLanguage: String
+    /// Legacy single-pair keys (pre dual-language).
+    var targetLanguage: String?
     var sourceLanguage: String?
+    var incomingSourceLanguage: String?
+    var incomingTargetLanguage: String?
+    var outgoingSourceLanguage: String?
+    var outgoingTargetLanguage: String?
     var providerKind: ProviderKind
     var openAtLogin: Bool
     var translateOnlyHotkey: HotkeyChord?
     var translateAndSendHotkey: HotkeyChord?
+    var popupModeEnabled: Bool?
+    var popupHotkey: HotkeyChord?
     var deeplUseFreeAPI: Bool
     var openAIBaseURL: String
     var openAIModel: String
@@ -116,12 +170,19 @@ private struct CodableSettings: Codable {
     init(_ settings: AppSettings) {
         isEnabled = settings.isEnabled
         enterTranslatesAndSends = settings.enterTranslatesAndSends
-        targetLanguage = settings.targetLanguage
-        sourceLanguage = settings.sourceLanguage
+        // Keep legacy keys in sync with outgoing for older builds / tooling.
+        targetLanguage = settings.outgoingTargetLanguage
+        sourceLanguage = settings.outgoingSourceLanguage
+        incomingSourceLanguage = settings.incomingSourceLanguage
+        incomingTargetLanguage = settings.incomingTargetLanguage
+        outgoingSourceLanguage = settings.outgoingSourceLanguage
+        outgoingTargetLanguage = settings.outgoingTargetLanguage
         providerKind = settings.providerKind
         openAtLogin = settings.openAtLogin
         translateOnlyHotkey = settings.translateOnlyHotkey
         translateAndSendHotkey = settings.translateAndSendHotkey
+        popupModeEnabled = settings.popupModeEnabled
+        popupHotkey = settings.popupHotkey
         deeplUseFreeAPI = settings.deeplUseFreeAPI
         openAIBaseURL = settings.openAIBaseURL
         openAIModel = settings.openAIModel
@@ -136,12 +197,34 @@ private struct CodableSettings: Codable {
         var s = AppSettings()
         s.isEnabled = isEnabled
         s.enterTranslatesAndSends = enterTranslatesAndSends
-        s.targetLanguage = targetLanguage
-        s.sourceLanguage = sourceLanguage
+
+        let legacySource = sourceLanguage
+        let legacyTarget = targetLanguage ?? LanguageCode.systemDefaultTarget
+        let hasDual =
+            outgoingTargetLanguage != nil
+            || incomingTargetLanguage != nil
+            || outgoingSourceLanguage != nil
+            || incomingSourceLanguage != nil
+
+        if hasDual {
+            s.outgoingTargetLanguage = outgoingTargetLanguage ?? legacyTarget
+            // Explicit null means “Detectar idioma” — do not fall back to legacy.
+            s.outgoingSourceLanguage = outgoingSourceLanguage
+            s.incomingTargetLanguage = incomingTargetLanguage ?? LanguageCode.systemLanguage
+            s.incomingSourceLanguage = incomingSourceLanguage
+        } else {
+            s.outgoingTargetLanguage = legacyTarget
+            s.outgoingSourceLanguage = legacySource ?? LanguageCode.systemLanguage
+            s.incomingTargetLanguage = LanguageCode.systemLanguage
+            s.incomingSourceLanguage = nil
+        }
+
         s.providerKind = providerKind
         s.openAtLogin = openAtLogin
         s.translateOnlyHotkey = translateOnlyHotkey ?? .translateOnlyDefault
         s.translateAndSendHotkey = translateAndSendHotkey ?? .translateAndSendDefault
+        s.popupModeEnabled = popupModeEnabled ?? false
+        s.popupHotkey = popupHotkey ?? .popupDefault
         s.deeplUseFreeAPI = deeplUseFreeAPI
         s.openAIBaseURL = openAIBaseURL
         s.openAIModel = openAIModel

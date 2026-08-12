@@ -1,9 +1,21 @@
 import Foundation
 
+/// Result of a translation call, including optional API-detected source language.
+struct TranslationOutcome: Equatable {
+    let text: String
+    /// App-style language code when the provider reported detection (e.g. auto source).
+    let detectedSourceLanguage: String?
+
+    init(text: String, detectedSourceLanguage: String? = nil) {
+        self.text = text
+        self.detectedSourceLanguage = detectedSourceLanguage
+    }
+}
+
 protocol TranslationProvider {
     var id: String { get }
     var displayName: String { get }
-    func translate(_ text: String, from: String?, to: String) async throws -> String
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome
 }
 
 enum TranslationError: LocalizedError {

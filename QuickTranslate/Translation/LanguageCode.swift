@@ -24,7 +24,27 @@ struct LanguageCode: Identifiable, Hashable {
     ]
 
     static func displayName(for id: String) -> String {
-        commonTargets.first(where: { $0.id == id })?.displayName ?? id
+        let normalized = normalize(id)
+        return commonTargets.first(where: { $0.id == normalized })?.displayName
+            ?? Locale.current.localizedString(forLanguageCode: normalized)
+            ?? id
+    }
+
+    /// Maps provider codes (EN, PT-BR, zh-CN, …) onto app language ids when possible.
+    static func normalize(_ code: String) -> String {
+        let lower = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+        switch lower {
+        case "en", "en-us", "en-gb": return "en"
+        case "pt", "pt-br", "pt-pt": return "pt"
+        case "zh", "zh-cn", "zh-hans", "zh-hans-cn": return "zh-Hans"
+        case "zh-tw", "zh-hk", "zh-hant", "zh-hant-tw": return "zh-Hant"
+        default:
+            if commonTargets.contains(where: { $0.id == lower }) { return lower }
+            let base = Locale(identifier: lower).language.languageCode?.identifier ?? lower
+            if commonTargets.contains(where: { $0.id == base }) { return base }
+            return lower
+        }
     }
 
     /// Idioma preferido do sistema, mapeado para um código suportado pelo app.

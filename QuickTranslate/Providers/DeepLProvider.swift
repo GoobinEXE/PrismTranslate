@@ -1,15 +1,12 @@
 import Foundation
-import os
 
 struct DeepLProvider: TranslationProvider {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "DeepLProvider")
-
     let id = ProviderKind.deepl.rawValue
     let displayName = ProviderKind.deepl.displayName
     let apiKey: String
     let useFreeAPI: Bool
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
             throw TranslationError.invalidConfiguration("Configure a API key do DeepL nas Preferências")
         }
@@ -19,7 +16,10 @@ struct DeepLProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("URL DeepL inválida")
         }
 
-        Self.logger.info("📡 [DeepL] enviando requisição HTTP POST para https://\(host, privacy: .public)/v2/translate")
+        AppLog.info(
+            .deepl,
+            "📡 [DeepL] POST https://\(host)/v2/translate — chars=\(text.count), from=\(from ?? "auto"), to=\(to), freeAPI=\(useFreeAPI), keyConfigured=\(!apiKey.isEmpty)"
+        )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -40,21 +40,30 @@ struct DeepLProvider: TranslationProvider {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            Self.logger.error("❌ [DeepL] HTTP \(http.statusCode): \(bodyText, privacy: .public)")
+            AppLog.error(.deepl, "❌ [DeepL] HTTP \(http.statusCode): \(bodyText)")
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
         struct DeepLResponse: Decodable {
-            struct Translation: Decodable { let text: String }
+            struct Translation: Decodable {
+                let text: String
+                let detectedSourceLanguage: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case text
+                    case detectedSourceLanguage = "detected_source_language"
+                }
+            }
             let translations: [Translation]
         }
 
         let decoded = try JSONDecoder().decode(DeepLResponse.self, from: data)
-        guard let first = decoded.translations.first?.text else {
+        guard let first = decoded.translations.first else {
             throw TranslationError.emptyResponse
         }
-        Self.logger.info("✅ [DeepL] resposta HTTP \(http.statusCode) OK (\(first.count) chars)")
-        return first
+        AppLog.info(.deepl, "✅ [DeepL] resposta HTTP \(http.statusCode) OK (\(first.text.count) chars)")
+        let detected = first.detectedSourceLanguage.map { LanguageCode.normalize($0) }
+        return TranslationOutcome(text: first.text, detectedSourceLanguage: detected)
     }
 
     /// Maps app language codes to DeepL codes. `target_lang` accepts regional variants

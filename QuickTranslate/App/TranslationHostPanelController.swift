@@ -1,5 +1,4 @@
 import AppKit
-import os
 import SwiftUI
 import Translation
 
@@ -10,8 +9,6 @@ import Translation
 @available(macOS 15.0, *)
 final class TranslationHostPanelController {
     static let shared = TranslationHostPanelController()
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "HostPanel")
-
     /// Borderless panels refuse key status by default; the download sheet needs it.
     private final class KeyablePanel: NSPanel {
         override var canBecomeKey: Bool { true }
@@ -47,7 +44,7 @@ final class TranslationHostPanelController {
         panel.orderFrontRegardless()
         self.panel = panel
 
-        Self.logger.info("🍏 TranslationHostPanelController installed with persistent NSHostingView")
+        AppLog.info(.hostPanel, "🍏 TranslationHostPanelController installed with persistent NSHostingView")
     }
 
     /// Brings a visible panel on-screen so `prepareTranslation()` can anchor
@@ -78,13 +75,11 @@ final class TranslationHostPanelController {
 @available(macOS 15.0, *)
 private struct TranslationHostView: View {
     @ObservedObject var bridge: AppleTranslationBridge
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "TranslationHostView")
-
     var body: some View {
         Color.clear
             .frame(width: 1, height: 1)
             .translationTask(bridge.configuration) { session in
-                Self.logger.info("🍏 .translationTask triggered by configuration change!")
+                AppLog.info(.hostPanel, "🍏 .translationTask triggered by configuration change!")
                 await bridge.handle(session: session)
             }
     }

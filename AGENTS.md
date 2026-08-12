@@ -6,10 +6,6 @@ Use **somente** o Xcode.app. Não rode `swiftly use xcode` neste projeto — iss
 `~/Library/Developer/Toolchains/xcode.xctoolchain` e o SourceKit reclama de toolchain
 duplicada (`com.apple.dt.toolchain.XcodeDefault` already registered).
 
-Nesta máquina o `/usr/bin/xcrun` está quebrado (arm64 vs arm64e). Por isso o Cursor define
-`SDKROOT` e `swift.SDK` explicitamente — a extensão Swift chama `xcrun --show-sdk-path`
-na descoberta do toolchain e falha sem isso. Correção definitiva: reinstalar o Xcode.
-
 ## Build (sempre via Xcode.app)
 
 Use o mesmo DerivedData do Xcode (melhor para SourceKit-LSP + debug no Cursor):

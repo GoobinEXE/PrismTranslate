@@ -6,10 +6,26 @@ import SwiftUI
 struct HotkeyRecorderButton: View {
     @EnvironmentObject private var appState: AppState
     @Binding var chord: HotkeyChord
-    var otherChord: HotkeyChord?
+    /// Other configured chords that must not collide with this one.
+    var conflictingChords: [HotkeyChord] = []
 
     @State private var isRecording = false
     @State private var conflictMessage: String?
+
+    /// Convenience for the previous single-chord API.
+    init(chord: Binding<HotkeyChord>, otherChord: HotkeyChord? = nil) {
+        self._chord = chord
+        if let otherChord {
+            self.conflictingChords = [otherChord]
+        } else {
+            self.conflictingChords = []
+        }
+    }
+
+    init(chord: Binding<HotkeyChord>, conflictingChords: [HotkeyChord]) {
+        self._chord = chord
+        self.conflictingChords = conflictingChords
+    }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
@@ -60,7 +76,7 @@ struct HotkeyRecorderButton: View {
             }
 
             DispatchQueue.main.async {
-                if let other = otherChord, recorded == other {
+                if conflictingChords.contains(recorded) {
                     conflictMessage = "Este atalho já está em uso."
                 } else {
                     chord = recorded
@@ -81,8 +97,7 @@ struct HotkeyRecorderButton: View {
     }
 }
 
-/// Local key monitor used only while a recorder button is active.
-@MainActor
+/// Local key monitor used only while a HotkeyRecorderButton is recording.
 private final class HotkeyRecordingMonitor {
     static let shared = HotkeyRecordingMonitor()
 

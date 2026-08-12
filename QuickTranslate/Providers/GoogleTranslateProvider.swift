@@ -1,14 +1,11 @@
 import Foundation
-import os
 
 struct GoogleTranslateProvider: TranslationProvider {
-    private static let logger = Logger(subsystem: "com.quicktranslate", category: "GoogleTranslateProvider")
-
     let id = ProviderKind.google.rawValue
     let displayName = ProviderKind.google.displayName
     let apiKey: String
 
-    func translate(_ text: String, from: String?, to: String) async throws -> String {
+    func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
             throw TranslationError.invalidConfiguration("Configure a API key do Google nas Preferências")
         }
@@ -29,7 +26,10 @@ struct GoogleTranslateProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("URL Google inválida")
         }
 
-        Self.logger.info("📡 [Google] enviando requisição HTTP POST para translation.googleapis.com")
+        AppLog.info(
+            .google,
+            "📡 [Google] POST translation.googleapis.com — chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
+        )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -41,7 +41,7 @@ struct GoogleTranslateProvider: TranslationProvider {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            Self.logger.error("❌ [Google] HTTP \(http.statusCode): \(bodyText, privacy: .public)")
+            AppLog.error(.google, "❌ [Google] HTTP \(http.statusCode): \(bodyText)")
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
@@ -49,6 +49,7 @@ struct GoogleTranslateProvider: TranslationProvider {
             struct DataBlock: Decodable {
                 struct Translation: Decodable {
                     let translatedText: String
+                    let detectedSourceLanguage: String?
                 }
                 let translations: [Translation]
             }
@@ -56,10 +57,15 @@ struct GoogleTranslateProvider: TranslationProvider {
         }
 
         let decoded = try JSONDecoder().decode(GoogleResponse.self, from: data)
-        guard let first = decoded.data.translations.first?.translatedText else {
+        guard let first = decoded.data.translations.first else {
             throw TranslationError.emptyResponse
         }
-        return first
+        let detected = first.detectedSourceLanguage.map { LanguageCode.normalize($0) }
+        AppLog.info(
+            .google,
+            "✅ [Google] HTTP \(http.statusCode) OK — \(first.translatedText.count) chars, detected=\(detected ?? "nil")"
+        )
+        return TranslationOutcome(text: first.translatedText, detectedSourceLanguage: detected)
     }
 
     /// Internal (not private) so unit tests can exercise the mapping directly.
