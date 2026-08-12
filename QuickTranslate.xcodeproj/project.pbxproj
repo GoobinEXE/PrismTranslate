@@ -42,6 +42,8 @@
 		E7F539D921AC4DBFB0DACE66 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3776FCBBFCB4DB594C2A352 /* SettingsView.swift */; };
 		E83A33EA6757496AAAC165B0 /* QuickTranslateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0956634C894D4AB5D6A0CC /* QuickTranslateApp.swift */; };
 		F1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift */; };
+		F2A3B4C5D6E74899B0C1D2E3 /* SettingsNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A3B4C5D6E74899B0C1D2E3 /* SettingsNavigation.swift */; };
+		F3A4B5C6D7E84900C1D2E3F4 /* StatusHUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A4B5C6D7E84900C1D2E3F4 /* StatusHUDController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +82,8 @@
 		DE51A11AA0143D0A00000003 /* QTStatusChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QTStatusChrome.swift; sourceTree = "<group>"; };
 		DE51A11AA0143D0A00000004 /* SettingsSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSections.swift; sourceTree = "<group>"; };
 		E1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockIconController.swift; sourceTree = "<group>"; };
+		E2A3B4C5D6E74899B0C1D2E3 /* SettingsNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigation.swift; sourceTree = "<group>"; };
+		E3A4B5C6D7E84900C1D2E3F4 /* StatusHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusHUDController.swift; sourceTree = "<group>"; };
 		E62EB21B68D1445B8F465705 /* QuickTranslate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuickTranslate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E920F3E2A86C46E3A4B58AF7 /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleProvider.swift; sourceTree = "<group>"; };
 		EDC94BD2A4164FF6B5D956FC /* QuickTranslate.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = QuickTranslate.entitlements; sourceTree = "<group>"; };
@@ -105,6 +109,8 @@
 				B1C2D3E4F5A64789B0C1D2E3 /* OnboardingView.swift */,
 				D3E4F5A6B7C84901D2E3F4A5 /* OnboardingWindowController.swift */,
 				CB0956634C894D4AB5D6A0CC /* QuickTranslateApp.swift */,
+				E2A3B4C5D6E74899B0C1D2E3 /* SettingsNavigation.swift */,
+				E3A4B5C6D7E84900C1D2E3F4 /* StatusHUDController.swift */,
 				7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */,
 				B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */,
 				A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */,
@@ -292,6 +298,8 @@
 			files = (
 				36AE3AC7FC1740C7918BB1FE /* AppState.swift in Sources */,
 				F1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift in Sources */,
+				F2A3B4C5D6E74899B0C1D2E3 /* SettingsNavigation.swift in Sources */,
+				F3A4B5C6D7E84900C1D2E3F4 /* StatusHUDController.swift in Sources */,
 				8A18CAC0B8274CB3A4E93373 /* MenuBarView.swift in Sources */,
 				E83A33EA6757496AAAC165B0 /* QuickTranslateApp.swift in Sources */,
 				CC4E385301B942E2BE5847B1 /* TranslationHostPanelController.swift in Sources */,

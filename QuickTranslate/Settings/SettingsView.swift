@@ -1,13 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Destinos da sidebar de Preferências — padrão System Settings do macOS Tahoe.
+/// Destinos da sidebar de Configurações — padrão System Settings do macOS (HIG).
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general
-    case provider
     case shortcuts
-    case permissions
+    case provider
     case test
+    case permissions
     case logs
     case about
 
@@ -36,60 +36,83 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .about: return "info.circle"
         }
     }
+
+    /// Grupos da sidebar (card-sorting por tarefa do usuário).
+    enum Group: String, CaseIterable, Identifiable {
+        case daily
+        case translation
+        case system
+        case help
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .daily: return "Uso diário"
+            case .translation: return "Tradução"
+            case .system: return "Sistema"
+            case .help: return "Ajuda"
+            }
+        }
+
+        var sections: [SettingsSection] {
+            switch self {
+            case .daily: return [.general, .shortcuts]
+            case .translation: return [.provider, .test]
+            case .system: return [.permissions, .logs]
+            case .help: return [.about]
+            }
+        }
+    }
 }
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var selection: SettingsSection? = .general
+
+    private var selection: Binding<SettingsSection?> {
+        Binding(
+            get: { appState.settingsSelection },
+            set: { newValue in
+                let section = newValue ?? .general
+                appState.settingsSelection = section
+                appState.rememberSettingsSection(section)
+            }
+        )
+    }
 
     var body: some View {
         NavigationSplitView {
-            List(SettingsSection.allCases, selection: $selection) { section in
-                Label(section.title, systemImage: section.symbolName)
-                    .tag(section)
+            List(selection: selection) {
+                ForEach(SettingsSection.Group.allCases) { group in
+                    Section(group.title) {
+                        ForEach(group.sections) { section in
+                            Label(section.title, systemImage: section.symbolName)
+                                .tag(section)
+                        }
+                    }
+                }
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 160, ideal: 175, max: 210)
             .toolbar(removing: .sidebarToggle)
         } detail: {
-            detail(for: selection ?? .general)
+            detail(for: appState.settingsSelection)
         }
         .frame(minWidth: 660, minHeight: 460)
         .onAppear {
-            // #region agent log
-            AgentDebugLog.write(
-                hypothesisId: "H1",
-                location: "SettingsView.onAppear",
-                message: "settings appear → showForSettings",
-                data: ["selection": selection?.rawValue ?? "nil"]
-            )
-            // #endregion
             DockIconController.shared.showForSettings()
+            if let pending = appState.consumePendingSettingsSection() {
+                appState.settingsSelection = pending
+                appState.rememberSettingsSection(pending)
+            }
         }
-        .onDisappear {
-            // #region agent log
-            AgentDebugLog.write(
-                hypothesisId: "H1",
-                location: "SettingsView.onDisappear",
-                message: "settings disappear → hideForSettings",
-                data: ["selection": selection?.rawValue ?? "nil"]
-            )
-            // #endregion
-            DockIconController.shared.hideForSettings()
+        .onChange(of: appState.pendingSettingsSection) { _, newValue in
+            guard let newValue else { return }
+            appState.settingsSelection = newValue
+            appState.rememberSettingsSection(newValue)
+            _ = appState.consumePendingSettingsSection()
         }
-        .onChange(of: selection) { oldValue, newValue in
-            // #region agent log
-            AgentDebugLog.write(
-                hypothesisId: "H3",
-                location: "SettingsView.onChange(selection)",
-                message: "sidebar selection changed",
-                data: [
-                    "from": oldValue?.rawValue ?? "nil",
-                    "to": newValue?.rawValue ?? "nil",
-                ]
-            )
-            // #endregion
-        }
+        .accessibilityLabel("Configurações do QuickTranslate")
     }
 
     @ViewBuilder

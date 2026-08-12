@@ -24,18 +24,10 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     }
 
     func show() {
+        SettingsNavigation.closeMenuBarExtra()
+        DockIconController.shared.retain(.onboarding)
+
         if let panel, panel.isVisible {
-            // #region agent log
-            AgentDebugLog.write(
-                hypothesisId: "H5",
-                location: "OnboardingController.show",
-                message: "reuse visible panel",
-                data: [
-                    "dockReasonsWouldNeed": "onboarding",
-                    "activationPolicy": NSApp.activationPolicy().rawValue,
-                ]
-            )
-            // #endregion
             NSApp.activate(ignoringOtherApps: true)
             panel.makeKeyAndOrderFront(nil)
             return
@@ -80,30 +72,15 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         panel.delegate = self
         // Tahoe: chrome em Liquid Glass; antes disso a vibrancy fica por conta
         // do VisualEffectBackground dentro da própria OnboardingView.
-        var usedNestedGlass = false
         if #available(macOS 26.0, *) {
             let glass = NSGlassEffectView(frame: contentRect)
             glass.cornerRadius = 16
             hostingView.autoresizingMask = [.width, .height]
             glass.contentView = hostingView
             panel.contentView = glass
-            usedNestedGlass = true
         } else {
             panel.contentView = hostingView
         }
-        // #region agent log
-        AgentDebugLog.write(
-            hypothesisId: "H5",
-            location: "OnboardingController.show",
-            message: "created onboarding panel",
-            data: [
-                "usedNSGlassEffectView": usedNestedGlass,
-                "preferMaterialEnvApplied": usedNestedGlass,
-                "dockRetainCalled": false,
-                "activationPolicy": NSApp.activationPolicy().rawValue,
-            ]
-        )
-        // #endregion
         panel.center()
         panel.makeKeyAndOrderFront(nil)
 
@@ -112,32 +89,18 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     }
 
     func close() {
-        // #region agent log
-        AgentDebugLog.write(
-            hypothesisId: "H5",
-            location: "OnboardingController.close",
-            message: "close onboarding",
-            data: ["hadPanel": panel != nil]
-        )
-        // #endregion
         panel?.delegate = nil
         panel?.orderOut(nil)
         panel = nil
         hosting = nil
+        DockIconController.shared.release(.onboarding)
     }
 
     nonisolated func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
-            // #region agent log
-            AgentDebugLog.write(
-                hypothesisId: "H5",
-                location: "OnboardingController.windowWillClose",
-                message: "onboarding willClose",
-                data: [:]
-            )
-            // #endregion
             self.panel = nil
             self.hosting = nil
+            DockIconController.shared.release(.onboarding)
         }
     }
 }

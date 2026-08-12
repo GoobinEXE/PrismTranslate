@@ -1,0 +1,289 @@
+import AppKit
+import SwiftUI
+
+/// Toast flutuante para status de tradução quando o MenuBarExtra está fechado.
+/// Alinhado às HIG de Feedback: anuncia VoiceOver; erros não somem sozinhos.
+@MainActor
+final class StatusHUDController {
+    static let shared = StatusHUDController()
+
+    private final class KeyablePanel: NSPanel {
+        override var canBecomeKey: Bool { true }
+        override var canBecomeMain: Bool { false }
+    }
+
+    private var panel: NSPanel?
+    private var hideTask: Task<Void, Never>?
+    private var escapeMonitor: Any?
+
+    private init() {}
+
+    func present(status: AppState.Status, isEnabled: Bool) {
+        switch status {
+        case .idle:
+            hide()
+            return
+        case .translating, .success, .error:
+            break
+        }
+
+        // O painel de resultado já é o feedback principal no modo popup.
+        if TranslationResultPanelController.shared.isVisible {
+            return
+        }
+        if SettingsNavigation.isMenuBarExtraVisible() {
+            return
+        }
+
+        hideTask?.cancel()
+        closeChrome()
+
+        let root = StatusHUDView(
+            status: status,
+            isEnabled: isEnabled,
+            onDismiss: { [weak self] in
+                self?.hide()
+            }
+        )
+
+        let hostingView: NSView
+        if #available(macOS 26.0, *) {
+            hostingView = NSHostingView(
+                rootView: root.environment(\.preferMaterialOverGlass, true)
+            )
+        } else {
+            hostingView = NSHostingView(rootView: root)
+        }
+
+        let width: CGFloat = 320
+        hostingView.frame = NSRect(x: 0, y: 0, width: width, height: 10)
+        let height = max(hostingView.fittingSize.height, 44)
+        let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
+        hostingView.frame = contentRect
+
+        let panel = KeyablePanel(
+            contentRect: contentRect,
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.isMovableByWindowBackground = false
+        panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .ignoresCycle]
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
+        panel.ignoresMouseEvents = false
+
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView(frame: contentRect)
+            glass.cornerRadius = 12
+            hostingView.autoresizingMask = [.width, .height]
+            glass.contentView = hostingView
+            panel.contentView = glass
+        } else {
+            panel.contentView = hostingView
+        }
+
+        panel.setContentSize(NSSize(width: width, height: height))
+        positionNearCursor(panel, size: NSSize(width: width, height: height))
+        panel.orderFront(nil)
+        self.panel = panel
+
+        announce(status: status, isEnabled: isEnabled)
+        installEscapeMonitorIfNeeded(for: status)
+
+        // Erros ficam até o usuário dispensar ou abrir logs (HIG: feedback legível).
+        let dismissNanos: UInt64? =
+            switch status {
+            case .translating: UInt64(8_000_000_000)
+            case .success: UInt64(1_400_000_000)
+            case .error, .idle: nil
+            }
+
+        if let dismissNanos {
+            hideTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: dismissNanos)
+                guard !Task.isCancelled else { return }
+                self?.hide()
+            }
+        }
+    }
+
+    func hide() {
+        hideTask?.cancel()
+        hideTask = nil
+        removeEscapeMonitor()
+        closeChrome()
+    }
+
+    private func announce(status: AppState.Status, isEnabled: Bool) {
+        let title: String =
+            switch status {
+            case .idle: isEnabled ? "Ativo" : "Pausado"
+            case .translating: "Traduzindo…"
+            case .success: "Tradução concluída"
+            case .error: "Falha na tradução"
+            }
+        let message: String =
+            if case .error(let detail) = status {
+                "\(title). \(detail)"
+            } else {
+                title
+            }
+        AccessibilityNotification.Announcement(message).post()
+    }
+
+    private func installEscapeMonitorIfNeeded(for status: AppState.Status) {
+        removeEscapeMonitor()
+        guard case .error = status else { return }
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 { // Escape
+                self?.hide()
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func removeEscapeMonitor() {
+        if let escapeMonitor {
+            NSEvent.removeMonitor(escapeMonitor)
+            self.escapeMonitor = nil
+        }
+    }
+
+    private func closeChrome() {
+        panel?.orderOut(nil)
+        panel = nil
+    }
+
+    private func positionNearCursor(_ panel: NSPanel, size: NSSize) {
+        let mouse = NSEvent.mouseLocation
+        let screen =
+            NSScreen.screens.first { $0.frame.contains(mouse) }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+
+        var origin = NSPoint(
+            x: mouse.x - size.width / 2,
+            y: mouse.y - size.height - 28
+        )
+        if origin.y < visible.minY + 8 {
+            origin.y = mouse.y + 20
+        }
+        origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
+        origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
+        panel.setFrameOrigin(origin)
+    }
+}
+
+private struct StatusHUDView: View {
+    let status: AppState.Status
+    let isEnabled: Bool
+    var onDismiss: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(alignment: .center, spacing: QTDesign.Spacing.s) {
+            Image(systemName: iconName)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(tint)
+                .symbolEffect(.pulse, options: .repeating, isActive: isTranslating && !reduceMotion)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(QTDesign.Fonts.callout.weight(.semibold))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(QTDesign.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if case .error = status {
+                QTSettingsLink(section: .logs, beforeOpen: onDismiss) {
+                    Text("Ver detalhes")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .font(QTDesign.Fonts.caption)
+                .accessibilityLabel("Abrir Configurações, seção Logs")
+                .accessibilityHint("Mostra os logs da falha na tradução")
+
+                Button {
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .help("Dispensar")
+                .accessibilityLabel("Dispensar aviso")
+                .keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(width: 320, alignment: .leading)
+        .background {
+            if #available(macOS 26.0, *) {
+                Color.clear
+            } else {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
+        .accessibilityValue(subtitle ?? "")
+    }
+
+    private var isTranslating: Bool { status == .translating }
+
+    private var title: String {
+        switch status {
+        case .idle: return isEnabled ? "Ativo" : "Pausado"
+        case .translating: return "Traduzindo…"
+        case .success: return "Tradução concluída"
+        case .error: return "Falha na tradução"
+        }
+    }
+
+    private var subtitle: String? {
+        if case .error(let message) = status {
+            return message
+        }
+        return nil
+    }
+
+    private var iconName: String {
+        switch status {
+        case .idle: return isEnabled ? "globe" : "pause.circle"
+        case .translating: return "ellipsis.circle.fill"
+        case .success: return "checkmark.circle.fill"
+        case .error: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch status {
+        case .idle: return isEnabled ? .green : .secondary
+        case .translating: return .blue
+        case .success: return .green
+        case .error: return .red
+        }
+    }
+}

@@ -7,7 +7,7 @@ struct GoogleTranslateProvider: TranslationProvider {
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
-            throw TranslationError.invalidConfiguration("Configure a API key do Google nas Preferências")
+            throw TranslationError.invalidConfiguration("Configure a API key do Google nas Configurações")
         }
 
         var components = URLComponents(string: "https://translation.googleapis.com/language/translate/v2")!

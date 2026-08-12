@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Conteúdo do painel de tradução. Aparência isolada aqui para mudanças visuais futuras.
+/// Conteúdo do painel de tradução — HIG: hierarquia clara, foco teclado, a11y.
 struct TranslationResultPanelView: View {
     let original: String
     let translated: String
@@ -14,6 +14,8 @@ struct TranslationResultPanelView: View {
     var onClose: () -> Void
 
     @State private var didCopy = false
+    @State private var showOriginalExpanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var languagePairLabel: String {
         "\(sourceLanguageLabel) → \(targetLanguageLabel)"
@@ -26,18 +28,18 @@ struct TranslationResultPanelView: View {
                     .font(QTDesign.Fonts.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .accessibilityLabel("Idiomas \(languagePairLabel)")
                 Spacer(minLength: 0)
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 20)
+                        .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .focusable(false)
-                .focusEffectDisabled()
+                .buttonStyle(.borderless)
                 .help("Fechar")
+                .accessibilityLabel("Fechar painel de tradução")
                 .keyboardShortcut(.cancelAction)
             }
 
@@ -51,55 +53,71 @@ struct TranslationResultPanelView: View {
 
             HStack(spacing: QTDesign.Spacing.s) {
                 Spacer(minLength: 0)
-                Button(didCopy ? "Copiado" : "Copiar") {
+                Button {
                     onCopy()
                     didCopy = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                         didCopy = false
                     }
+                } label: {
+                    Label(
+                        didCopy ? "Copiado" : "Copiar",
+                        systemImage: didCopy ? "checkmark" : "doc.on.doc")
                 }
-                .controlSize(.small)
+                .controlSize(.regular)
                 .buttonStyle(.bordered)
-                .focusable(false)
-                .focusEffectDisabled()
+                .frame(minHeight: 28)
                 .keyboardShortcut("c", modifiers: [.command])
+                .accessibilityLabel(didCopy ? "Copiado" : "Copiar tradução")
+                .accessibilityHint("Copia o texto traduzido para a área de transferência")
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: didCopy)
 
                 if canReplace {
                     Button("Substituir") {
                         onReplace()
                     }
-                    .controlSize(.small)
-                    .buttonStyle(.bordered)
-                    .focusable(false)
-                    .focusEffectDisabled()
+                    .controlSize(.regular)
+                    .buttonStyle(.borderedProminent)
+                    .frame(minHeight: 28)
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityLabel("Substituir texto no campo")
+                    .accessibilityHint("Substitui o texto selecionado pela tradução")
                 }
             }
         }
         .padding(.horizontal, QTDesign.Spacing.l)
         .padding(.vertical, QTDesign.Spacing.m)
-        .frame(width: 420, alignment: .topLeading)
-        .fixedSize(horizontal: true, vertical: true)
-        // Panel opens as key window; prevent any control from drawing the blue focus ring.
-        .focusEffectDisabled()
+        .frame(minWidth: 360, idealWidth: 420, maxWidth: 520, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var textStack: some View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-            if showOriginal {
-                Text(original)
-                    .font(QTDesign.Fonts.caption)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             Text(translated)
-                .font(.system(size: 17))
+                .font(QTDesign.Fonts.reading)
                 .foregroundStyle(.primary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Tradução")
+                .accessibilityValue(translated)
+
+            if showOriginal {
+                DisclosureGroup(isExpanded: $showOriginalExpanded) {
+                    Text(original)
+                        .font(QTDesign.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
+                        .accessibilityLabel("Texto original")
+                        .accessibilityValue(original)
+                } label: {
+                    Text("Mostrar original")
+                        .font(QTDesign.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }

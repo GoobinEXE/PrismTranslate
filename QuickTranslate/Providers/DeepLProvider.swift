@@ -8,7 +8,7 @@ struct DeepLProvider: TranslationProvider {
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
-            throw TranslationError.invalidConfiguration("Configure a API key do DeepL nas Preferências")
+            throw TranslationError.invalidConfiguration("Configure a API key do DeepL nas Configurações")
         }
 
         let host = useFreeAPI ? "api-free.deepl.com" : "api.deepl.com"

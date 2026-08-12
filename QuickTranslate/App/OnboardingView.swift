@@ -64,7 +64,7 @@ struct OnboardingView: View {
             id: 4,
             title: "Atalhos na prática",
             subtitle:
-                "Estes são os seus atalhos atuais. Dá para trocá-los em Preferências → Atalhos.",
+                "Estes são os seus atalhos atuais. Dá para trocá-los em Configurações → Atalhos.",
             symbolName: "command",
             symbolColor: .purple
         ),
@@ -72,7 +72,7 @@ struct OnboardingView: View {
             id: 5,
             title: "Tudo pronto",
             subtitle:
-                "Confira o checklist — o ícone do globo fica na barra de menus para ligar/desligar, trocar idioma e abrir as Preferências.",
+                "Confira o checklist — o ícone do globo fica na barra de menus para ligar/desligar, trocar idioma e abrir as Configurações.",
             symbolName: "checkmark.circle.fill",
             symbolColor: .green
         ),
@@ -123,9 +123,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Text("Etapa \(stepIndex + 1) de \(steps.count)")
-                .font(.system(size: 11, weight: .medium))
+                .font(QTDesign.Fonts.caption.weight(.medium))
                 .foregroundStyle(.tertiary)
                 .monospacedDigit()
+                .accessibilityLabel("Etapa \(stepIndex + 1) de \(steps.count)")
         }
         .padding(.horizontal, QTDesign.Spacing.l)
         .padding(.vertical, 12)
@@ -140,10 +141,11 @@ struct OnboardingView: View {
                     .fill(current.symbolColor.opacity(0.14))
                     .frame(width: 88, height: 88)
                 Image(systemName: current.symbolName)
-                    .font(.system(size: 36, weight: .medium))
+                    .font(.largeTitle.weight(.medium))
                     .foregroundStyle(current.symbolColor)
                     .symbolRenderingMode(.hierarchical)
                     .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                    .accessibilityHidden(true)
             }
             .padding(.top, 8)
 
@@ -235,10 +237,18 @@ struct OnboardingView: View {
                     .padding(12)
                 }
                 languagePackCard
+                QTSettingsLink(section: .provider) {
+                    Label("Abrir Configurações → Provedor", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .font(QTDesign.Fonts.caption)
+                .accessibilityLabel("Abrir Configurações, seção Provedor")
+                .accessibilityHint("Abre a janela de Configurações na seção Provedor")
                 QTTipRow(
                     icon: "key.fill",
                     text:
-                        "Prefere DeepL, Google ou LM Studio? Configure depois em Preferências → Provedor."
+                        "Prefere DeepL, Google ou LM Studio? Configure o motor em Configurações → Provedor."
                 )
             }
             .onAppear(perform: refreshLanguagePack)
@@ -252,15 +262,25 @@ struct OnboardingView: View {
                     keys: appState.settings.translateAndSendHotkey.displayString,
                     label: "Faz o mesmo e envia (Enter)"
                 )
+                if appState.settings.popupModeEnabled {
+                    shortcutRow(
+                        keys: appState.settings.popupHotkey.displayString,
+                        label: "Mostra o resultado num painel (modo popup)"
+                    )
+                }
                 shortcutRow(
                     keys: "⏎",
-                    label: "Só se “Enter traduz e envia” estiver ligado"
+                    label: "Só se “Enter traduz e envia” estiver ligado no menu"
                 )
-                Text("Altere os atalhos em Preferências → Atalhos se preferir.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 4)
+                QTSettingsLink(section: .shortcuts) {
+                    Label("Abrir Configurações → Atalhos", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .font(QTDesign.Fonts.caption)
+                .accessibilityLabel("Abrir Configurações, seção Atalhos")
+                .accessibilityHint("Abre a janela de Configurações na seção Atalhos")
+                .padding(.top, 4)
             }
         case 5:
             checklist
@@ -279,9 +299,12 @@ struct OnboardingView: View {
 
             if stepIndex == 0 {
                 Button("Pular") {
-                    finish()
+                    // Vai ao checklist para ver o que ainda falta — não marca concluído.
+                    go(to: steps.count - 1)
                 }
                 .foregroundStyle(.secondary)
+                .help("Pula para o checklist final sem concluir o tutorial.")
+                .accessibilityHint("Mostra o checklist com itens pendentes")
             } else {
                 Button("Voltar") {
                     go(to: stepIndex - 1)
@@ -330,6 +353,10 @@ struct OnboardingView: View {
         } else {
             stepIndex = index
         }
+        let step = steps[index]
+        AccessibilityNotification.Announcement(
+            "Etapa \(index + 1) de \(steps.count): \(step.title)"
+        ).post()
     }
 
     private func finish() {
@@ -353,7 +380,7 @@ struct OnboardingView: View {
                     )
                     .foregroundStyle(ok ? Color.green : Color.orange)
                     Text(ok ? okTitle : pendingTitle)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(QTDesign.Fonts.callout.weight(.medium))
                     Spacer(minLength: 0)
                 }
 
@@ -369,7 +396,7 @@ struct OnboardingView: View {
     private func pendingBadge(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "clock.badge.exclamationmark")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.orange)
             Text(text)
                 .font(QTDesign.Fonts.caption)
@@ -385,7 +412,7 @@ struct OnboardingView: View {
             HStack {
                 QTKeycap(keys: keys)
                 Text(label)
-                    .font(.system(size: 12.5))
+                    .font(QTDesign.Fonts.callout)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }
@@ -401,37 +428,68 @@ struct OnboardingView: View {
     }
 
     private var checklist: some View {
-        GlassSurface {
-            VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-                checklistRow(ok: accessibilityOK, text: "Acessibilidade") {
-                    Permissions.openAccessibilitySettings()
+        VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
+            GlassSurface {
+                VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
+                    checklistRow(ok: accessibilityOK, text: "Acessibilidade") {
+                        Permissions.openAccessibilitySettings()
+                    }
+                    checklistRow(ok: inputMonitoringOK, text: "Monitoramento de Entrada") {
+                        Permissions.openInputMonitoringSettings()
+                    }
+                    checklistRow(
+                        ok: languagesReady,
+                        text:
+                            "Idiomas de tradução (\(LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)))",
+                        settingsSection: .general
+                    )
+                    checklistRow(ok: true, text: "Ícone do globo na barra de menus", fix: nil)
                 }
-                checklistRow(ok: inputMonitoringOK, text: "Monitoramento de Entrada") {
-                    Permissions.openInputMonitoringSettings()
-                }
-                checklistRow(
-                    ok: languagesReady,
-                    text:
-                        "Idiomas de tradução (\(LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)))",
-                    fix: nil
-                )
-                checklistRow(ok: true, text: "Ícone do globo na barra de menus", fix: nil)
+                .padding(14)
             }
-            .padding(14)
+
+            if !accessibilityOK || !inputMonitoringOK {
+                QTSettingsLink(section: .permissions) {
+                    Label("Abrir Configurações → Permissões", systemImage: "lock.shield")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .font(QTDesign.Fonts.caption)
+                .accessibilityLabel("Abrir Configurações, seção Permissões")
+                .accessibilityHint("Abre a janela de Configurações na seção Permissões")
+            }
+
+            Text("Itens em laranja ficam pendentes — você pode corrigir agora ou depois pelo menu.")
+                .font(QTDesign.Fonts.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func checklistRow(ok: Bool, text: String, fix: (() -> Void)?) -> some View {
+    private func checklistRow(
+        ok: Bool,
+        text: String,
+        settingsSection: SettingsSection? = nil,
+        fix: (() -> Void)? = nil
+    ) -> some View {
         HStack(spacing: QTDesign.Spacing.s) {
             Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .foregroundStyle(ok ? Color.green : Color.orange)
             Text(text)
-                .font(.system(size: 12.5))
+                .font(QTDesign.Fonts.callout)
             Spacer(minLength: 0)
-            if !ok, let fix {
-                Button("Corrigir…", action: fix)
+            if !ok {
+                if let settingsSection {
+                    QTSettingsLink(section: settingsSection) {
+                        Text("Corrigir…")
+                    }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
+                } else if let fix {
+                    Button("Corrigir…", action: fix)
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                }
             }
         }
         .accessibilityElement(children: .combine)
@@ -447,7 +505,7 @@ struct OnboardingView: View {
                     Image(systemName: packIconName)
                         .foregroundStyle(packIconColor)
                     Text(packTitle)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(QTDesign.Fonts.callout.weight(.medium))
                     Spacer(minLength: 0)
                     if packState == .checking || packState == .downloading {
                         ProgressView()

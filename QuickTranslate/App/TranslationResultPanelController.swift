@@ -28,6 +28,10 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
     /// Preferências window we ordered out so activate only shows the popup.
     private weak var hiddenSettingsWindow: NSWindow?
 
+    var isVisible: Bool {
+        panel?.isVisible == true
+    }
+
     func show(_ session: Session) {
         AppLog.info(
             .resultPanel,
@@ -141,10 +145,13 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         }
 
         panel.setContentSize(NSSize(width: width, height: height))
-        position(panel, size: NSSize(width: width, height: height), near: session.capture.selectionScreenRect)
+        position(
+            panel, size: NSSize(width: width, height: height),
+            near: session.capture.selectionScreenRect)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        // Avoid SwiftUI focusing the first Button and drawing the blue focus ring.
+        // Avoid SwiftUI focusing the first Button and drawing the blue focus ring on open.
+        // Keyboard/VoiceOver still reach controls via Tab (HIG accessibility).
         _ = panel.makeFirstResponder(hostingView)
         self.panel = panel
     }
@@ -152,10 +159,12 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
     /// Places the panel just below the selection (or above if it would go off-screen).
     private func position(_ panel: NSPanel, size: NSSize, near selection: CGRect?) {
         let gap: CGFloat = 10
-        let anchor = selection.flatMap { $0.isEmpty ? nil : $0 }
+        let anchor =
+            selection.flatMap { $0.isEmpty ? nil : $0 }
             ?? CGRect(origin: NSEvent.mouseLocation, size: .zero)
 
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor) }
+        let screen =
+            NSScreen.screens.first { $0.frame.intersects(anchor) }
             ?? NSScreen.main
             ?? NSScreen.screens.first
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
@@ -177,7 +186,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
     // MARK: - Preferências (hide while popup is frontmost)
 
     private func hideSettingsIfNeeded() {
-        guard let settings = Self.settingsWindow(), settings.isVisible else {
+        guard let settings = SettingsNavigation.settingsWindow(), settings.isVisible else {
             hiddenSettingsWindow = nil
             return
         }
@@ -189,28 +198,5 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         guard let settings = hiddenSettingsWindow else { return }
         hiddenSettingsWindow = nil
         settings.makeKeyAndOrderFront(nil)
-    }
-
-    /// Same heuristic as `DockIconController.findSettingsWindow` — kept local to avoid coupling.
-    private static func settingsWindow() -> NSWindow? {
-        if let named = NSApp.windows.first(where: {
-            $0.frameAutosaveName == "com_apple_SwiftUI_Settings_window"
-        }) {
-            return named
-        }
-        if let key = NSApp.keyWindow,
-           !(key is NSPanel),
-           key.isVisible,
-           key.styleMask.contains(.titled),
-           key.styleMask.contains(.closable)
-        {
-            return key
-        }
-        return NSApp.windows.first { window in
-            window.isVisible
-                && !(window is NSPanel)
-                && window.styleMask.contains(.titled)
-                && window.styleMask.contains(.closable)
-        }
     }
 }

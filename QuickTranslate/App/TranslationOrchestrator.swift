@@ -53,7 +53,7 @@ final class TranslationOrchestrator {
 
         guard settings.isEnabled else {
             AppLog.warning(.orchestrator, "tradução ignorada: app está desligado")
-            onStatusChange?(.error("QuickTranslate está desligado — ligue nas Preferências"))
+            onStatusChange?(.error("QuickTranslate está desligado — ligue nas Configurações"))
             return
         }
 

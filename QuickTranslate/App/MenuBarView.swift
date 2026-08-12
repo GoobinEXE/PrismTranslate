@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// Painel do menu bar (MenuBarExtra estilo .window) — layout no espírito do
-/// Control Center do macOS Tahoe: status no topo, controles agrupados em glass,
-/// alertas acionáveis e ações de navegação no rodapé.
+/// Painel do menu bar (MenuBarExtra estilo .window) — alinhado às HIG de Menu Bar Extras:
+/// status no topo, controles frequentes, alertas acionáveis, navegação no rodapé.
 struct MenuBarView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.openSettings) private var openSettings
     @State private var showFullError = false
 
     var body: some View {
@@ -34,6 +34,10 @@ struct MenuBarView: View {
         }
         .padding(14)
         .frame(width: 320)
+        // Bridge para callers AppKit (`AppState.openSettings`) sem seletor privado.
+        .onReceive(NotificationCenter.default.publisher(for: .qtRequestOpenSettings)) { _ in
+            openSettings()
+        }
     }
 
     // MARK: - Header
@@ -41,8 +45,9 @@ struct MenuBarView: View {
     private var header: some View {
         HStack(spacing: QTDesign.Spacing.s) {
             Image(systemName: "globe")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
             Text("QuickTranslate")
                 .font(QTDesign.Fonts.heading)
             Spacer()
@@ -83,9 +88,10 @@ struct MenuBarView: View {
                         Text(language.displayName).tag(language.id)
                     }
                 } label: {
-                    Label("Recebidas →", systemImage: "arrow.down.left")
+                    Label("Texto que leio →", systemImage: "arrow.down.left")
                         .font(QTDesign.Fonts.body)
                 }
+                .help("Idioma destino ao traduzir texto só leitura (conversas, painel).")
 
                 Divider()
 
@@ -99,9 +105,10 @@ struct MenuBarView: View {
                         Text(language.displayName).tag(language.id)
                     }
                 } label: {
-                    Label("Suas →", systemImage: "arrow.up.right")
+                    Label("Texto que escrevo →", systemImage: "arrow.up.right")
                         .font(QTDesign.Fonts.body)
                 }
+                .help("Idioma destino ao substituir texto em campos editáveis.")
 
                 Divider()
 
@@ -110,18 +117,18 @@ struct MenuBarView: View {
                         .font(QTDesign.Fonts.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .accessibilityLabel(
+                            "Motor de tradução: \(appState.settings.providerKind.displayName)")
                     Spacer(minLength: 0)
-                    SettingsLink {
+                    QTOpenSettingsButton(section: .provider) {
                         Text("Configurar…")
                     }
-                    .simultaneousGesture(TapGesture().onEnded { prepareOpenSettings() })
                     .buttonStyle(.borderless)
                     .controlSize(.small)
                     .font(QTDesign.Fonts.caption)
+                    .accessibilityLabel("Abrir Configurações, seção Provedor")
+                    .accessibilityHint("Abre a janela de Configurações na seção Provedor")
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(
-                    "Motor de tradução: \(appState.settings.providerKind.displayName)")
             }
             .padding(12)
         }
@@ -133,15 +140,16 @@ struct MenuBarView: View {
         QTBanner(
             icon: "keyboard",
             tint: .orange,
-            text:
-                "Atalhos inativos — conceda Monitoramento de Entrada para usar ⌃⌥T em qualquer app."
+            text: "Atalhos inativos. Ative o Monitoramento de Entrada.",
+            lineLimit: 2
         ) {
-            Button("Abrir Ajustes…") {
-                _ = Permissions.requestInputMonitoring()
-                Permissions.openInputMonitoringSettings()
+            QTOpenSettingsButton(section: .permissions) {
+                Text("Corrigir…")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityLabel("Abrir Configurações, seção Permissões")
+            .accessibilityHint("Abre Configurações para conceder Monitoramento de Entrada")
         }
     }
 
@@ -166,6 +174,15 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderless)
             .controlSize(.small)
+            QTOpenSettingsButton(section: .logs, beforeOpen: {
+                showFullError = false
+            }) {
+                Text("Ver logs")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Abrir Configurações, seção Logs")
+            .accessibilityHint("Abre os logs para diagnosticar a falha")
         }
     }
 
@@ -173,26 +190,18 @@ struct MenuBarView: View {
 
     private var footer: some View {
         HStack(spacing: QTDesign.Spacing.m) {
-            SettingsLink {
-                Label("Preferências", systemImage: "gearshape")
+            QTOpenSettingsButton {
+                Label("Configurações", systemImage: "gearshape")
             }
-            .simultaneousGesture(TapGesture().onEnded { prepareOpenSettings() })
             .keyboardShortcut(",", modifiers: .command)
+            .accessibilityLabel("Abrir Configurações")
 
             Button {
-                // #region agent log
-                AgentDebugLog.write(
-                    hypothesisId: "H3",
-                    location: "MenuBarView.footer.Tutorial",
-                    message: "open tutorial from menu bar",
-                    data: [:]
-                )
-                // #endregion
-                closePanel()
                 appState.showOnboarding()
             } label: {
-                Label("Tutorial", systemImage: "questionmark.circle")
+                Label("Ajuda", systemImage: "questionmark.circle")
             }
+            .accessibilityLabel("Abrir tutorial de configuração")
 
             Spacer()
 
@@ -202,49 +211,12 @@ struct MenuBarView: View {
                 Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
             }
             .keyboardShortcut("q", modifiers: .command)
+            .foregroundStyle(.tertiary)
         }
         .buttonStyle(.borderless)
         .controlSize(.small)
         .labelStyle(.titleAndIcon)
         .font(QTDesign.Fonts.caption)
         .foregroundStyle(.secondary)
-    }
-
-    // MARK: - Navegação
-
-    /// Fecha o painel do MenuBarExtra e mostra o Dock antes do Settings abrir.
-    private func prepareOpenSettings() {
-        // #region agent log
-        AgentDebugLog.write(
-            hypothesisId: "H3",
-            location: "MenuBarView.prepareOpenSettings",
-            message: "open settings from menu bar",
-            data: [:]
-        )
-        // #endregion
-        closePanel()
-        DockIconController.shared.showForSettings()
-    }
-
-    /// O MenuBarExtra .window não fecha sozinho ao navegar — fecha o painel
-    /// antes de abrir outra janela para não deixá-lo pendurado.
-    private func closePanel() {
-        let targets = NSApp.windows.filter {
-            String(describing: type(of: $0)).contains("MenuBarExtra")
-        }
-        // #region agent log
-        AgentDebugLog.write(
-            hypothesisId: "H3",
-            location: "MenuBarView.closePanel",
-            message: "closing MenuBarExtra windows",
-            data: [
-                "matchCount": targets.count,
-                "allClasses": NSApp.windows.map { String(describing: type(of: $0)) },
-            ]
-        )
-        // #endregion
-        for window in targets {
-            window.close()
-        }
     }
 }

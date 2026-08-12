@@ -20,11 +20,18 @@ final class AppState: ObservableObject {
     /// False until the CGEvent tap is installed (needs Input Monitoring).
     @Published var hotkeysActive: Bool = false
 
+    /// Seção ativa na sidebar de Preferências.
+    @Published var settingsSelection: SettingsSection
+    /// Deep-link pendente (consumido por `SettingsView` no appear/onChange).
+    @Published var pendingSettingsSection: SettingsSection?
+
     let engine: TranslationEngine
     let textIO = FocusedTextIO()
     let orchestrator: TranslationOrchestrator
     let hotkeyMonitor: HotkeyMonitor
     let appleBridge = AppleTranslationBridge()
+
+    private static let lastSettingsSectionKey = "lastSettingsSection"
 
     private var statusResetTask: Task<Void, Never>?
     private var permissionWatchTask: Task<Void, Never>?
@@ -36,6 +43,7 @@ final class AppState: ObservableObject {
 
         let settings = AppSettings.load()
         self.settings = settings
+        self.settingsSelection = Self.loadRememberedSettingsSection()
         self.engine = TranslationEngine(settings: settings, appleBridge: appleBridge)
         self.orchestrator = TranslationOrchestrator(
             settings: settings,
@@ -93,13 +101,15 @@ final class AppState: ObservableObject {
         hotkeyMonitor.onTranslateOnly = { [weak self] in
             Task { @MainActor in
                 AppLog.info(.hotkey, "callback onTranslateOnly → orchestrator")
-                await self?.orchestrator.translateFocusedText(presentation: .replaceInPlace(sendAfter: false))
+                await self?.orchestrator.translateFocusedText(
+                    presentation: .replaceInPlace(sendAfter: false))
             }
         }
         hotkeyMonitor.onTranslateAndSend = { [weak self] in
             Task { @MainActor in
                 AppLog.info(.hotkey, "callback onTranslateAndSend → orchestrator")
-                await self?.orchestrator.translateFocusedText(presentation: .replaceInPlace(sendAfter: true))
+                await self?.orchestrator.translateFocusedText(
+                    presentation: .replaceInPlace(sendAfter: true))
             }
         }
         hotkeyMonitor.onPopup = { [weak self] in
@@ -154,10 +164,47 @@ final class AppState: ObservableObject {
     func clearLastError() {
         lastErrorMessage = nil
         if case .error = status { status = .idle }
+        StatusHUDController.shared.hide()
     }
 
     func showOnboarding() {
+        SettingsNavigation.closeMenuBarExtra()
         OnboardingController.shared.show()
+    }
+
+    func rememberSettingsSection(_ section: SettingsSection) {
+        UserDefaults.standard.set(section.rawValue, forKey: Self.lastSettingsSectionKey)
+    }
+
+    func consumePendingSettingsSection() -> SettingsSection? {
+        let pending = pendingSettingsSection
+        pendingSettingsSection = nil
+        return pending
+    }
+
+    /// Prepara deep-link + Dock. Abrir a scene com `SettingsLink` / `OpenSettingsAction`.
+    func prepareSettings(section: SettingsSection? = nil, closeMenuBar: Bool = false) {
+        let target = section ?? settingsSelection
+        pendingSettingsSection = target
+        settingsSelection = target
+        rememberSettingsSection(target)
+        SettingsNavigation.prepareOpenSettings(closeMenuBar: closeMenuBar)
+    }
+
+    /// Abre Configurações pedindo à bridge SwiftUI (`SettingsLink` / `openSettings`).
+    func openSettings(section: SettingsSection? = nil) {
+        prepareSettings(section: section, closeMenuBar: false)
+        NotificationCenter.default.post(name: .qtRequestOpenSettings, object: nil)
+        SettingsNavigation.closeMenuBarExtra()
+    }
+
+    private static func loadRememberedSettingsSection() -> SettingsSection {
+        guard let raw = UserDefaults.standard.string(forKey: lastSettingsSectionKey),
+            let section = SettingsSection(rawValue: raw)
+        else {
+            return .general
+        }
+        return section
     }
 
     var statusIconName: String {
@@ -225,6 +272,7 @@ final class AppState: ObservableObject {
     private func applyStatus(_ status: Status) {
         statusResetTask?.cancel()
         self.status = status
+        StatusHUDController.shared.present(status: status, isEnabled: settings.isEnabled)
         switch status {
         case .error(let message):
             AppLog.error(.app, "status=error — \(message)")

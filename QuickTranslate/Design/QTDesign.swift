@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Tokens de design compartilhados — raios, espaçamentos e tipografia semântica.
-/// Mantém o visual consistente entre menu bar, Preferências e onboarding.
+/// Tokens de design compartilhados — raios, espaçamentos e tipografia semântica (HIG).
+/// Mantém o visual consistente entre menu bar, Configurações e onboarding.
 enum QTDesign {
     enum Radius {
         static let small: CGFloat = 8
@@ -17,17 +17,21 @@ enum QTDesign {
         static let xl: CGFloat = 28
     }
 
+    /// Tipografia semântica — escala com Dynamic Type / preferências do sistema.
     enum Fonts {
-        static let title = Font.system(size: 20, weight: .semibold)
-        static let heading = Font.system(size: 13, weight: .semibold)
-        static let body = Font.system(size: 13)
-        static let caption = Font.system(size: 11.5)
+        static let title = Font.title3.weight(.semibold)
+        static let heading = Font.headline
+        static let body = Font.body
+        static let caption = Font.caption
+        static let callout = Font.callout
+        /// Texto de leitura no painel de resultado.
+        static let reading = Font.title3
         /// Chords/keycaps (⌃⌥T) — rounded para lembrar teclas físicas.
-        static let keycap = Font.system(size: 13, weight: .semibold, design: .rounded)
+        static let keycap = Font.system(.body, design: .rounded).weight(.semibold)
     }
 }
 
-/// Tecla/atalho estilizado (ex.: ⌃⌥T) — usado em menu bar, onboarding e Preferências.
+/// Tecla/atalho estilizado (ex.: ⌃⌥T) — usado em menu bar, onboarding e Configurações.
 struct QTKeycap: View {
     let keys: String
 
@@ -52,11 +56,11 @@ struct QTTipRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
             Text(text)
-                .font(.system(size: 12.5))
+                .font(QTDesign.Fonts.callout)
                 .foregroundStyle(.primary.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)

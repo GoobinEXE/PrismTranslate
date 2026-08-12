@@ -9,6 +9,12 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            Section {
+                Text("Os controles Ligado, Enter e idiomas também ficam no ícone da barra de menus.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Tradução") {
                 Toggle("Ligado", isOn: appState.settingsBinding(\.isEnabled))
                 Toggle(
@@ -16,7 +22,7 @@ struct GeneralSettingsView: View {
                     isOn: appState.settingsBinding(\.enterTranslatesAndSends))
             }
 
-            Section("Mensagens recebidas") {
+            Section("Texto que leio") {
                 Picker(
                     "Traduzir de",
                     selection: appState.settingsBinding(\.incomingSourceLanguage)
@@ -39,7 +45,7 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Suas mensagens") {
+            Section("Texto que escrevo") {
                 Picker(
                     "Traduzir de",
                     selection: appState.settingsBinding(\.outgoingSourceLanguage)
@@ -60,6 +66,21 @@ struct GeneralSettingsView: View {
                 Text("Usado ao substituir texto em campos editáveis.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Mais opções") {
+                Button("Abrir Atalhos…") {
+                    appState.settingsSelection = .shortcuts
+                    appState.rememberSettingsSection(.shortcuts)
+                }
+                .accessibilityLabel("Ir para seção Atalhos")
+                .accessibilityHint("Mostra a seção Atalhos nesta janela")
+                Button("Abrir Provedor…") {
+                    appState.settingsSelection = .provider
+                    appState.rememberSettingsSection(.provider)
+                }
+                .accessibilityLabel("Ir para seção Provedor")
+                .accessibilityHint("Mostra a seção Provedor nesta janela")
             }
 
             Section("Sistema") {
@@ -126,6 +147,8 @@ struct ProviderSettingsView: View {
             }
         case .deepl:
             SecureField("API Key DeepL", text: $deeplKey)
+                .help("Chave da API DeepL (conta Free ou Pro). Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API DeepL, armazenada no Keychain")
                 .onChange(of: deeplKey) { _, newValue in
                     KeychainStore.set(newValue, for: .deeplAPIKey)
                 }
@@ -134,13 +157,18 @@ struct ProviderSettingsView: View {
                 isOn: appState.settingsBinding(\.deeplUseFreeAPI))
         case .google:
             SecureField("API Key Google Cloud Translation", text: $googleKey)
+                .help("Chave da API Google Cloud Translation. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API Google Cloud, armazenada no Keychain")
                 .onChange(of: googleKey) { _, newValue in
                     KeychainStore.set(newValue, for: .googleAPIKey)
                 }
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
+                .help("Endpoint compatível com OpenAI, por exemplo LM Studio local.")
             TextField("Modelo", text: appState.settingsBinding(\.openAIModel))
             SecureField("API Key (opcional)", text: $openAIKey)
+                .help("Opcional para servidores locais. Guardada no Keychain.")
+                .accessibilityHint("Chave de API opcional, armazenada no Keychain")
                 .onChange(of: openAIKey) { _, newValue in
                     KeychainStore.set(newValue, for: .openAIAPIKey)
                 }
@@ -218,7 +246,8 @@ struct ProviderSettingsView: View {
         var anyNeedsWork = false
         for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
             do {
-                try await appState.appleBridge.ensureLanguagePacks(from: pair.source, to: pair.target)
+                try await appState.appleBridge.ensureLanguagePacks(
+                    from: pair.source, to: pair.target)
             } catch {
                 lastError = error
                 anyNeedsWork = true
@@ -239,7 +268,9 @@ struct ProviderSettingsView: View {
         }
     }
 
-    private static func mergePackState(_ a: LanguagePackState, _ b: LanguagePackState) -> LanguagePackState {
+    private static func mergePackState(_ a: LanguagePackState, _ b: LanguagePackState)
+        -> LanguagePackState
+    {
         // Prefer the more actionable / worse status for the UI badge.
         let rank: (LanguagePackState) -> Int = { state in
             switch state {
@@ -407,13 +438,14 @@ struct PermissionsSettingsView: View {
                 Spacer()
                 if !ok {
                     Button("Abrir Ajustes", action: open)
+                        .accessibilityHint("Abre Ajustes do Sistema para conceder esta permissão")
                 }
             }
             Text(caption)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(ok ? okText : pendingText). \(caption)")
     }
 }
@@ -486,7 +518,10 @@ struct TestSettingsView: View {
     private func runTest() async {
         isTesting = true
         defer { isTesting = false }
-        AppLog.info(.settings, "teste manual iniciado — chars=\(testText.count), provider=\(appState.settings.providerKind.displayName)")
+        AppLog.info(
+            .settings,
+            "teste manual iniciado — chars=\(testText.count), provider=\(appState.settings.providerKind.displayName)"
+        )
         do {
             let result = try await appState.engine.translate(
                 testText,
@@ -535,21 +570,46 @@ struct AboutSettingsView: View {
             }
 
             Section("Atalhos atuais") {
-                LabeledContent(
-                    "Traduzir", value: appState.settings.translateOnlyHotkey.displayString)
-                LabeledContent(
-                    "Traduzir e enviar",
-                    value: appState.settings.translateAndSendHotkey.displayString)
-                if appState.settings.popupModeEnabled {
+                Button {
+                    appState.settingsSelection = .shortcuts
+                    appState.rememberSettingsSection(.shortcuts)
+                } label: {
                     LabeledContent(
-                        "Popup", value: appState.settings.popupHotkey.displayString)
+                        "Traduzir", value: appState.settings.translateOnlyHotkey.displayString)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Abrir seção Atalhos")
+
+                Button {
+                    appState.settingsSelection = .shortcuts
+                    appState.rememberSettingsSection(.shortcuts)
+                } label: {
+                    LabeledContent(
+                        "Traduzir e enviar",
+                        value: appState.settings.translateAndSendHotkey.displayString)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Abrir seção Atalhos")
+
+                if appState.settings.popupModeEnabled {
+                    Button {
+                        appState.settingsSelection = .shortcuts
+                        appState.rememberSettingsSection(.shortcuts)
+                    } label: {
+                        LabeledContent(
+                            "Popup", value: appState.settings.popupHotkey.displayString)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Abrir seção Atalhos")
                 }
             }
 
             Section("Ajuda") {
                 Button("Reabrir tutorial de configuração…") {
+                    // Tutorial empilha com Dock (.onboarding); Preferências pode permanecer.
                     appState.showOnboarding()
                 }
+                .accessibilityLabel("Reabrir tutorial de configuração")
             }
         }
         .formStyle(.grouped)

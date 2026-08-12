@@ -11,12 +11,12 @@ struct QTStatusChip: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: iconName)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .symbolRenderingMode(.hierarchical)
                 .symbolEffect(.pulse, options: .repeating, isActive: isTranslating && !reduceMotion)
                 .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.caption.weight(.medium))
         }
         .foregroundStyle(tint)
         .padding(.horizontal, 8)
@@ -30,7 +30,7 @@ struct QTStatusChip: View {
         status == .translating
     }
 
-    private var label: String {
+    var label: String {
         switch status {
         case .idle: return isEnabled ? "Ativo" : "Pausado"
         case .translating: return "Traduzindo…"
@@ -85,8 +85,9 @@ struct QTBanner<Actions: View>: View {
             VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
                 HStack(alignment: .top, spacing: QTDesign.Spacing.s) {
                     Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                         .foregroundStyle(tint)
+                        .accessibilityHidden(true)
                     Text(text)
                         .font(QTDesign.Fonts.caption)
                         .foregroundStyle(.primary.opacity(0.9))
@@ -101,5 +102,7 @@ struct QTBanner<Actions: View>: View {
             }
             .padding(10)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(text)
     }
 }
