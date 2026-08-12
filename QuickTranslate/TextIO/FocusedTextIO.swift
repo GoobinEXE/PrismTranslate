@@ -188,31 +188,54 @@ final class FocusedTextIO {
             }
         }
 
-        // Read-only: only copy existing selection (never ⌘A — avoids grabbing whole pages).
-        // AX-blind hosts (Discord/Electron: kAXErrorNoValue on focused UI) cannot report
-        // editability — ⌘C alone leaves changeCount unchanged when nothing is highlighted.
-        // Treat noFocusedElement like editable so we ⌘A+⌘C the focused compose field.
-        let assumeEditableDespiteAX = (axError == .noFocusedElement)
-        let selectAllFirst = isEditable || assumeEditableDespiteAX
-        let effectiveEditable = isEditable || assumeEditableDespiteAX
+        // Clipboard fallback strategy:
+        // 1) Always prefer ⌘C of the *existing* selection first (Discord chat highlight, PDF, etc.).
+        // 2) Only ⌘A+⌘C when there is no selection AND the host looks editable (or AX-blind
+        //    compose with no highlight — never ⌘A when the user already highlighted text).
+        // Past bug: treating noFocusedElement as editable and ⌘A'ing first grabbed the whole
+        // Discord conversation and pasted it into the compose box.
+        let maySelectAllIfNoSelection = isEditable || (axError == .noFocusedElement)
+
+        // Step 1: copy existing selection only (never ⌘A).
         do {
-            let text = try await readViaClipboard(selectAllFirst: selectAllFirst)
-            AppLog.info(.textIO, "📖 clipboard fallback OK: \(text.count) chars")
+            let text = try await readViaClipboard(selectAllFirst: false)
+            // Selection existed. AX-blind hosts cannot prove the selection lives in a text field;
+            // treat as read-only so we show the panel instead of pasting into Discord compose.
+            let treatAsEditable = isEditable && axError != .noFocusedElement
+            AppLog.info(
+                .textIO,
+                "📖 clipboard selection OK: \(text.count) chars, treatAsEditable=\(treatAsEditable)"
+            )
             return FocusedTextCapture(
                 text: text,
-                didSelectAll: selectAllFirst,
+                didSelectAll: false,
                 usedClipboardForRead: true,
-                isEditable: effectiveEditable,
+                isEditable: treatAsEditable,
+                selectionScreenRect: Self.mouseAnchorRect()
+            )
+        } catch {
+            AppLog.debug(.textIO, "📖 clipboard sem seleção existente — \(error.localizedDescription)")
+        }
+
+        // Step 2: no selection — select-all only for editable / AX-blind compose.
+        guard maySelectAllIfNoSelection else {
+            restorePendingUserPasteboard(after: 0.2)
+            throw FocusedTextIOError.noSelectionInReadOnly
+        }
+
+        do {
+            let text = try await readViaClipboard(selectAllFirst: true)
+            AppLog.info(.textIO, "📖 clipboard select-all OK: \(text.count) chars")
+            return FocusedTextCapture(
+                text: text,
+                didSelectAll: true,
+                usedClipboardForRead: true,
+                isEditable: true,
                 selectionScreenRect: Self.mouseAnchorRect()
             )
         } catch {
             AppLog.error(.textIO, "📖 clipboard fallback falhou: \(error.localizedDescription)")
-            // Read failed — give the user clipboard back immediately.
             restorePendingUserPasteboard(after: 0.2)
-            if !effectiveEditable { throw FocusedTextIOError.noSelectionInReadOnly }
-            // True "no field" only when AX never found a focused element.
-            // Editable hosts without AXValue (WebArea) also throw noFocusedElement from AX —
-            // surface a read failure instead of "Nenhum campo de texto focado".
             if axError == .noFocusedElement, Self.focusedElement() == nil {
                 throw FocusedTextIOError.readFallbackFailed
             }
@@ -242,11 +265,14 @@ final class FocusedTextIO {
         }
 
         // After a bogus AX "success", selection may still be intact — paste into it.
-        // If selection is gone, force ⌘A even when the capture was a partial highlight.
+        // If selection is gone, force ⌘A only when the capture was a whole-field read
+        // (didSelectAll) or there is nothing left to target. Do NOT force ⌘A merely because
+        // the read used the clipboard — that would expand a Discord chat highlight into
+        // the entire conversation before paste.
         let hasSelection = Self.focusedElement().flatMap { selectedText(of: $0) }.map { !$0.isEmpty } ?? false
-        let selectAllFirst = capture.didSelectAll || capture.usedClipboardForRead || !hasSelection
-        if selectAllFirst && !capture.didSelectAll && !capture.usedClipboardForRead {
-            AppLog.debug(.textIO, "✏️ clipboard: forçando selectAll (seleção ausente após AX)")
+        let selectAllFirst = capture.didSelectAll || !hasSelection
+        if selectAllFirst && !capture.didSelectAll {
+            AppLog.debug(.textIO, "✏️ clipboard: forçando selectAll (seleção ausente após captura)")
         }
 
         do {

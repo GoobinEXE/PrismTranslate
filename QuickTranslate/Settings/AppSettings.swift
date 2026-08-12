@@ -34,6 +34,13 @@ struct AppSettings: Equatable {
     // DeepL
     var deeplUseFreeAPI: Bool = true
 
+    // Free AI engines (API key in Keychain)
+    var groqModel: String = ProviderKind.groq.defaultModel ?? "llama-3.1-8b-instant"
+    var geminiModel: String = ProviderKind.gemini.defaultModel ?? "gemini-2.5-flash"
+    var mistralModel: String = ProviderKind.mistral.defaultModel ?? "mistral-small-latest"
+    var deepSeekModel: String = ProviderKind.deepSeek.defaultModel ?? "deepseek-v4-flash"
+    var openRouterModel: String = ProviderKind.openRouter.defaultModel ?? "openrouter/free"
+
     // OpenAI-compatible / LM Studio
     var openAIBaseURL: String = "http://localhost:1234/v1"
     var openAIModel: String = "local-model"
@@ -159,6 +166,11 @@ private struct CodableSettings: Codable {
     var popupModeEnabled: Bool?
     var popupHotkey: HotkeyChord?
     var deeplUseFreeAPI: Bool
+    var groqModel: String?
+    var geminiModel: String?
+    var mistralModel: String?
+    var deepSeekModel: String?
+    var openRouterModel: String?
     var openAIBaseURL: String
     var openAIModel: String
     var customHTTPURL: String
@@ -184,6 +196,11 @@ private struct CodableSettings: Codable {
         popupModeEnabled = settings.popupModeEnabled
         popupHotkey = settings.popupHotkey
         deeplUseFreeAPI = settings.deeplUseFreeAPI
+        groqModel = settings.groqModel
+        geminiModel = settings.geminiModel
+        mistralModel = settings.mistralModel
+        deepSeekModel = settings.deepSeekModel
+        openRouterModel = settings.openRouterModel
         openAIBaseURL = settings.openAIBaseURL
         openAIModel = settings.openAIModel
         customHTTPURL = settings.customHTTPURL
@@ -226,6 +243,11 @@ private struct CodableSettings: Codable {
         s.popupModeEnabled = popupModeEnabled ?? false
         s.popupHotkey = popupHotkey ?? .popupDefault
         s.deeplUseFreeAPI = deeplUseFreeAPI
+        s.groqModel = groqModel ?? ProviderKind.groq.defaultModel ?? s.groqModel
+        s.geminiModel = geminiModel ?? ProviderKind.gemini.defaultModel ?? s.geminiModel
+        s.mistralModel = mistralModel ?? ProviderKind.mistral.defaultModel ?? s.mistralModel
+        s.deepSeekModel = deepSeekModel ?? ProviderKind.deepSeek.defaultModel ?? s.deepSeekModel
+        s.openRouterModel = openRouterModel ?? ProviderKind.openRouter.defaultModel ?? s.openRouterModel
         s.openAIBaseURL = openAIBaseURL
         s.openAIModel = openAIModel
         s.customHTTPURL = customHTTPURL

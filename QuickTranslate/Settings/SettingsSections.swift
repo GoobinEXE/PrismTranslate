@@ -99,6 +99,11 @@ struct ProviderSettingsView: View {
     @State private var deeplKey: String = KeychainStore.string(for: .deeplAPIKey) ?? ""
     @State private var googleKey: String = KeychainStore.string(for: .googleAPIKey) ?? ""
     @State private var openAIKey: String = KeychainStore.string(for: .openAIAPIKey) ?? ""
+    @State private var groqKey: String = KeychainStore.string(for: .groqAPIKey) ?? ""
+    @State private var geminiKey: String = KeychainStore.string(for: .geminiAPIKey) ?? ""
+    @State private var mistralKey: String = KeychainStore.string(for: .mistralAPIKey) ?? ""
+    @State private var deepSeekKey: String = KeychainStore.string(for: .deepSeekAPIKey) ?? ""
+    @State private var openRouterKey: String = KeychainStore.string(for: .openRouterAPIKey) ?? ""
     @State private var applePackState: LanguagePackState = .checking
 
     var body: some View {
@@ -108,6 +113,11 @@ struct ProviderSettingsView: View {
                     ForEach(ProviderKind.allCases) { kind in
                         Text(kind.displayName).tag(kind)
                     }
+                }
+                if let hint = appState.settings.providerKind.setupHint {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -162,6 +172,66 @@ struct ProviderSettingsView: View {
                 .onChange(of: googleKey) { _, newValue in
                     KeychainStore.set(newValue, for: .googleAPIKey)
                 }
+        case .groq:
+            SecureField("API Key Groq", text: $groqKey)
+                .help("Chave gratuita em console.groq.com. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API Groq, armazenada no Keychain")
+                .onChange(of: groqKey) { _, newValue in
+                    KeychainStore.set(newValue, for: .groqAPIKey)
+                }
+            TextField("Modelo", text: appState.settingsBinding(\.groqModel))
+                .help("Ex.: llama-3.1-8b-instant, llama-3.3-70b-versatile")
+            Text("Padrão: \(ProviderKind.groq.defaultModel ?? "")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .gemini:
+            SecureField("API Key Gemini (AI Studio)", text: $geminiKey)
+                .help("Chave gratuita em aistudio.google.com — diferente da Google Cloud Translation. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API Gemini, armazenada no Keychain")
+                .onChange(of: geminiKey) { _, newValue in
+                    KeychainStore.set(newValue, for: .geminiAPIKey)
+                }
+            TextField("Modelo", text: appState.settingsBinding(\.geminiModel))
+                .help("Ex.: gemini-2.5-flash, gemini-2.5-flash-lite")
+            Text("Padrão: \(ProviderKind.gemini.defaultModel ?? "")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .mistral:
+            SecureField("API Key Mistral", text: $mistralKey)
+                .help("Chave gratuita em console.mistral.ai. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API Mistral, armazenada no Keychain")
+                .onChange(of: mistralKey) { _, newValue in
+                    KeychainStore.set(newValue, for: .mistralAPIKey)
+                }
+            TextField("Modelo", text: appState.settingsBinding(\.mistralModel))
+                .help("Ex.: mistral-small-latest, mistral-medium-latest")
+            Text("Padrão: \(ProviderKind.mistral.defaultModel ?? "")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .deepSeek:
+            SecureField("API Key DeepSeek", text: $deepSeekKey)
+                .help("Chave em platform.deepseek.com. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API DeepSeek, armazenada no Keychain")
+                .onChange(of: deepSeekKey) { _, newValue in
+                    KeychainStore.set(newValue, for: .deepSeekAPIKey)
+                }
+            TextField("Modelo", text: appState.settingsBinding(\.deepSeekModel))
+                .help("Ex.: deepseek-v4-flash, deepseek-v4-pro")
+            Text("Padrão: \(ProviderKind.deepSeek.defaultModel ?? "")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .openRouter:
+            SecureField("API Key OpenRouter", text: $openRouterKey)
+                .help("Chave gratuita em openrouter.ai. Guardada no Keychain.")
+                .accessibilityHint("Chave secreta da API OpenRouter, armazenada no Keychain")
+                .onChange(of: openRouterKey) { _, newValue in
+                    KeychainStore.set(newValue, for: .openRouterAPIKey)
+                }
+            TextField("Modelo", text: appState.settingsBinding(\.openRouterModel))
+                .help("Ex.: openrouter/free ou meta-llama/llama-3.3-70b-instruct:free")
+            Text("Padrão: \(ProviderKind.openRouter.defaultModel ?? "") — roteia modelos gratuitos")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
                 .help("Endpoint compatível com OpenAI, por exemplo LM Studio local.")
@@ -289,6 +359,11 @@ struct ProviderSettingsView: View {
         KeychainStore.set(deeplKey, for: .deeplAPIKey)
         KeychainStore.set(googleKey, for: .googleAPIKey)
         KeychainStore.set(openAIKey, for: .openAIAPIKey)
+        KeychainStore.set(groqKey, for: .groqAPIKey)
+        KeychainStore.set(geminiKey, for: .geminiAPIKey)
+        KeychainStore.set(mistralKey, for: .mistralAPIKey)
+        KeychainStore.set(deepSeekKey, for: .deepSeekAPIKey)
+        KeychainStore.set(openRouterKey, for: .openRouterAPIKey)
     }
 }
 

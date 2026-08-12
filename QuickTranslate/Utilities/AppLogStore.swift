@@ -56,6 +56,11 @@ enum AppLogCategory: String, Codable, CaseIterable, Identifiable {
     case deepl
     case google
     case openAI
+    case groq
+    case gemini
+    case mistral
+    case deepSeek
+    case openRouter
     case customHTTP
     case apple
     case permissions
@@ -75,6 +80,11 @@ enum AppLogCategory: String, Codable, CaseIterable, Identifiable {
         case .deepl: return "DeepL"
         case .google: return "Google"
         case .openAI: return "OpenAI"
+        case .groq: return "Groq"
+        case .gemini: return "Gemini"
+        case .mistral: return "Mistral"
+        case .deepSeek: return "DeepSeek"
+        case .openRouter: return "OpenRouter"
         case .customHTTP: return "CustomHTTP"
         case .apple: return "Apple"
         case .permissions: return "Permissions"

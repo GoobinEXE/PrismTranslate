@@ -20,5 +20,6 @@ Testes unitários do QuickTranslate. Esta pasta **ainda não faz parte do projet
 | `LanguageMappingTests.swift` | `LanguageCode` (displayName, alvos comuns) e mapeamento de códigos para DeepL (ZH-HANS/ZH-HANT/PT-BR) e Google (zh-CN/zh-TW) |
 | `CustomHTTPParsingTests.swift` | Extração por JSON path (`data.translations.0.text`) do provedor Custom HTTP |
 | `OpenAICompatibleParsingTests.swift` | Parsing da resposta `chat/completions` (conteúdo, trimming, erros) |
+| `GeminiParsingTests.swift` | Parsing da resposta `generateContent` do Gemini (parts, trimming, erros) |
 
 Os testes usam `@testable import QuickTranslate`, então o target do app precisa estar com **Enable Testability** ativo em Debug (padrão do Xcode).

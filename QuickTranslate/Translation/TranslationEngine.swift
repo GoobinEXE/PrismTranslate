@@ -147,11 +147,54 @@ final class TranslationEngine {
             return GoogleTranslateProvider(
                 apiKey: KeychainStore.string(for: .googleAPIKey) ?? ""
             )
+        case .groq:
+            return OpenAICompatibleProvider(
+                kind: .groq,
+                baseURL: ProviderKind.groq.openAICompatibleBaseURL ?? "",
+                model: settings.groqModel,
+                apiKey: KeychainStore.string(for: .groqAPIKey) ?? "",
+                requiresAPIKey: true
+            )
+        case .gemini:
+            return GeminiProvider(
+                apiKey: KeychainStore.string(for: .geminiAPIKey) ?? "",
+                model: settings.geminiModel
+            )
+        case .mistral:
+            return OpenAICompatibleProvider(
+                kind: .mistral,
+                baseURL: ProviderKind.mistral.openAICompatibleBaseURL ?? "",
+                model: settings.mistralModel,
+                apiKey: KeychainStore.string(for: .mistralAPIKey) ?? "",
+                requiresAPIKey: true
+            )
+        case .deepSeek:
+            return OpenAICompatibleProvider(
+                kind: .deepSeek,
+                baseURL: ProviderKind.deepSeek.openAICompatibleBaseURL ?? "",
+                model: settings.deepSeekModel,
+                apiKey: KeychainStore.string(for: .deepSeekAPIKey) ?? "",
+                requiresAPIKey: true
+            )
+        case .openRouter:
+            return OpenAICompatibleProvider(
+                kind: .openRouter,
+                baseURL: ProviderKind.openRouter.openAICompatibleBaseURL ?? "",
+                model: settings.openRouterModel,
+                apiKey: KeychainStore.string(for: .openRouterAPIKey) ?? "",
+                requiresAPIKey: true,
+                extraHeaders: [
+                    "HTTP-Referer": "https://github.com/quicktranslate/quicktranslate",
+                    "X-Title": "QuickTranslate"
+                ]
+            )
         case .openAICompatible:
             return OpenAICompatibleProvider(
+                kind: .openAICompatible,
                 baseURL: settings.openAIBaseURL,
                 model: settings.openAIModel,
-                apiKey: KeychainStore.string(for: .openAIAPIKey) ?? ""
+                apiKey: KeychainStore.string(for: .openAIAPIKey) ?? "",
+                requiresAPIKey: false
             )
         case .customHTTP:
             return CustomHTTPProvider(

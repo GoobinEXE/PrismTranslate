@@ -145,6 +145,7 @@ Ordem sugerida, sem compromisso de prazo:
 | Alta | Pré-visualização antes de substituir (painel flutuante) |
 | Média | Glossário / termos fixos (nomes próprios) |
 | Média | Detectar idioma origem e “trocar direção” com atalho |
+| Média | **Prompt de tradução customizável (versão paga / Pro)** — editar o system prompt dos motores de IA; o padrão gratuito continua sendo o de alta fidelidade (significado, tom, dialeto, nuance). Não implementar na versão gratuita. |
 | Baixa | Widget / Control Center (Tahoe) |
 | Baixa | Sync de preferências via iCloud (sem texto traduzido) |
 

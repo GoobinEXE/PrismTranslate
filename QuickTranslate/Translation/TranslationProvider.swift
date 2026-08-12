@@ -45,6 +45,11 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable {
     case apple
     case deepl
     case google
+    case groq
+    case gemini
+    case mistral
+    case deepSeek
+    case openRouter
     case openAICompatible
     case customHTTP
 
@@ -55,12 +60,70 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable {
         case .apple: return "Apple Translation (padrão)"
         case .deepl: return "DeepL"
         case .google: return "Google Cloud Translation"
+        case .groq: return "Groq (IA gratuita)"
+        case .gemini: return "Google Gemini (IA gratuita)"
+        case .mistral: return "Mistral (IA gratuita)"
+        case .deepSeek: return "DeepSeek (IA)"
+        case .openRouter: return "OpenRouter (IA gratuita)"
         case .openAICompatible: return "OpenAI-compatible / LM Studio"
         case .customHTTP: return "Custom HTTP"
         }
     }
 
+    /// On-device or local-first defaults (no cloud account required).
     var isLocalDefault: Bool {
         self == .apple || self == .openAICompatible
+    }
+
+    /// Cloud LLM that translates via chat/completions-style prompting.
+    var isAIEngine: Bool {
+        switch self {
+        case .groq, .gemini, .mistral, .deepSeek, .openRouter, .openAICompatible:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Help text shown under the provider picker for free AI engines.
+    var setupHint: String? {
+        switch self {
+        case .groq:
+            return "Chave grátis em console.groq.com — API OpenAI-compatible."
+        case .gemini:
+            return "Chave grátis em aistudio.google.com — Google AI Studio."
+        case .mistral:
+            return "Chave grátis em console.mistral.ai — La Plateforme."
+        case .deepSeek:
+            return "Chave em platform.deepseek.com — API OpenAI-compatible (créditos iniciais)."
+        case .openRouter:
+            return "Chave grátis em openrouter.ai — use modelos com sufixo :free ou openrouter/free."
+        default:
+            return nil
+        }
+    }
+
+    /// Default model id when the user has not customized it.
+    var defaultModel: String? {
+        switch self {
+        case .groq: return "llama-3.1-8b-instant"
+        case .gemini: return "gemini-2.5-flash"
+        case .mistral: return "mistral-small-latest"
+        case .deepSeek: return "deepseek-v4-flash"
+        case .openRouter: return "openrouter/free"
+        case .openAICompatible: return "local-model"
+        default: return nil
+        }
+    }
+
+    /// Fixed OpenAI-compatible base URL for preset AI providers.
+    var openAICompatibleBaseURL: String? {
+        switch self {
+        case .groq: return "https://api.groq.com/openai/v1"
+        case .mistral: return "https://api.mistral.ai/v1"
+        case .deepSeek: return "https://api.deepseek.com"
+        case .openRouter: return "https://openrouter.ai/api/v1"
+        default: return nil
+        }
     }
 }

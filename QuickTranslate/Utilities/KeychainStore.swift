@@ -6,6 +6,11 @@ enum KeychainStore {
         case deeplAPIKey = "deeplAPIKey"
         case googleAPIKey = "googleAPIKey"
         case openAIAPIKey = "openAIAPIKey"
+        case groqAPIKey = "groqAPIKey"
+        case geminiAPIKey = "geminiAPIKey"
+        case mistralAPIKey = "mistralAPIKey"
+        case deepSeekAPIKey = "deepSeekAPIKey"
+        case openRouterAPIKey = "openRouterAPIKey"
     }
 
     private static let service = "com.quicktranslate.app"

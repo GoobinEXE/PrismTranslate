@@ -1,17 +1,56 @@
 import Foundation
 
 struct OpenAICompatibleProvider: TranslationProvider {
-    let id = ProviderKind.openAICompatible.rawValue
-    let displayName = ProviderKind.openAICompatible.displayName
+    let kind: ProviderKind
     let baseURL: String
     let model: String
     let apiKey: String
+    /// When true, empty API key fails fast with a configuration error.
+    let requiresAPIKey: Bool
+    let extraHeaders: [String: String]
+
+    var id: String { kind.rawValue }
+    var displayName: String { kind.displayName }
+
+    init(
+        kind: ProviderKind = .openAICompatible,
+        baseURL: String,
+        model: String,
+        apiKey: String,
+        requiresAPIKey: Bool = false,
+        extraHeaders: [String: String] = [:]
+    ) {
+        self.kind = kind
+        self.baseURL = baseURL
+        self.model = model
+        self.apiKey = apiKey
+        self.requiresAPIKey = requiresAPIKey
+        self.extraHeaders = extraHeaders
+    }
+
+    private var logCategory: AppLogCategory {
+        switch kind {
+        case .groq: return .groq
+        case .mistral: return .mistral
+        case .deepSeek: return .deepSeek
+        case .openRouter: return .openRouter
+        default: return .openAI
+        }
+    }
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         let trimmedBase = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard !trimmedBase.isEmpty, !model.isEmpty else {
-            throw TranslationError.invalidConfiguration("Configure base URL e modelo OpenAI-compatible")
+        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBase.isEmpty, !trimmedModel.isEmpty else {
+            throw TranslationError.invalidConfiguration(
+                "Configure base URL e modelo para \(displayName)"
+            )
+        }
+        if requiresAPIKey, apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw TranslationError.invalidConfiguration(
+                "Configure a API key de \(displayName) nas Configurações"
+            )
         }
 
         guard let url = URL(string: "\(trimmedBase)/chat/completions") else {
@@ -19,31 +58,29 @@ struct OpenAICompatibleProvider: TranslationProvider {
         }
 
         AppLog.info(
-            .openAI,
-            "📡 [OpenAI-compatible] POST \(url.absoluteString) — model=\(model), chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
+            logCategory,
+            "📡 [\(displayName)] POST \(url.absoluteString) — model=\(trimmedModel), chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
         )
 
-        let targetName = LanguageCode.displayName(for: to)
-        let sourceHint = from.map { LanguageCode.displayName(for: $0) } ?? "auto-detect"
-        let system = """
-        You are a translation engine. Translate the user message into \(targetName) (source: \(sourceHint)).
-        Return ONLY the translated text. No quotes, no explanations.
-        """
+        let prompt = AITranslationPrompt.make(text: text, from: from, to: to)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 20
+        request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
+        for (header, value) in extraHeaders {
+            request.setValue(value, forHTTPHeaderField: header)
+        }
 
         let payload: [String: Any] = [
-            "model": model,
+            "model": trimmedModel,
             "temperature": 0,
             "messages": [
-                ["role": "system", "content": system],
-                ["role": "user", "content": text]
+                ["role": "system", "content": prompt.system],
+                ["role": "user", "content": prompt.user]
             ]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
@@ -54,7 +91,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(.openAI, "❌ [OpenAI-compatible] HTTP \(http.statusCode): \(bodyText)")
+            AppLog.error(logCategory, "❌ [\(displayName)] HTTP \(http.statusCode): \(bodyText)")
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
