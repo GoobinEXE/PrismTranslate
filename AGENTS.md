@@ -41,3 +41,9 @@ Depois: **Developer: Reload Window** no Cursor.
 ## Debug
 
 Launch config **QuickTranslate** (F5) usa `lldb-dap` + build prévio.
+
+## Versão do produto
+
+Skill: **`version-judgment`** (pessoal em `~/.cursor/skills/` e cópia em `.cursor/skills/`).
+Baseline deste repo: [`VERSIONING.md`](VERSIONING.md).
+Regra Cursor: `.cursor/rules/version-judgment.mdc`.

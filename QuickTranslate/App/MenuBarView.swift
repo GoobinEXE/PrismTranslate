@@ -113,12 +113,20 @@ struct MenuBarView: View {
                 Divider()
 
                 HStack(spacing: QTDesign.Spacing.s) {
-                    Label(appState.settings.providerKind.displayName, systemImage: "gearshape.2")
-                        .font(QTDesign.Fonts.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .accessibilityLabel(
-                            "Motor de tradução: \(appState.settings.providerKind.displayName)")
+                    Label(
+                        appState.settings.providerKind.displayName,
+                        systemImage: appState.settings.providerKind.symbolName
+                    )
+                    .font(QTDesign.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .accessibilityLabel(
+                        "Motor de tradução: \(appState.settings.providerKind.displayName)")
+                    ForEach(appState.settings.providerKind.badges.prefix(2), id: \.self) { badge in
+                        Text(badge.rawValue)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
                     Spacer(minLength: 0)
                     QTOpenSettingsButton(section: .provider) {
                         Text("Configurar…")

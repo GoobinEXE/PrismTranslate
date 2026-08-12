@@ -105,15 +105,46 @@ struct ProviderSettingsView: View {
     @State private var deepSeekKey: String = KeychainStore.string(for: .deepSeekAPIKey) ?? ""
     @State private var openRouterKey: String = KeychainStore.string(for: .openRouterAPIKey) ?? ""
     @State private var applePackState: LanguagePackState = .checking
+    @State private var isRefreshingModels = false
+    @State private var modelRefreshNote: String?
 
     var body: some View {
         Form {
             Section("Motor") {
                 Picker("Motor", selection: appState.settingsBinding(\.providerKind)) {
-                    ForEach(ProviderKind.allCases) { kind in
-                        Text(kind.displayName).tag(kind)
+                    ForEach(EnginePickerGroup.allCases) { group in
+                        Section(group.title) {
+                            ForEach(group.providers) { kind in
+                                Label {
+                                    HStack(spacing: 6) {
+                                        Text(kind.displayName)
+                                        ForEach(kind.badges, id: \.self) { badge in
+                                            EngineBadgeChip(badge: badge)
+                                        }
+                                    }
+                                } icon: {
+                                    Image(systemName: kind.symbolName)
+                                }
+                                .tag(kind)
+                                .accessibilityLabel(providerAccessibilityLabel(kind))
+                            }
+                        }
                     }
                 }
+                .pickerStyle(.menu)
+
+                HStack(spacing: 6) {
+                    Image(systemName: appState.settings.providerKind.symbolName)
+                        .foregroundStyle(.secondary)
+                    Text(appState.settings.providerKind.displayName)
+                        .font(.subheadline.weight(.medium))
+                    ForEach(appState.settings.providerKind.badges, id: \.self) { badge in
+                        EngineBadgeChip(badge: badge)
+                    }
+                    Spacer()
+                }
+                .accessibilityElement(children: .combine)
+
                 if let hint = appState.settings.providerKind.setupHint {
                     Text(hint)
                         .font(.caption)
@@ -127,6 +158,8 @@ struct ProviderSettingsView: View {
         }
         .formStyle(.grouped)
         .onDisappear(perform: persistSecrets)
+        // Refresh automático fica no AppState (fora do ciclo de layout da Form).
+        // Aqui só o botão “Atualizar” força consulta à API.
     }
 
     @ViewBuilder
@@ -179,11 +212,11 @@ struct ProviderSettingsView: View {
                 .onChange(of: groqKey) { _, newValue in
                     KeychainStore.set(newValue, for: .groqAPIKey)
                 }
-            TextField("Modelo", text: appState.settingsBinding(\.groqModel))
-                .help("Ex.: llama-3.1-8b-instant, llama-3.3-70b-versatile")
-            Text("Padrão: \(ProviderKind.groq.defaultModel ?? "")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            aiModelFields(
+                model: appState.settingsBinding(\.groqModel),
+                kind: .groq,
+                help: "Ex.: llama-3.1-8b-instant, llama-3.3-70b-versatile"
+            )
         case .gemini:
             SecureField("API Key Gemini (AI Studio)", text: $geminiKey)
                 .help("Chave gratuita em aistudio.google.com — diferente da Google Cloud Translation. Guardada no Keychain.")
@@ -191,11 +224,11 @@ struct ProviderSettingsView: View {
                 .onChange(of: geminiKey) { _, newValue in
                     KeychainStore.set(newValue, for: .geminiAPIKey)
                 }
-            TextField("Modelo", text: appState.settingsBinding(\.geminiModel))
-                .help("Ex.: gemini-2.5-flash, gemini-2.5-flash-lite")
-            Text("Padrão: \(ProviderKind.gemini.defaultModel ?? "")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            aiModelFields(
+                model: appState.settingsBinding(\.geminiModel),
+                kind: .gemini,
+                help: "Ex.: gemini-flash-lite-latest, gemini-3.5-flash-lite"
+            )
         case .mistral:
             SecureField("API Key Mistral", text: $mistralKey)
                 .help("Chave gratuita em console.mistral.ai. Guardada no Keychain.")
@@ -203,11 +236,11 @@ struct ProviderSettingsView: View {
                 .onChange(of: mistralKey) { _, newValue in
                     KeychainStore.set(newValue, for: .mistralAPIKey)
                 }
-            TextField("Modelo", text: appState.settingsBinding(\.mistralModel))
-                .help("Ex.: mistral-small-latest, mistral-medium-latest")
-            Text("Padrão: \(ProviderKind.mistral.defaultModel ?? "")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            aiModelFields(
+                model: appState.settingsBinding(\.mistralModel),
+                kind: .mistral,
+                help: "Ex.: mistral-small-latest, mistral-medium-latest"
+            )
         case .deepSeek:
             SecureField("API Key DeepSeek", text: $deepSeekKey)
                 .help("Chave em platform.deepseek.com. Guardada no Keychain.")
@@ -215,11 +248,11 @@ struct ProviderSettingsView: View {
                 .onChange(of: deepSeekKey) { _, newValue in
                     KeychainStore.set(newValue, for: .deepSeekAPIKey)
                 }
-            TextField("Modelo", text: appState.settingsBinding(\.deepSeekModel))
-                .help("Ex.: deepseek-v4-flash, deepseek-v4-pro")
-            Text("Padrão: \(ProviderKind.deepSeek.defaultModel ?? "")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            aiModelFields(
+                model: appState.settingsBinding(\.deepSeekModel),
+                kind: .deepSeek,
+                help: "Ex.: deepseek-chat, deepseek-reasoner"
+            )
         case .openRouter:
             SecureField("API Key OpenRouter", text: $openRouterKey)
                 .help("Chave gratuita em openrouter.ai. Guardada no Keychain.")
@@ -227,11 +260,12 @@ struct ProviderSettingsView: View {
                 .onChange(of: openRouterKey) { _, newValue in
                     KeychainStore.set(newValue, for: .openRouterAPIKey)
                 }
-            TextField("Modelo", text: appState.settingsBinding(\.openRouterModel))
-                .help("Ex.: openrouter/free ou meta-llama/llama-3.3-70b-instruct:free")
-            Text("Padrão: \(ProviderKind.openRouter.defaultModel ?? "") — roteia modelos gratuitos")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            aiModelFields(
+                model: appState.settingsBinding(\.openRouterModel),
+                kind: .openRouter,
+                help: "Ex.: openrouter/free ou meta-llama/llama-3.3-70b-instruct:free",
+                captionExtra: " — roteia modelos gratuitos"
+            )
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
                 .help("Endpoint compatível com OpenAI, por exemplo LM Studio local.")
@@ -296,6 +330,7 @@ struct ProviderSettingsView: View {
     }
 
     private func refreshApplePackState() async {
+        await Task.yield()
         applePackState = .checking
         var worst: LanguagePackState = .installed
         for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
@@ -365,6 +400,102 @@ struct ProviderSettingsView: View {
         KeychainStore.set(deepSeekKey, for: .deepSeekAPIKey)
         KeychainStore.set(openRouterKey, for: .openRouterAPIKey)
     }
+
+    @ViewBuilder
+    private func aiModelFields(
+        model: Binding<String>,
+        kind: ProviderKind,
+        help: String,
+        captionExtra: String = ""
+    ) -> some View {
+        TextField("Modelo", text: model)
+            .help(help)
+        HStack {
+            Text("Recomendado: \(kind.defaultModel ?? "")\(captionExtra)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                Task { await refreshModelsIfNeeded(force: true, kinds: [kind]) }
+            } label: {
+                if isRefreshingModels {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Label("Atualizar", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            .disabled(isRefreshingModels)
+            .help("Consulta a API do provedor e troca o modelo se estiver descontinuado ou houver opção melhor para tradução.")
+        }
+        if let modelRefreshNote {
+            Text(modelRefreshNote)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func providerAccessibilityLabel(_ kind: ProviderKind) -> String {
+        let badges = kind.badges.map(\.rawValue).joined(separator: ", ")
+        if badges.isEmpty { return kind.displayName }
+        return "\(kind.displayName), \(badges)"
+    }
+
+    private func refreshModelsIfNeeded(force: Bool, kinds: [ProviderKind]? = nil) async {
+        let kind = appState.settings.providerKind
+        let targets = kinds ?? (kind.supportsLiveModelCatalog ? [kind] : [])
+        guard !targets.isEmpty else { return }
+
+        // Sai do ciclo de update da view antes de tocar em @State / @Published.
+        await Task.yield()
+        isRefreshingModels = true
+        defer { isRefreshingModels = false }
+
+        var settings = appState.settings
+        let result = await AIModelCatalog.refreshModels(
+            settings: &settings,
+            force: force,
+            kinds: targets
+        )
+        if result.didChange {
+            appState.applySettingsAsync(settings)
+        }
+        if force || result.didChange {
+            modelRefreshNote =
+                result.notes.isEmpty
+                ? "Modelos verificados — configuração atual permanece válida."
+                : result.notes.joined(separator: " ")
+        }
+    }
+}
+
+/// Chip compacto ao lado do nome do motor (substitui sufixos entre parênteses).
+private struct EngineBadgeChip: View {
+    let badge: EngineBadge
+
+    var body: some View {
+        Text(badge.rawValue)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .foregroundStyle(foreground)
+            .background(background.opacity(0.18), in: Capsule())
+            .accessibilityHidden(true)
+    }
+
+    private var foreground: Color {
+        switch badge {
+        case .ai: return .purple
+        case .local, .default: return .blue
+        case .classic: return .teal
+        case .freeTier: return .green
+        case .paid: return .orange
+        case .advanced: return .secondary
+        }
+    }
+
+    private var background: Color { foreground }
 }
 
 // MARK: - Atalhos
@@ -538,7 +669,12 @@ struct TestSettingsView: View {
         Form {
             Section("Entrada") {
                 TextField("Texto", text: $testText)
-                LabeledContent("Motor atual", value: appState.settings.providerKind.displayName)
+                LabeledContent("Motor atual") {
+                    Label(
+                        appState.settings.providerKind.displayName,
+                        systemImage: appState.settings.providerKind.symbolName
+                    )
+                }
                 LabeledContent(
                     "Destino (suas)",
                     value: LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)

@@ -128,6 +128,7 @@ final class AppState: ObservableObject {
         hotkeyMonitor.start()
         applyHotkeyConfiguration(settings)
         startPermissionWatch()
+        scheduleAIModelCatalogRefresh()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             TranslationHostPanelController.shared.install(bridge: self.appleBridge)
@@ -152,12 +153,29 @@ final class AppState: ObservableObject {
         permissionWatchTask?.cancel()
         permissionWatchTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                _ = try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard let self else { return }
                 // Event tap needs Input Monitoring; retry whenever it is still missing.
                 self.hotkeyMonitor.retryInstallIfNeeded()
                 self.hotkeysActive = self.hotkeyMonitor.isTapActive
             }
+        }
+    }
+
+    /// Consulta APIs dos motores de IA (quando há chave) e troca modelos descontinuados.
+    private func scheduleAIModelCatalogRefresh() {
+        Task { [weak self] in
+            // Evita competir com o cold start / onboarding / primeiro layout.
+            _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard let self else { return }
+            var updated = self.settings
+            let result = await AIModelCatalog.refreshModels(settings: &updated, force: false)
+            guard result.didChange else { return }
+            self.applySettingsAsync(updated)
+            AppLog.info(
+                .settings,
+                "catálogo de modelos atualizou \(result.updatedProviders.map(\.rawValue).joined(separator: ", "))"
+            )
         }
     }
 
@@ -229,12 +247,14 @@ final class AppState: ObservableObject {
     }
 
     func setOutgoingTargetLanguage(_ code: String) {
+        guard settings.outgoingTargetLanguage != code else { return }
         var updated = settings
         updated.outgoingTargetLanguage = code
         settings = updated
     }
 
     func setIncomingTargetLanguage(_ code: String) {
+        guard settings.incomingTargetLanguage != code else { return }
         var updated = settings
         updated.incomingTargetLanguage = code
         settings = updated
@@ -262,11 +282,29 @@ final class AppState: ObservableObject {
     }
 
     /// Binding que grava de volta em `settings` (dispara save/apply via publisher).
+    /// Ignora writes idênticos — Pickers/Forms do SwiftUI reaplicam o valor durante
+    /// o update da view; republicar `@Published` nesse momento gera
+    /// “Publishing changes from within view updates…”.
     func settingsBinding<T>(_ keyPath: WritableKeyPath<AppSettings, T>) -> Binding<T> {
         Binding(
             get: { self.settings[keyPath: keyPath] },
-            set: { self.settings[keyPath: keyPath] = $0 }
+            set: { newValue in
+                var updated = self.settings
+                updated[keyPath: keyPath] = newValue
+                guard updated != self.settings else { return }
+                self.settings = updated
+            }
         )
+    }
+
+    /// Aplica settings fora do ciclo de update da view (catálogo de modelos, etc.).
+    func applySettingsAsync(_ newSettings: AppSettings) {
+        guard newSettings != settings else { return }
+        Task { @MainActor in
+            await Task.yield()
+            guard newSettings != self.settings else { return }
+            self.settings = newSettings
+        }
     }
 
     private func applyStatus(_ status: Status) {
@@ -278,14 +316,14 @@ final class AppState: ObservableObject {
             AppLog.error(.app, "status=error — \(message)")
             lastErrorMessage = message
             statusResetTask = Task {
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .success:
             AppLog.info(.app, "status=success")
             lastErrorMessage = nil
             statusResetTask = Task {
-                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                _ = try? await Task.sleep(nanoseconds: 1_200_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .translating:

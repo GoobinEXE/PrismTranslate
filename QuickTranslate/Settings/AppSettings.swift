@@ -36,10 +36,34 @@ struct AppSettings: Equatable {
 
     // Free AI engines (API key in Keychain)
     var groqModel: String = ProviderKind.groq.defaultModel ?? "llama-3.1-8b-instant"
-    var geminiModel: String = ProviderKind.gemini.defaultModel ?? "gemini-2.5-flash"
+    var geminiModel: String = ProviderKind.gemini.defaultModel ?? "gemini-flash-lite-latest"
     var mistralModel: String = ProviderKind.mistral.defaultModel ?? "mistral-small-latest"
-    var deepSeekModel: String = ProviderKind.deepSeek.defaultModel ?? "deepseek-v4-flash"
+    var deepSeekModel: String = ProviderKind.deepSeek.defaultModel ?? "deepseek-chat"
     var openRouterModel: String = ProviderKind.openRouter.defaultModel ?? "openrouter/free"
+
+    func model(for kind: ProviderKind) -> String? {
+        switch kind {
+        case .groq: return groqModel
+        case .gemini: return geminiModel
+        case .mistral: return mistralModel
+        case .deepSeek: return deepSeekModel
+        case .openRouter: return openRouterModel
+        case .openAICompatible: return openAIModel
+        default: return nil
+        }
+    }
+
+    mutating func setModel(_ model: String, for kind: ProviderKind) {
+        switch kind {
+        case .groq: groqModel = model
+        case .gemini: geminiModel = model
+        case .mistral: mistralModel = model
+        case .deepSeek: deepSeekModel = model
+        case .openRouter: openRouterModel = model
+        case .openAICompatible: openAIModel = model
+        default: break
+        }
+    }
 
     // OpenAI-compatible / LM Studio
     var openAIBaseURL: String = "http://localhost:1234/v1"
@@ -93,7 +117,25 @@ struct AppSettings: Equatable {
         } else {
             settings = AppSettings()
         }
-        return migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
+        return migrateDeprecatedAIModelsIfNeeded(
+            migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
+        )
+    }
+
+    /// Bumps known-dead model ids to the current built-in default (offline-safe).
+    private static func migrateDeprecatedAIModelsIfNeeded(_ settings: AppSettings) -> AppSettings {
+        var updated = settings
+        var changed = false
+        for kind in ProviderKind.allCases where kind.supportsLiveModelCatalog {
+            let current = updated.model(for: kind) ?? ""
+            guard AIModelCatalog.isKnownDeprecated(kind, model: current) else { continue }
+            let fallback = kind.defaultModel ?? kind.preferredModelsForTranslation.first
+            guard let fallback, fallback != current else { continue }
+            updated.setModel(fallback, for: kind)
+            changed = true
+        }
+        if changed { updated.save() }
+        return updated
     }
 
     /// One-time: old default was `nil` (auto). Switch outgoing source to the system language once.
