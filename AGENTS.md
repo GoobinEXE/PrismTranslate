@@ -1,4 +1,4 @@
-# QuickTranslate — agent notes
+# Prism — agent notes
 
 ## Toolchain
 
@@ -13,8 +13,8 @@ Use o mesmo DerivedData do Xcode (melhor para SourceKit-LSP + debug no Cursor):
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
-  -project QuickTranslate.xcodeproj \
-  -scheme QuickTranslate \
+  -project Prism.xcodeproj \
+  -scheme Prism \
   -configuration Debug \
   build
 ```
@@ -27,20 +27,20 @@ Já existe `buildServer.json` (via `xcode-build-server`). Após mudar o `.xcodep
 
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-xcode-build-server config -project QuickTranslate.xcodeproj -scheme QuickTranslate
+xcode-build-server config -project Prism.xcodeproj -scheme Prism
 ```
 
 Depois: **Developer: Reload Window** no Cursor.
 
 ## Tasks úteis (⌘⇧B / Terminal → Run Task)
 
-- `xcodebuild: QuickTranslate (Debug)` — build padrão (⌘⇧B)
+- `xcodebuild: Prism (Debug)` — build padrão (⌘⇧B)
 - `xcode-build-server: configure` — regenera índice LSP
 - `open: Xcode` — abre o `.xcodeproj`
 
 ## Debug
 
-Launch config **QuickTranslate** (F5) usa `lldb-dap` + build prévio.
+Launch config **Prism** (F5) usa `lldb-dap` + build prévio.
 
 ## Versão do produto
 

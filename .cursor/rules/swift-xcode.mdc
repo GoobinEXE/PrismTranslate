@@ -1,25 +1,25 @@
 ---
-description: Convenções Swift/SwiftUI/AppKit e fluxo Xcode para o QuickTranslate no Cursor
+description: Convenções Swift/SwiftUI/AppKit e fluxo Xcode para o Prism no Cursor
 globs: "**/*.{swift,plist,entitlements,pbxproj}"
 alwaysApply: false
 ---
 
-# Swift + Xcode (QuickTranslate)
+# Swift + Xcode (Prism)
 
 ## Ambiente
 
 - Target: **macOS 15+**, Swift 5, app de menu bar (`LSUIElement`)
-- Bundle ID: `com.quicktranslate.app`
+- Bundle ID: `com.marcelopessoa.prism`
 - Sempre preferir o toolchain do **Xcode.app**, não Command Line Tools:
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
   - Build: `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild`
-- DerivedData compartilhado com o Xcode (`~/Library/Developer/Xcode/DerivedData/QuickTranslate-*`) — não force `-derivedDataPath` local ao indexar/debugar no Cursor
+- DerivedData compartilhado com o Xcode (`~/Library/Developer/Xcode/DerivedData/Prism-*`) — não force `-derivedDataPath` local ao indexar/debugar no Cursor
 
 ## Build / LSP
 
-- Compilar com a task **xcodebuild: QuickTranslate (Debug)** (⌘⇧B) ou o comando em `AGENTS.md`
+- Compilar com a task **xcodebuild: Prism (Debug)** (⌘⇧B) ou o comando em `AGENTS.md`
 - Após mudanças no `.xcodeproj` / novos arquivos Swift, regenerar o índice do SourceKit:
-  `xcode-build-server config -project QuickTranslate.xcodeproj -scheme QuickTranslate`
+  `xcode-build-server config -project Prism.xcodeproj -scheme Prism`
 - Não editar `project.pbxproj` à mão se der para evitar; ao adicionar arquivos, garantir que entram no target Sources
 
 ## Arquitetura
@@ -32,6 +32,7 @@ alwaysApply: false
 | `Translation/` | Protocolo + engine |
 | `Providers/` | Apple, DeepL, Google, OpenAI, Custom HTTP |
 | `Settings/` | Preferências + UserDefaults |
+| `Design/` | Tokens visuais e glifo Prism |
 | `Utilities/` | Teclado, Keychain, permissões |
 
 ## Regras de código

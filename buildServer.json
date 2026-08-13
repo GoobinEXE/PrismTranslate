@@ -12,8 +12,8 @@
 	"argv": [
 		"/opt/homebrew/bin/xcode-build-server"
 	],
-	"workspace": "/Users/marcelopessoa/CODES/QuickTranslate/QuickTranslate.xcodeproj/project.xcworkspace",
-	"build_root": "/Users/marcelopessoa/Library/Developer/Xcode/DerivedData/QuickTranslate-anoeyhcnaiwgaybsaalekpptbrrf",
-	"scheme": "QuickTranslate",
+	"workspace": "/Users/marcelopessoa/CODES/QuickTranslate/Prism.xcodeproj/project.xcworkspace",
+	"build_root": "/Users/marcelopessoa/Library/Developer/Xcode/DerivedData/Prism-hldybfnpldplucduuopmbsvuemob",
+	"scheme": "Prism",
 	"kind": "xcode"
 }

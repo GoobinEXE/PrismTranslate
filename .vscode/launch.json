@@ -4,10 +4,10 @@
     {
       "type": "lldb-dap",
       "request": "launch",
-      "name": "QuickTranslate",
-      "program": "${userHome}/Library/Developer/Xcode/DerivedData/QuickTranslate-anoeyhcnaiwgaybsaalekpptbrrf/Build/Products/Debug/QuickTranslate.app/Contents/MacOS/QuickTranslate",
+      "name": "Prism",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/Prism-hldybfnpldplucduuopmbsvuemob/Build/Products/Debug/Prism.app/Contents/MacOS/Prism",
       "cwd": "${workspaceFolder}",
-      "preLaunchTask": "xcodebuild: QuickTranslate (Debug)",
+      "preLaunchTask": "xcodebuild: Prism (Debug)",
       "env": {
         "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
       }
@@ -15,8 +15,8 @@
     {
       "type": "lldb-dap",
       "request": "attach",
-      "name": "Attach QuickTranslate",
-      "program": "${userHome}/Library/Developer/Xcode/DerivedData/QuickTranslate-anoeyhcnaiwgaybsaalekpptbrrf/Build/Products/Debug/QuickTranslate.app/Contents/MacOS/QuickTranslate"
+      "name": "Attach Prism",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/Prism-hldybfnpldplucduuopmbsvuemob/Build/Products/Debug/Prism.app/Contents/MacOS/Prism"
     }
   ]
 }

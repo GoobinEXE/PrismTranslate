@@ -2,14 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "xcodebuild: QuickTranslate (Debug)",
+      "label": "xcodebuild: Prism (Debug)",
       "type": "shell",
       "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
       "args": [
         "-project",
-        "QuickTranslate.xcodeproj",
+        "Prism.xcodeproj",
         "-scheme",
-        "QuickTranslate",
+        "Prism",
         "-configuration",
         "Debug",
         "build"
@@ -27,14 +27,14 @@
       "problemMatcher": ["$swiftc"]
     },
     {
-      "label": "xcodebuild: QuickTranslate (Release)",
+      "label": "xcodebuild: Prism (Release)",
       "type": "shell",
       "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
       "args": [
         "-project",
-        "QuickTranslate.xcodeproj",
+        "Prism.xcodeproj",
         "-scheme",
-        "QuickTranslate",
+        "Prism",
         "-configuration",
         "Release",
         "build"
@@ -51,7 +51,7 @@
     {
       "label": "xcode-build-server: configure",
       "type": "shell",
-      "command": "xcode-build-server config -project QuickTranslate.xcodeproj -scheme QuickTranslate",
+      "command": "xcode-build-server config -project Prism.xcodeproj -scheme Prism",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
@@ -64,7 +64,7 @@
     {
       "label": "open: Xcode",
       "type": "shell",
-      "command": "open -a Xcode QuickTranslate.xcodeproj",
+      "command": "open -a Xcode Prism.xcodeproj",
       "options": {
         "cwd": "${workspaceFolder}"
       },

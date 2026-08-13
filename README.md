@@ -1,6 +1,8 @@
-# QuickTranslate
+# Prism Translate
 
 App de menu bar para macOS que traduz o texto do campo focado com atalhos — rápido e quase sem interface.
+
+No sistema (Dock, barra de menus, Ajustes) o nome de display é **Prism**.
 
 ## Requisitos
 
@@ -10,8 +12,8 @@ App de menu bar para macOS que traduz o texto do campo focado com atalhos — r�
 
 ## Instalação
 
-1. Baixe o `QuickTranslate-x.y.z.dmg` mais recente em [GitHub Releases](../../releases)
-2. Abra o DMG e arraste **QuickTranslate** para **Aplicativos**
+1. Baixe o `Prism-x.y.z.dmg` mais recente em [GitHub Releases](../../releases)
+2. Abra o DMG e arraste **Prism** para **Aplicativos**
 3. Abra o app — o macOS avisa que foi baixado da internet; clique em **Abrir**. Se bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**
 4. Conceda **Acessibilidade** e **Monitoramento de Entrada** quando o onboarding pedir (Ajustes do Sistema → Privacidade e Segurança)
 
@@ -19,10 +21,10 @@ Para mantenedores: o processo completo de assinatura, notarização e publicaç�
 
 ## Como abrir e rodar
 
-1. Abra `QuickTranslate.xcodeproj` no Xcode
-2. Selecione o target **QuickTranslate** e rode (⌘R)
+1. Abra `Prism.xcodeproj` no Xcode
+2. Selecione o target **Prism** e rode (⌘R)
 3. Na primeira execução, autorize Acessibilidade (e Input Monitoring se o sistema pedir)
-4. O ícone aparece na barra de menus (globo)
+4. O ícone aparece na barra de menus (prisma)
 
 ## Uso rápido (padrão)
 
@@ -76,12 +78,13 @@ Fonte da verdade dos atalhos padrão: `HotkeyChord.swift` / `AppSettings.swift`.
 ## Estrutura
 
 ```
-QuickTranslate/
+Prism/
   App/           # Menu bar, estado, orquestração
   Hotkeys/       # CGEvent tap (atalhos + Enter)
   TextIO/        # Accessibility + fallback clipboard
   Translation/   # Protocolo e engine
   Providers/     # Apple, DeepL, Google, Groq, Gemini, Mistral, DeepSeek, OpenRouter, OpenAI, Custom HTTP
   Settings/      # Preferências
+  Design/        # Tokens visuais e glifo Prism
   Utilities/     # Teclado, Keychain, permissões
 ```

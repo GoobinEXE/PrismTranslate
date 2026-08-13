@@ -8,9 +8,10 @@ baseline como ponto de partida (contexto do usuário prevalece se divergir).
 
 ## Baseline atual (atualize quando a realidade mudar)
 
-- **Versão justa agora:** `0.4.0` (pré-lançamento; MAJOR = 0)
+- **Versão justa agora:** `0.6.0` (pré-lançamento; MAJOR = 0)
 - **Lançado?** Não (sem tags `v*`, sem GitHub Release, sem DMG público)
 - **Validado E2E:** **Apple Translation**, **tradução por IA** e **DeepL** (atalho → traduzir → substituir)
+- **Identidade:** rebrand **Prism Translate** (display **Prism**; bundle `com.marcelopessoa.prism`)
 - **Não conta ainda:** Google, Custom HTTP; aceite v1 do README ainda unchecked
 
 ## Notas deste repo
@@ -19,8 +20,8 @@ baseline como ponto de partida (contexto do usuário prevalece se divergir).
 
 ## Onde bumpa neste projeto (só com pedido explícito)
 
-- `QuickTranslate.xcodeproj/project.pbxproj` → `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
-- `QuickTranslate/Info.plist` → `CFBundleShortVersionString` / `CFBundleVersion`
+- `Prism.xcodeproj/project.pbxproj` → `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
+- `Prism/Info.plist` → `CFBundleShortVersionString` / `CFBundleVersion`
 - `CHANGELOG.md` → entrada com data real e escopo honesto
 - Release público: tag `vX.Y.Z` + GitHub Release + DMG (`scripts/release.sh` / `RELEASING.md`)
 - Depois do bump: atualizar a seção Baseline acima

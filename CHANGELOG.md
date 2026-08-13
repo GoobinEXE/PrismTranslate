@@ -5,6 +5,36 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.6.0] - 2026-08-13
+
+Aba **Sobre** redesenhada: identidade, app, time, história, novidades, atualizações, suporte e legal.
+
+### Changed
+
+- Preferências → Sobre no fluxo de um About de produto: quem é o app, quem fez, de onde veio, o que mudou, como atualizar, como pedir ajuda.
+- Novidades da versão a partir do CHANGELOG; verificar atualizações no GitHub Releases.
+- Suporte compacto: tutorial, reportar problema, copiar info do app e abrir Logs.
+- Legal separado (copyright, marcas, repositório e releases).
+
+### Notas de maturidade
+
+- Validado E2E: **Apple Translation**, **tradução por IA** e **DeepL**.
+- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+
+## [0.5.0] - 2026-08-13
+
+Rebrand do produto: **Prism Translate** (nome de display no macOS: **Prism**). Pré-lançamento (sem tag/release público).
+
+### Changed
+
+- Identidade visual e de empacotamento: novo ícone, bundle ID `com.marcelopessoa.prism`, target/scheme `Prism`.
+- Projeto Xcode e artefatos de release passam a `Prism.xcodeproj` / `Prism-x.y.z.dmg`.
+
+### Notas de maturidade
+
+- Validado E2E: **Apple Translation**, **tradução por IA** e **DeepL**.
+- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+
 ## [0.4.0] - 2026-08-12
 
 **DeepL** validado de ponta a ponta (atalho → traduzir → substituir).

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# release.sh — Automatiza o release do QuickTranslate:
+# release.sh — Automatiza o release do Prism:
 #   archive → export (Developer ID) → notarização → staple → DMG
 #
 # USO:
-#   TEAM_ID=ABCDE12345 NOTARY_PROFILE=quicktranslate-notary ./scripts/release.sh
+#   TEAM_ID=ABCDE12345 NOTARY_PROFILE=prism-notary ./scripts/release.sh
 #   # ou, sem perfil no Keychain:
 #   TEAM_ID=ABCDE12345 APPLE_ID=voce@exemplo.com APP_PASSWORD=xxxx-xxxx-xxxx-xxxx ./scripts/release.sh
 #
@@ -25,9 +25,9 @@ set -euo pipefail
 # Configuração
 # ---------------------------------------------------------------------------
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$REPO_ROOT/QuickTranslate.xcodeproj"
-SCHEME="QuickTranslate"
-APP_NAME="QuickTranslate"
+PROJECT="$REPO_ROOT/Prism.xcodeproj"
+SCHEME="Prism"
+APP_NAME="Prism"
 
 BUILD_DIR="$REPO_ROOT/build"
 ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
