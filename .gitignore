@@ -2,8 +2,39 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
 
-# Xcode / build
+# Secrets / credentials — never commit
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.p8
+*.p12
+*.key
+*.cer
+*.cert
+*.der
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+AuthKey_*.p8
+Secrets.xcconfig
+*.local.xcconfig
+credentials.json
+*-credentials.json
+*serviceAccount*.json
+GoogleService-Info.plist
+google-services.json
+.data-seed-credentials.env
+hawk.properties
+
+# Xcode / build artifacts
 build/
 DerivedData/
 *.xcuserstate
@@ -15,8 +46,17 @@ xcuserdata/
 *.ipa
 *.dSYM
 *.dSYM.zip
+*.xcarchive
+*.xcresult
+*.app
+!**/AppIcon.appiconset/*.png
 timeline.xctimeline
 playground.xcworkspace
+*.gcda
+*.gcno
+coverage/
+*.profraw
+*.profdata
 
 # Swift Package Manager
 .swiftpm/
@@ -28,16 +68,30 @@ Package.resolved
 *.pkg
 *.dmg
 swiftly.pkg
-AGENTS.md
-REALEASING.md
 
+# Logs / crash reports
+*.log
+*.crash
+*.ips
+
+# Cursor — keep rules/skills; ignore debug, plans, local junk
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
+
+# SourceKit / xcode-build-server (buildServer.json is committed; keep index local)
+.buildServer/
+compile_commands.json
+*.xcindex
+*.xcuserdatad/
 
 # IDE
 .idea/
 *.swp
+*.swo
+*~
 *~.nib
-
-# SourceKit / xcode-build-server (buildServer.json is committed; keep index local)
-.buildServer/
-*.xcindex
-*.xcuserdatad/
+*.sublime-workspace
+.vscode/*.local.json
