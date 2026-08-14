@@ -67,12 +67,25 @@ struct MenuBarView: View {
                 Toggle(isOn: appState.settingsBinding(\.enterTranslatesAndSends)) {
                     Label("Enter traduz e envia", systemImage: "return")
                 }
+                Divider()
+                Toggle(isOn: appState.settingsBinding(\.showStatusHUD)) {
+                    Label("Aviso perto do ponteiro", systemImage: "cursorarrow.click")
+                }
+                Divider()
+                Toggle(isOn: appState.settingsBinding(\.popupModeEnabled)) {
+                    Label("Modo popup", systemImage: "menubar.arrow.up.rectangle")
+                }
             }
             .toggleStyle(.switch)
             .controlSize(.small)
             .font(QTDesign.Fonts.body)
             .padding(12)
         }
+        .help(
+            appState.settings.popupModeEnabled
+                ? "Atalho do painel: \(appState.settings.popupHotkey.displayString). Traduzir: \(appState.settings.translateOnlyHotkey.displayString)."
+                : "Atalho Traduzir: \(appState.settings.translateOnlyHotkey.displayString). Ative o modo popup para o atalho do painel."
+        )
     }
 
     private var languageCard: some View {
@@ -110,6 +123,11 @@ struct MenuBarView: View {
                 }
                 .help("Idioma destino ao substituir texto em campos editáveis.")
 
+                Text(hotkeyCaption)
+                    .font(QTDesign.Fonts.caption)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Divider()
 
                 HStack(spacing: QTDesign.Spacing.s) {
@@ -140,6 +158,14 @@ struct MenuBarView: View {
             }
             .padding(12)
         }
+    }
+
+    private var hotkeyCaption: String {
+        let translate = appState.settings.translateOnlyHotkey.displayString
+        if appState.settings.popupModeEnabled {
+            return "Traduzir \(translate) · Painel \(appState.settings.popupHotkey.displayString)"
+        }
+        return "Traduzir \(translate) · Painel desligado"
     }
 
     // MARK: - Alertas
@@ -205,6 +231,7 @@ struct MenuBarView: View {
             .accessibilityLabel("Abrir Configurações")
 
             Button {
+                AppLog.info(.app, "Botão «Ajuda» no menu — abrindo tutorial")
                 appState.showOnboarding()
             } label: {
                 Label("Ajuda", systemImage: "questionmark.circle")
@@ -214,6 +241,7 @@ struct MenuBarView: View {
             Spacer()
 
             Button {
+                AppLog.info(.app, "Botão «Sair» no menu")
                 NSApplication.shared.terminate(nil)
             } label: {
                 Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")

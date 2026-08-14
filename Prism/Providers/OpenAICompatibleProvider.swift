@@ -48,6 +48,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
             )
         }
         if requiresAPIKey, apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            AppLog.error(logCategory, "\(displayName): API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration(
                 "Configure a API key de \(displayName) nas Configurações"
             )
@@ -57,9 +58,15 @@ struct OpenAICompatibleProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("Base URL inválida")
         }
 
-        AppLog.info(
+        ProviderLog.sending(
             logCategory,
-            "📡 [\(displayName)] POST \(url.absoluteString) — model=\(trimmedModel), chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
+            engine: displayName,
+            endpoint: url.absoluteString,
+            chars: text.count,
+            from: from,
+            to: to,
+            model: trimmedModel,
+            extra: apiKey.isEmpty ? "sem API key" : "API key configurada"
         )
 
         let prompt = AITranslationPrompt.make(text: text, from: from, to: to)
@@ -85,17 +92,33 @@ struct OpenAICompatibleProvider: TranslationProvider {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
+        let started = Date()
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            ProviderLog.failed(logCategory, engine: displayName, status: nil, since: started, body: "")
             throw TranslationError.emptyResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(logCategory, "❌ [\(displayName)] HTTP \(http.statusCode): \(bodyText)")
+            ProviderLog.failed(
+                logCategory,
+                engine: displayName,
+                status: http.statusCode,
+                since: started,
+                body: bodyText
+            )
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
         let content = try Self.parseChatContent(from: data)
+        ProviderLog.received(
+            logCategory,
+            engine: displayName,
+            status: http.statusCode,
+            bytes: data.count,
+            since: started,
+            outChars: content.count
+        )
         return TranslationOutcome(text: content)
     }
 

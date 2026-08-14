@@ -39,8 +39,14 @@ enum Permissions {
     /// System Settings › General › Language & Region › Translation Languages
     /// (download packs + On-Device Mode checkbox).
     static func openTranslationLanguagesSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension?translation") {
-            NSWorkspace.shared.open(url)
+        let candidates = [
+            "x-apple.systempreferences:com.apple.Localization-Settings.extension?translation",
+            "x-apple.systempreferences:com.apple.Localization-Settings.extension",
+        ]
+        for candidate in candidates {
+            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+                return
+            }
         }
     }
 

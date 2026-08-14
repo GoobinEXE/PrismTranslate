@@ -99,7 +99,7 @@ enum AIModelCatalog {
                         )
                         AppLog.info(
                             .engine,
-                            "catálogo \(kind.rawValue): \(current) → \(recommended) (\(reason))"
+                            "Catálogo \(kind.displayName): modelo \(current.isEmpty ? "—" : current) → \(recommended) (\(reason))"
                         )
                     }
                 }
@@ -107,7 +107,7 @@ enum AIModelCatalog {
                 result.notes.append("\(kind.displayName): \(error.localizedDescription)")
                 AppLog.warning(
                     .engine,
-                    "catálogo \(kind.rawValue) falhou: \(error.localizedDescription)"
+                    "Catálogo \(kind.displayName) falhou: \(error.localizedDescription)"
                 )
                 // Offline / sem chave: ainda migra lista local de deprecated.
                 let local = migrateKnownDeprecated(settings: &settings, kinds: [kind])

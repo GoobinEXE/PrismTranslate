@@ -68,6 +68,17 @@ enum TranslationError: LocalizedError {
         case modelUnavailable
         case serverError
         case other
+
+        var logLabel: String {
+            switch self {
+            case .billingOrQuota: return "saldo ou cota esgotados"
+            case .unauthorized: return "chave inválida ou sem permissão"
+            case .rateLimited: return "limite de requisições"
+            case .modelUnavailable: return "modelo indisponível ou descontinuado"
+            case .serverError: return "erro no servidor do provedor"
+            case .other: return "erro do provedor"
+            }
+        }
     }
 
     static func classifyHTTPFailure(statusCode: Int, body: String) -> HTTPFailureKind {

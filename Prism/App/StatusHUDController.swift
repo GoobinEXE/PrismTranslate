@@ -1,41 +1,48 @@
 import AppKit
 import SwiftUI
 
-/// Toast flutuante para status de tradução quando o MenuBarExtra está fechado.
-/// Alinhado às HIG de Feedback: anuncia VoiceOver; erros não somem sozinhos.
+/// Toast flutuante perto do ponteiro para status de tradução (atalho).
+/// Não ativa o app nem rouba o foco do campo; erros não somem sozinhos.
 @MainActor
 final class StatusHUDController {
     static let shared = StatusHUDController()
 
-    private final class KeyablePanel: NSPanel {
-        override var canBecomeKey: Bool { true }
+    private final class HUDPanel: NSPanel {
+        var allowsKey: Bool = false
+        override var canBecomeKey: Bool { allowsKey }
         override var canBecomeMain: Bool { false }
     }
 
-    private var panel: NSPanel?
+    private var panel: HUDPanel?
     private var hideTask: Task<Void, Never>?
     private var escapeMonitor: Any?
+    private var globalEscapeMonitor: Any?
 
     private init() {}
 
-    func present(status: AppState.Status, isEnabled: Bool) {
+    func present(status: AppState.Status, isEnabled: Bool, hudEnabled: Bool = true) {
+        guard hudEnabled else {
+            hide()
+            return
+        }
+
         switch status {
         case .idle:
+            hide()
+            return
+        case .success where TranslationResultPanelController.shared.isVisible:
+            // O painel de resultado já é o feedback de conclusão no modo popup.
+            hide()
+            return
+        case .translating where TranslationResultPanelController.shared.isVisible:
             hide()
             return
         case .translating, .success, .error:
             break
         }
 
-        // O painel de resultado já é o feedback principal no modo popup.
-        if TranslationResultPanelController.shared.isVisible {
-            return
-        }
-        if SettingsNavigation.isMenuBarExtraVisible() {
-            return
-        }
-
         hideTask?.cancel()
+        hideTask = nil
         closeChrome()
 
         let root = StatusHUDView(
@@ -43,6 +50,9 @@ final class StatusHUDController {
             isEnabled: isEnabled,
             onDismiss: { [weak self] in
                 self?.hide()
+            },
+            onOpenDetails: { [weak self] in
+                self?.hideAfterCurrentEvent()
             }
         )
 
@@ -61,22 +71,26 @@ final class StatusHUDController {
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         hostingView.frame = contentRect
 
-        let panel = KeyablePanel(
+        let needsClicks = if case .error = status { true } else { false }
+
+        let panel = HUDPanel(
             contentRect: contentRect,
-            styleMask: [.borderless, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
+        panel.allowsKey = needsClicks
         panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.level = .statusBar
         panel.isMovableByWindowBackground = false
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .ignoresCycle]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
-        panel.ignoresMouseEvents = false
+        panel.ignoresMouseEvents = !needsClicks
+        panel.worksWhenModal = true
 
         if #available(macOS 26.0, *) {
             let glass = NSGlassEffectView(frame: contentRect)
@@ -90,18 +104,17 @@ final class StatusHUDController {
 
         panel.setContentSize(NSSize(width: width, height: height))
         positionNearCursor(panel, size: NSSize(width: width, height: height))
-        panel.orderFront(nil)
+        panel.orderFrontRegardless()
         self.panel = panel
 
         announce(status: status, isEnabled: isEnabled)
         installEscapeMonitorIfNeeded(for: status)
 
-        // Erros ficam até o usuário dispensar ou abrir logs (HIG: feedback legível).
+        // «Traduzindo…» fica até sucesso/erro. Erros ficam até o usuário dispensar.
         let dismissNanos: UInt64? =
             switch status {
-            case .translating: UInt64(8_000_000_000)
             case .success: UInt64(1_400_000_000)
-            case .error, .idle: nil
+            case .translating, .error, .idle: nil
             }
 
         if let dismissNanos {
@@ -118,6 +131,13 @@ final class StatusHUDController {
         hideTask = nil
         removeEscapeMonitor()
         closeChrome()
+    }
+
+    /// Dismiss after the current click finishes so `SettingsLink` can open Preferências.
+    func hideAfterCurrentEvent() {
+        DispatchQueue.main.async { [weak self] in
+            self?.hide()
+        }
     }
 
     private func announce(status: AppState.Status, isEnabled: Bool) {
@@ -147,12 +167,23 @@ final class StatusHUDController {
             }
             return event
         }
+        globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 {
+                Task { @MainActor in
+                    self?.hide()
+                }
+            }
+        }
     }
 
     private func removeEscapeMonitor() {
         if let escapeMonitor {
             NSEvent.removeMonitor(escapeMonitor)
             self.escapeMonitor = nil
+        }
+        if let globalEscapeMonitor {
+            NSEvent.removeMonitor(globalEscapeMonitor)
+            self.globalEscapeMonitor = nil
         }
     }
 
@@ -186,6 +217,7 @@ private struct StatusHUDView: View {
     let status: AppState.Status
     let isEnabled: Bool
     var onDismiss: () -> Void
+    var onOpenDetails: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -212,7 +244,7 @@ private struct StatusHUDView: View {
             Spacer(minLength: 0)
 
             if case .error = status {
-                QTSettingsLink(section: .logs, beforeOpen: onDismiss) {
+                QTSettingsLink(section: .logs, beforeOpen: onOpenDetails) {
                     Text("Ver detalhes")
                 }
                 .buttonStyle(.bordered)

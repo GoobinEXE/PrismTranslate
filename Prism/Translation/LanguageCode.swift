@@ -30,6 +30,12 @@ struct LanguageCode: Identifiable, Hashable {
             ?? id
     }
 
+    /// Ex.: "detecção automática → English" ou "Português → English".
+    static func pairLabel(from: String?, to: String) -> String {
+        let source = from.map { displayName(for: $0) } ?? "detecção automática"
+        return "\(source) → \(displayName(for: to))"
+    }
+
     /// Maps provider codes (EN, PT-BR, zh-CN, …) onto app language ids when possible.
     static func normalize(_ code: String) -> String {
         let lower = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

@@ -16,6 +16,130 @@ enum LanguagePackState: Equatable {
         if case .failed = self { return true }
         return false
     }
+
+    var isBusy: Bool {
+        self == .checking || self == .downloading
+    }
+}
+
+/// Maps app language ids (`en`, `pt`, `zh-Hans`) onto the `Locale.Language`
+/// values Apple's Translation framework actually lists in `supportedLanguages`.
+///
+/// `Locale.Language(identifier: "en-US")` often becomes `en-Latn-US` (maximal),
+/// which `LanguageAvailability.status` treats as a different pair than the
+/// installed `en` + region `US` pack — so the UI keeps saying the pack is missing.
+enum AppleTranslationLanguageMap {
+    struct Spec: Equatable {
+        var languageCode: String
+        var region: String?
+        var script: String?
+        var appCode: String
+
+        var bcp47: String {
+            if let region { return "\(languageCode)-\(region)" }
+            if let script { return "\(languageCode)-\(script)" }
+            return languageCode
+        }
+    }
+
+    static func spec(forAppCode raw: String) -> Spec {
+        let code = LanguageCode.normalize(raw)
+        switch code {
+        case "en": return Spec(languageCode: "en", region: "US", script: nil, appCode: "en")
+        case "pt": return Spec(languageCode: "pt", region: "BR", script: nil, appCode: "pt")
+        case "es": return Spec(languageCode: "es", region: "ES", script: nil, appCode: "es")
+        case "fr": return Spec(languageCode: "fr", region: "FR", script: nil, appCode: "fr")
+        case "de": return Spec(languageCode: "de", region: "DE", script: nil, appCode: "de")
+        case "it": return Spec(languageCode: "it", region: "IT", script: nil, appCode: "it")
+        case "ja": return Spec(languageCode: "ja", region: "JP", script: nil, appCode: "ja")
+        case "ko": return Spec(languageCode: "ko", region: "KR", script: nil, appCode: "ko")
+        case "ru": return Spec(languageCode: "ru", region: "RU", script: nil, appCode: "ru")
+        case "ar": return Spec(languageCode: "ar", region: "AE", script: nil, appCode: "ar")
+        case "nl": return Spec(languageCode: "nl", region: "NL", script: nil, appCode: "nl")
+        case "pl": return Spec(languageCode: "pl", region: "PL", script: nil, appCode: "pl")
+        case "tr": return Spec(languageCode: "tr", region: "TR", script: nil, appCode: "tr")
+        case "hi": return Spec(languageCode: "hi", region: "IN", script: nil, appCode: "hi")
+        case "zh-Hans": return Spec(languageCode: "zh", region: "CN", script: nil, appCode: "zh-Hans")
+        case "zh-Hant": return Spec(languageCode: "zh", region: "TW", script: nil, appCode: "zh-Hant")
+        default:
+            let language = Locale.Language(identifier: code)
+            return Spec(
+                languageCode: language.languageCode?.identifier ?? code,
+                region: language.region?.identifier,
+                script: nil,
+                appCode: code
+            )
+        }
+    }
+
+    static func makeLanguage(forAppCode code: String) -> Locale.Language {
+        let spec = spec(forAppCode: code)
+        return Locale.Language(
+            components: Locale.Language.Components(
+                languageCode: Locale.LanguageCode(spec.languageCode),
+                script: spec.script.map { Locale.Script($0) },
+                region: spec.region.map { Locale.Region($0) }
+            )
+        )
+    }
+
+    static func pick(appCode: String, from supported: [Locale.Language]) -> Locale.Language? {
+        let spec = spec(forAppCode: appCode)
+        if let region = spec.region,
+           let match = supported.first(where: {
+               $0.languageCode?.identifier == spec.languageCode
+                   && $0.region?.identifier == region
+           })
+        {
+            return match
+        }
+        if spec.appCode == "zh-Hans" || spec.appCode == "zh-Hant" {
+            let wantedScript = spec.appCode == "zh-Hant" ? "Hant" : "Hans"
+            if let match = supported.first(where: {
+                $0.languageCode?.identifier == "zh"
+                    && $0.script?.identifier == wantedScript
+            }) {
+                return match
+            }
+        }
+        return supported.first(where: {
+            $0.languageCode?.identifier == spec.languageCode
+                && AppleTranslationLanguageMap.appCode(from: $0) == spec.appCode
+        })
+            ?? supported.first(where: { $0.languageCode?.identifier == spec.languageCode })
+    }
+
+    static func appCode(from language: Locale.Language) -> String {
+        let code = language.languageCode?.identifier ?? language.maximalIdentifier
+        if code == "zh" {
+            let script = language.script?.identifier
+            let region = language.region?.identifier
+            if script == "Hant" || region == "TW" || region == "HK" || region == "MO" {
+                return "zh-Hant"
+            }
+            return "zh-Hans"
+        }
+        return LanguageCode.normalize(code)
+    }
+
+    static func alternates(of language: Locale.Language, in supported: [Locale.Language]) -> [Locale.Language] {
+        let code = AppleTranslationLanguageMap.appCode(from: language)
+        let matches = supported.filter { AppleTranslationLanguageMap.appCode(from: $0) == code }
+        return matches.isEmpty ? [language] : matches
+    }
+
+    /// Auto-detect (`nil` source) cannot drive `prepareTranslation()` or a reliable
+    /// pack check — pick a concrete counterpart that isn't the target.
+    static func concreteSource(preferred: String?, target: String) -> String {
+        let targetCode = LanguageCode.normalize(target)
+        if let preferred, !preferred.isEmpty {
+            let sourceCode = LanguageCode.normalize(preferred)
+            if sourceCode != targetCode { return sourceCode }
+        }
+        let system = LanguageCode.systemLanguage
+        if system != targetCode { return system }
+        return LanguageCode.systemDefaultTarget
+    }
 }
 
 /// Coordinates programmatic Apple Translation via a hidden SwiftUI host.
@@ -48,6 +172,12 @@ final class AppleTranslationBridge: ObservableObject {
     private var availabilityCache: [String: AvailabilityCacheEntry] = [:]
     /// Last published language pair — used to invalidate instead of clear+republish.
     private var publishedPairKey: String?
+    /// Reused — a new instance per check was returning `.supported` for packs already on disk.
+    private let languageAvailability = LanguageAvailability()
+    private var supportedLanguagesCache: [Locale.Language] = []
+    private var supportedLanguagesFetchedAt: Date?
+    /// Last merged pack status, so Preferências can reopen without flashing “não baixados”.
+    private(set) var cachedOverallPackState: LanguagePackState?
 
     /// Notifies the host panel when a request may need the language-download sheet
     /// (true = bring the host window on-screen, false = hide it again).
@@ -57,6 +187,7 @@ final class AppleTranslationBridge: ObservableObject {
     /// macOS 26's translationd can take longer to spin up on first use after boot.
     private static let requestTimeoutNs: UInt64 = 30_000_000_000
     private static let availabilityCacheTTL: TimeInterval = 300
+    private static let supportedLanguagesTTL: TimeInterval = 600
 
     func translate(_ text: String, from: String?, to: String) async throws -> String {
         try await enqueue(
@@ -69,10 +200,11 @@ final class AppleTranslationBridge: ObservableObject {
 
     /// Asks the system download sheet for offline language packs (onboarding / Preferências).
     func ensureLanguagePacks(from: String?, to: String) async throws {
-        invalidateAvailabilityCache(from: from, to: to)
+        let source = AppleTranslationLanguageMap.concreteSource(preferred: from, target: to)
+        invalidateAvailabilityCache(from: source, to: to)
         _ = try await enqueue(
             text: Self.sampleText(target: to),
-            from: from,
+            from: source,
             to: to,
             forcePrepare: true
         )
@@ -83,7 +215,10 @@ final class AppleTranslationBridge: ObservableObject {
         let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
         let targetLang = Locale.Language(identifier: normalize(to))
         guard pending == nil else { return }
-        AppLog.info(.apple, "🍏 prewarming session for \(self.pairKey(source: sourceLang, target: targetLang))")
+        AppLog.info(
+            .apple,
+            "Preparando sessão Apple Translation para \(self.pairKey(source: sourceLang, target: targetLang))"
+        )
         publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
         Task { [weak self] in
             guard let self else { return }
@@ -138,16 +273,18 @@ final class AppleTranslationBridge: ObservableObject {
             pending = request
             scheduleTimeout(for: request.id)
 
-            AppLog.info(.apple, "🍏 enqueuing translation request \(request.id.uuidString)")
+            AppLog.info(
+                .apple,
+                "Fila: pedido \(request.id.uuidString.prefix(8)) — \(request.text.count) caracteres, pacotes \(request.packsLikelyMissing ? "provavelmente ausentes" : "ok")"
+            )
             publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
         }
     }
 
     func handle(session: TranslationSession) async {
-        AppLog.info(.apple, "🍏 handle(session:) received session!")
+        AppLog.info(.apple, "Sessão Apple Translation recebida do sistema")
         guard let request = pending else {
-            // Prewarm / leftover session — keep configuration warm, ignore.
-            AppLog.debug(.apple, "🍏 handle(session:) with no pending request — keeping warm session")
+            AppLog.debug(.apple, "Sessão sem pedido pendente — mantendo aquecida")
             return
         }
         pending = nil
@@ -155,7 +292,7 @@ final class AppleTranslationBridge: ObservableObject {
         timeoutTask = nil
         do {
             let translated = try await translateRespectingSystemMode(session: session, request: request)
-            AppLog.info(.apple, "🍏 translation session returned successfully!")
+            AppLog.info(.apple, "Sessão devolveu a tradução com sucesso")
             // Packs that were missing are now likely installed after a successful prepare path.
             if request.packsLikelyMissing || request.forcePrepare {
                 cacheAvailability(
@@ -166,7 +303,7 @@ final class AppleTranslationBridge: ObservableObject {
             }
             request.continuation.resume(returning: translated)
         } catch {
-            AppLog.error(.apple, "🍏 translation session error: \(error.localizedDescription)")
+            AppLog.error(.apple, "Sessão Apple Translation falhou: \(error.localizedDescription)")
             // Stale "installed" cache can hide a missing pack — recheck next time.
             if Self.isMissingLanguagePack(error) {
                 invalidateAvailabilityCache(
@@ -291,36 +428,61 @@ final class AppleTranslationBridge: ObservableObject {
         return source == target ? (nil, target) : (source, target)
     }
 
-    /// All distinct pairs worth checking for download readiness.
+    /// Distinct concrete pairs to check/download (auto-detect is resolved to a counterpart).
     static func packPairs(settings: AppSettings) -> [(source: String?, target: String)] {
         var pairs: [(String?, String)] = []
-        let outgoing = defaultPackPair(settings: settings)
-        pairs.append(outgoing)
+        var seen = Set<String>()
 
-        let inSource = settings.resolvedSourceLanguage(outgoing: false) ?? LanguageCode.systemLanguage
-        let inTarget = settings.incomingTargetLanguage
-        let incomingSource: String? = inSource == inTarget ? nil : inSource
-        let incomingTarget = inTarget
-        if incomingSource != outgoing.source || incomingTarget != outgoing.target {
-            pairs.append((incomingSource, incomingTarget))
+        func add(preferred: String?, target: String) {
+            let source = AppleTranslationLanguageMap.concreteSource(preferred: preferred, target: target)
+            let key = "\(source)|\(target)"
+            guard !seen.contains(key) else { return }
+            seen.insert(key)
+            pairs.append((source, target))
         }
+
+        add(
+            preferred: settings.resolvedOutgoingSourceLanguage,
+            target: settings.outgoingTargetLanguage
+        )
+        add(
+            preferred: settings.resolvedSourceLanguage(outgoing: false),
+            target: settings.incomingTargetLanguage
+        )
         return pairs
     }
 
-    /// Pack state for a pair; source nil = auto-detect from a sample phrase.
-    func languagePackState(from: String?, to: String) async -> LanguagePackState {
-        let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
-        let targetLang = Locale.Language(identifier: normalize(to))
-        switch await availabilityStatus(
-            source: sourceLang,
-            target: targetLang,
-            sampleText: Self.sampleText(target: to)
-        ) {
-        case .installed: return .installed
-        case .supported: return .needsDownload
-        case .unsupported: return .unsupported
-        @unknown default: return .needsDownload
+    /// Pack state for a pair; auto-detect source is resolved to a concrete counterpart.
+    func languagePackState(from: String?, to: String, ignoreCache: Bool = false) async -> LanguagePackState {
+        let sourceCode = AppleTranslationLanguageMap.concreteSource(preferred: from, target: to)
+        let sourceLang = await resolvedAppleLanguage(for: sourceCode)
+        let targetLang = await resolvedAppleLanguage(for: to)
+        let key = pairKey(source: sourceLang, target: targetLang)
+
+        if !ignoreCache,
+           let cached = availabilityCache[key],
+           Date().timeIntervalSince(cached.checkedAt) < Self.availabilityCacheTTL {
+            let state: LanguagePackState = cached.packsLikelyMissing ? .needsDownload : .installed
+            AppLog.debug(.apple, "🍏 pack cache hit \(key) → \(state)")
+            return state
         }
+
+        switch await pairStatus(from: sourceLang, to: targetLang) {
+        case .installed:
+            cacheAvailability(source: sourceLang, target: targetLang, packsLikelyMissing: false)
+            return .installed
+        case .supported:
+            cacheAvailability(source: sourceLang, target: targetLang, packsLikelyMissing: true)
+            return .needsDownload
+        case .unsupported:
+            return .unsupported
+        @unknown default:
+            return .needsDownload
+        }
+    }
+
+    func rememberOverallPackState(_ state: LanguagePackState) {
+        cachedOverallPackState = state
     }
 
     /// Sample phrase in a language different from the target so detection works.
@@ -333,12 +495,71 @@ final class AppleTranslationBridge: ObservableObject {
         target: Locale.Language,
         sampleText: String
     ) async -> LanguageAvailability.Status {
-        let availability = LanguageAvailability()
         if let source {
-            return await availability.status(from: source, to: target)
+            let resolvedSource = await resolvedAppleLanguage(
+                for: AppleTranslationLanguageMap.appCode(from: source)
+            )
+            let resolvedTarget = await resolvedAppleLanguage(
+                for: AppleTranslationLanguageMap.appCode(from: target)
+            )
+            return await pairStatus(from: resolvedSource, to: resolvedTarget)
         }
-        // Auto-detect source from the text; assume supported when detection fails.
-        return (try? await availability.status(for: sampleText, to: target)) ?? .supported
+        if let detected = try? await languageAvailability.status(for: sampleText, to: target) {
+            return detected
+        }
+        // Detection failed — do not claim the pack is missing.
+        return .installed
+    }
+
+    private func pairStatus(
+        from source: Locale.Language,
+        to target: Locale.Language
+    ) async -> LanguageAvailability.Status {
+        let primary = await languageAvailability.status(from: source, to: target)
+        AppLog.debug(
+            .apple,
+            "🍏 LanguageAvailability \(AppleTranslationLanguageMap.appCode(from: source))→\(AppleTranslationLanguageMap.appCode(from: target)) = \(primary)"
+        )
+        if primary == .installed || primary == .unsupported {
+            return primary
+        }
+
+        let supported = await cachedSupportedLanguages()
+        let sourceAlts = AppleTranslationLanguageMap.alternates(of: source, in: supported)
+        let targetAlts = AppleTranslationLanguageMap.alternates(of: target, in: supported)
+        for src in sourceAlts {
+            for dst in targetAlts {
+                if src == source && dst == target { continue }
+                let status = await languageAvailability.status(from: src, to: dst)
+                if status == .installed {
+                    AppLog.info(
+                        .apple,
+                        "🍏 pack installed via alternate \(AppleTranslationLanguageMap.appCode(from: src))→\(AppleTranslationLanguageMap.appCode(from: dst))"
+                    )
+                    return .installed
+                }
+            }
+        }
+        return primary
+    }
+
+    private func resolvedAppleLanguage(for code: String) async -> Locale.Language {
+        let supported = await cachedSupportedLanguages()
+        return AppleTranslationLanguageMap.pick(appCode: code, from: supported)
+            ?? AppleTranslationLanguageMap.makeLanguage(forAppCode: code)
+    }
+
+    private func cachedSupportedLanguages() async -> [Locale.Language] {
+        if !supportedLanguagesCache.isEmpty,
+           let fetched = supportedLanguagesFetchedAt,
+           Date().timeIntervalSince(fetched) < Self.supportedLanguagesTTL {
+            return supportedLanguagesCache
+        }
+        let list = await languageAvailability.supportedLanguages
+        supportedLanguagesCache = list
+        supportedLanguagesFetchedAt = Date()
+        AppLog.debug(.apple, "🍏 supportedLanguages=\(list.count)")
+        return list
     }
 
     /// Returns true when the pair is supported but the language pack still needs downloading.
@@ -394,8 +615,8 @@ final class AppleTranslationBridge: ObservableObject {
     }
 
     private func pairKey(source: Locale.Language?, target: Locale.Language) -> String {
-        let sourceID = source?.maximalIdentifier ?? "auto"
-        return "\(sourceID)|\(target.maximalIdentifier)"
+        let sourceID = source.map { AppleTranslationLanguageMap.appCode(from: $0) } ?? "auto"
+        return "\(sourceID)|\(AppleTranslationLanguageMap.appCode(from: target))"
     }
 
     /// If `.translationTask` never picks up the request (host view unmounted, session broken),
@@ -439,13 +660,13 @@ final class AppleTranslationBridge: ObservableObject {
         if !forceNew,
            publishedPairKey == key,
            var config = configuration {
-            AppLog.info(.apple, "🍏 invalidating warm configuration for \(key)")
+            AppLog.info(.apple, "Reusando sessão aquecida para \(key) (invalidate)")
             config.invalidate()
             configuration = config
             return
         }
 
-        AppLog.info(.apple, "🍏 publishing new configuration for \(key)")
+        AppLog.info(.apple, "Publicando nova sessão Apple Translation para \(key)")
         publishedPairKey = key
         configuration = TranslationSession.Configuration(
             source: source,
@@ -484,7 +705,24 @@ struct AppleTranslationProvider: TranslationProvider {
     let bridge: AppleTranslationBridge
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
-        let text = try await bridge.translate(text, from: from, to: to)
-        return TranslationOutcome(text: text)
+        AppLog.info(
+            .apple,
+            "Apple Translation: \(LanguageCode.pairLabel(from: from, to: to)), \(text.count) caracteres"
+        )
+        let started = Date()
+        do {
+            let text = try await bridge.translate(text, from: from, to: to)
+            AppLog.info(
+                .apple,
+                "Apple Translation concluiu em \(AppLog.duration(since: started)) — \(text.count) caracteres"
+            )
+            return TranslationOutcome(text: text)
+        } catch {
+            AppLog.error(
+                .apple,
+                "Apple Translation falhou em \(AppLog.duration(since: started)): \(error.localizedDescription)"
+            )
+            throw error
+        }
     }
 }

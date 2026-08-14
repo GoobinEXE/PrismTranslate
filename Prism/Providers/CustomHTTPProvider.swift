@@ -14,9 +14,15 @@ struct CustomHTTPProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("Configure a URL do Custom HTTP")
         }
 
-        AppLog.info(
+        ProviderLog.sending(
             .customHTTP,
-            "📡 [Custom HTTP] \(method.uppercased()) \(url) — chars=\(text.count), from=\(from ?? "auto"), to=\(to), path=\(responseJSONPath)"
+            engine: "HTTP personalizado",
+            method: method.uppercased(),
+            endpoint: url,
+            chars: text.count,
+            from: from,
+            to: to,
+            extra: "caminho JSON \(responseJSONPath.isEmpty ? "(corpo inteiro)" : responseJSONPath)"
         )
 
         var request = URLRequest(url: endpoint)
@@ -46,27 +52,65 @@ struct CustomHTTPProvider: TranslationProvider {
             }
         }
 
+        let started = Date()
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            ProviderLog.failed(.customHTTP, engine: "HTTP personalizado", status: nil, since: started, body: "")
             throw TranslationError.emptyResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(.customHTTP, "❌ [Custom HTTP] HTTP \(http.statusCode): \(bodyText)")
+            ProviderLog.failed(
+                .customHTTP,
+                engine: "HTTP personalizado",
+                status: http.statusCode,
+                since: started,
+                body: bodyText
+            )
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
         if responseJSONPath.isEmpty {
             guard let raw = String(data: data, encoding: .utf8), !raw.isEmpty else {
+                ProviderLog.failed(
+                    .customHTTP,
+                    engine: "HTTP personalizado",
+                    status: http.statusCode,
+                    since: started,
+                    body: "corpo vazio"
+                )
                 throw TranslationError.emptyResponse
             }
+            ProviderLog.received(
+                .customHTTP,
+                engine: "HTTP personalizado",
+                status: http.statusCode,
+                bytes: data.count,
+                since: started,
+                outChars: raw.count
+            )
             return TranslationOutcome(text: raw)
         }
 
         let json = try JSONSerialization.jsonObject(with: data)
         guard let extracted = Self.extract(path: responseJSONPath, from: json) else {
+            ProviderLog.failed(
+                .customHTTP,
+                engine: "HTTP personalizado",
+                status: http.statusCode,
+                since: started,
+                body: "caminho JSON '\(responseJSONPath)' não encontrado"
+            )
             throw TranslationError.emptyResponse
         }
+        ProviderLog.received(
+            .customHTTP,
+            engine: "HTTP personalizado",
+            status: http.statusCode,
+            bytes: data.count,
+            since: started,
+            outChars: extracted.count
+        )
         return TranslationOutcome(text: extracted)
     }
 

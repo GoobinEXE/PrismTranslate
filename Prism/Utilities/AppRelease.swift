@@ -22,16 +22,16 @@ enum AppRelease {
             string: "https://github.com/\(githubOwner)/\(githubRepo)/issues/new"
         )!
         let body = """
-        ## O que aconteceu
+            ## O que aconteceu
 
 
-        ## O que você esperava
+            ## O que você esperava
 
 
-        ## Ambiente
-        - Prism \(version) (\(build))
-        - \(macOS)
-        """
+            ## Ambiente
+            - Prism \(version) (\(build))
+            - \(macOS)
+            """
         components.queryItems = [URLQueryItem(name: "body", value: body)]
         return components.url ?? newIssueURL
     }
@@ -71,7 +71,7 @@ enum AppRelease {
 enum AppCredits {
     static let developerName = "Marcelo Pessoa"
     static let developerRole = "Criador e desenvolvedor"
-    static let location = "Manaus, AM — Brasil"
+    static let location = "Curitiba, PR — Brasil"
     static let githubHandle = "@GoobinEXE"
     static let bio =
         "Projeto solo: da ideia ao design, do código ao release. Feito com cuidado artesanal para traduzir sem atrapalhar quem escreve o dia inteiro."
@@ -89,7 +89,8 @@ struct SemanticVersion: Comparable, Equatable {
         if text.first == "v" || text.first == "V" {
             text.removeFirst()
         }
-        let numeric = text.split(whereSeparator: { $0 == "-" || $0 == "+" }).first.map(String.init) ?? text
+        let numeric =
+            text.split(whereSeparator: { $0 == "-" || $0 == "+" }).first.map(String.init) ?? text
         let parts = numeric.split(separator: ".").compactMap { Int($0) }
         guard !parts.isEmpty else { return nil }
         return SemanticVersion(
@@ -138,7 +139,7 @@ enum ChangelogHighlights {
     static func summaryForCurrentVersion() -> String {
         let version = AppRelease.marketingVersion
         if let markdown = bundledMarkdown(),
-           let summary = summary(for: version, markdown: markdown)
+            let summary = summary(for: version, markdown: markdown)
         {
             return summary
         }
@@ -147,8 +148,8 @@ enum ChangelogHighlights {
 
     /// Usado se o CHANGELOG não estiver no bundle (dev) ou a versão não tiver seção.
     static let fallbackSummary = """
-    Aba Sobre com novidades desta versão, verificação de atualizações, reporte de problemas e atalhos de diagnóstico.
-    """
+        Aba Sobre com novidades desta versão, verificação de atualizações, reporte de problemas e atalhos de diagnóstico.
+        """
 
     static func section(for version: String, in markdown: String) -> String? {
         let heading = "## [\(version)]"
@@ -200,10 +201,15 @@ enum GitHubUpdateChecker {
         }
     }
 
-    static func check(currentVersion: String, session: URLSession = .shared) async -> UpdateCheckResult {
-        guard let url = URL(
-            string: "https://api.github.com/repos/\(AppRelease.githubOwner)/\(AppRelease.githubRepo)/releases?per_page=10"
-        ) else {
+    static func check(currentVersion: String, session: URLSession = .shared) async
+        -> UpdateCheckResult
+    {
+        guard
+            let url = URL(
+                string:
+                    "https://api.github.com/repos/\(AppRelease.githubOwner)/\(AppRelease.githubRepo)/releases?per_page=10"
+            )
+        else {
             return .failed("URL inválida.")
         }
 
@@ -238,12 +244,13 @@ enum GitHubUpdateChecker {
         let published = releases.filter { !$0.draft }
         guard let latest = published.first else { return .nonePublished }
         guard let latestVersion = SemanticVersion.parse(latest.tagName),
-              let current = SemanticVersion.parse(currentVersion)
+            let current = SemanticVersion.parse(currentVersion)
         else {
             return .failed("Não foi possível comparar as versões.")
         }
 
-        let label = latest.tagName.hasPrefix("v") ? String(latest.tagName.dropFirst()) : latest.tagName
+        let label =
+            latest.tagName.hasPrefix("v") ? String(latest.tagName.dropFirst()) : latest.tagName
         if latestVersion > current {
             if let url = URL(string: latest.htmlURL) {
                 return .available(version: label, url: url)

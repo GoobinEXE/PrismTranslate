@@ -8,6 +8,43 @@ enum TranslationPresentation: Equatable {
     case popup
 }
 
+/// Como a tradução foi disparada — atalho, Enter ou botão.
+enum TranslationTrigger: Equatable {
+    case hotkeyTranslateOnly(chord: String)
+    case hotkeyTranslateAndSend(chord: String)
+    case hotkeyPopup(chord: String)
+    case enterKey
+    case settingsTest
+
+    var title: String {
+        switch self {
+        case .hotkeyTranslateOnly(let chord):
+            return "atalho «Traduzir» (\(chord))"
+        case .hotkeyTranslateAndSend(let chord):
+            return "atalho «Traduzir e enviar» (\(chord))"
+        case .hotkeyPopup(let chord):
+            return "atalho «Painel» (\(chord))"
+        case .enterKey:
+            return "tecla Enter (modo «traduz e envia»)"
+        case .settingsTest:
+            return "botão «Testar tradução» nas Configurações"
+        }
+    }
+
+    var expectedOutcome: String {
+        switch self {
+        case .hotkeyTranslateOnly:
+            return "traduz e substitui no campo, sem enviar"
+        case .hotkeyTranslateAndSend, .enterKey:
+            return "traduz, substitui e envia (Return)"
+        case .hotkeyPopup:
+            return "mostra o resultado no painel flutuante"
+        case .settingsTest:
+            return "valida o motor com o texto de teste"
+        }
+    }
+}
+
 @MainActor
 final class TranslationOrchestrator {
     private var settings: AppSettings
@@ -18,6 +55,9 @@ final class TranslationOrchestrator {
     private var runStartDate: Date?
     /// Maximum time a translation can run before `isRunning` is forcibly reset.
     private static let maxRunDuration: TimeInterval = 45
+
+    /// True while a capture/translate or a popup Replace is in flight.
+    var isBusy: Bool { isRunning }
 
     var onStatusChange: ((AppState.Status) -> Void)?
     var pressReturnHandler: (() -> Void)?
@@ -30,30 +70,46 @@ final class TranslationOrchestrator {
 
     func updateSettings(_ settings: AppSettings) {
         self.settings = settings
-        AppLog.info(
+        AppLog.debug(
             .orchestrator,
-            "settings atualizados (enabled=\(settings.isEnabled), provider=\(settings.providerKind.displayName), popup=\(settings.popupModeEnabled))"
+            "Configuração do tradutor atualizada — motor \(settings.engineLogDescription), Prism \(settings.isEnabled ? "ligado" : "desligado"), painel \(settings.popupModeEnabled ? "ligado" : "desligado")"
         )
     }
 
     /// Backward-compatible entry used by existing call sites.
     func translateFocusedText(sendAfter: Bool) async {
-        await translateFocusedText(presentation: .replaceInPlace(sendAfter: sendAfter))
+        let trigger: TranslationTrigger = sendAfter
+            ? .hotkeyTranslateAndSend(chord: settings.translateAndSendHotkey.displayString)
+            : .hotkeyTranslateOnly(chord: settings.translateOnlyHotkey.displayString)
+        await translateFocusedText(
+            presentation: .replaceInPlace(sendAfter: sendAfter),
+            trigger: trigger
+        )
     }
 
     /// Select (if needed) → translate → replace or show result panel.
-    func translateFocusedText(presentation: TranslationPresentation) async {
+    func translateFocusedText(
+        presentation: TranslationPresentation,
+        trigger: TranslationTrigger
+    ) async {
         let runID = AppLog.beginRun()
+        let runStarted = Date()
         defer { AppLog.endRun() }
 
-        AppLog.info(
-            .orchestrator,
-            "▶︎ início — presentation=\(String(describing: presentation)), enabled=\(settings.isEnabled), provider=\(settings.providerKind.displayName)"
-        )
+        AppLog.info(.orchestrator, "── Tradução \(runID) iniciada ──")
+        AppLog.info(.orchestrator, "Disparo: \(trigger.title) — \(trigger.expectedOutcome)")
+        AppLog.info(.orchestrator, "Motor: \(settings.engineLogDescription)")
 
         guard settings.isEnabled else {
-            AppLog.warning(.orchestrator, "tradução ignorada: app está desligado")
+            AppLog.warning(
+                .orchestrator,
+                "Ignorado: Prism está desligado. Ligue o interruptor no menu ou em Configurações."
+            )
             onStatusChange?(.error("Prism está desligado — ligue nas Configurações"))
+            AppLog.info(
+                .orchestrator,
+                "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — app desligado ──"
+            )
             return
         }
 
@@ -61,23 +117,30 @@ final class TranslationOrchestrator {
         if isRunning, let start = runStartDate {
             let elapsed = Date().timeIntervalSince(start)
             if elapsed > Self.maxRunDuration {
-                AppLog.error(.orchestrator, "isRunning preso há \(Int(elapsed))s — forçando reset")
+                AppLog.error(
+                    .orchestrator,
+                    "Tradução anterior presa há \(Int(elapsed)) s — forçando reset para esta nova tentativa"
+                )
                 isRunning = false
                 runStartDate = nil
             }
         }
 
         guard !isRunning else {
-            AppLog.warning(.orchestrator, "tradução ignorada: outra tradução em andamento (run anterior)")
+            AppLog.warning(
+                .orchestrator,
+                "Ignorado: outra tradução ainda está em andamento. Espere ela terminar e tente de novo."
+            )
             onStatusChange?(.error("Tradução anterior ainda em andamento — aguarde"))
             return
         }
 
         // Capture the currently active application so we can re-activate it before replacing text
         let targetApp = NSWorkspace.shared.frontmostApplication
-        AppLog.info(
-            .orchestrator,
-            "app alvo: name=\(targetApp?.localizedName ?? "nil"), bundle=\(targetApp?.bundleIdentifier ?? "nil"), pid=\(targetApp?.processIdentifier ?? -1)"
+        let appName = targetApp?.localizedName ?? "app desconhecido"
+        AppLog.step(
+            .orchestrator, 1, of: 4,
+            "App em primeiro plano: \(appName) (\(targetApp?.bundleIdentifier ?? "sem bundle"), pid \(targetApp?.processIdentifier ?? -1))"
         )
 
         isRunning = true
@@ -87,39 +150,37 @@ final class TranslationOrchestrator {
             runStartDate = nil
             // If we borrowed the clipboard for read and never pasted (error / empty), restore it.
             textIO.finishPasteboardSession()
-            AppLog.debug(.orchestrator, "fim do run — isRunning=false, pasteboard session finalizada")
+            AppLog.debug(.orchestrator, "Fim do run — sessão de clipboard encerrada")
         }
 
         onStatusChange?(.translating)
 
         do {
-            // 1) Auto-select when nothing is highlighted (editable only), then capture.
-            AppLog.info(.orchestrator, "etapa 1/3 — capturando texto focado")
+            AppLog.step(.orchestrator, 2, of: 4, "Capturando o texto focado em \(appName)…")
             let capture = try await textIO.selectAndReadFocusedText()
             let trimmed = capture.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
                 AppLog.warning(
                     .orchestrator,
-                    "texto capturado vazio após trim (rawLen=\(capture.text.count), editable=\(capture.isEditable), didSelectAll=\(capture.didSelectAll), clipboard=\(capture.usedClipboardForRead))"
+                    "Nada para traduzir: o campo veio vazio (\(capture.logSummary))"
                 )
                 onStatusChange?(.error("Nenhum texto no campo focado"))
+                AppLog.info(
+                    .orchestrator,
+                    "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — texto vazio ──"
+                )
                 return
             }
-            let preview = Self.preview(trimmed)
-            AppLog.info(
-                .orchestrator,
-                "captura OK — chars=\(trimmed.count), didSelectAll=\(capture.didSelectAll), editable=\(capture.isEditable), clipboardRead=\(capture.usedClipboardForRead), rect=\(String(describing: capture.selectionScreenRect)), preview=\"\(preview)\""
-            )
+            AppLog.info(.orchestrator, "Captura: \(capture.logSummary)")
+            AppLog.info(.orchestrator, "Prévia original: \"\(AppLog.preview(trimmed))\"")
 
-            // 2) Translate with the pair for this context (incoming = read-only, outgoing = editable).
             let useOutgoing = capture.isEditable
             let from = settings.resolvedSourceLanguage(outgoing: useOutgoing)
             let to = settings.targetLanguage(outgoing: useOutgoing)
-            let sourceLang = from ?? "auto"
-            let providerName = settings.providerKind.displayName
-            AppLog.info(
-                .orchestrator,
-                "etapa 2/3 — traduzindo via '\(providerName)' \(sourceLang) → \(to) (outgoingPair=\(useOutgoing))"
+            let pairKind = useOutgoing ? "texto que você escreve" : "texto que você lê"
+            AppLog.step(
+                .orchestrator, 3, of: 4,
+                "Traduzindo \(LanguageCode.pairLabel(from: from, to: to)) via \(settings.engineLogDescription) (par: \(pairKind))"
             )
             let translateStarted = Date()
             let outcome = try await engine.translate(
@@ -127,11 +188,14 @@ final class TranslationOrchestrator {
                 from: from,
                 to: to
             )
-            let translateMs = Int(Date().timeIntervalSince(translateStarted) * 1000)
             AppLog.info(
                 .orchestrator,
-                "tradução OK — \(outcome.text.count) chars em \(translateMs)ms, detected=\(outcome.detectedSourceLanguage ?? "nil"), preview=\"\(Self.preview(outcome.text))\""
+                "Tradução pronta em \(AppLog.duration(since: translateStarted)) — \(outcome.text.count) caracteres"
+                    + (outcome.detectedSourceLanguage.map {
+                        ", origem detectada: \(LanguageCode.displayName(for: $0))"
+                    } ?? "")
             )
+            AppLog.info(.orchestrator, "Prévia traduzida: \"\(AppLog.preview(outcome.text))\"")
 
             let output = preserveSurroundingWhitespace(original: capture.text, translated: outcome.text)
 
@@ -149,11 +213,6 @@ final class TranslationOrchestrator {
                 sendAfter = false
             }
 
-            AppLog.info(
-                .orchestrator,
-                "etapa 3/3 — decisão de saída: showPanel=\(showPanel), canReplace=\(canReplace), sendAfter=\(sendAfter)"
-            )
-
             if showPanel {
                 let sourceLabel: String
                 if let from {
@@ -161,13 +220,15 @@ final class TranslationOrchestrator {
                 } else if let detected = outcome.detectedSourceLanguage {
                     sourceLabel = LanguageCode.displayName(for: detected)
                 } else {
-                    // Last resort — should be rare after on-device NLLanguageRecognizer fallback.
                     sourceLabel = LanguageCode.displayName(for: LanguageCode.systemLanguage)
                 }
                 let targetLabel = LanguageCode.displayName(for: to)
-                AppLog.info(
-                    .orchestrator,
-                    "abrindo painel — source=\(sourceLabel), target=\(targetLabel), canReplace=\(canReplace)"
+                let replaceHint = canReplace
+                    ? "botão Substituir habilitado (⏎)"
+                    : "só Copiar (⌘C) — campo não é editável"
+                AppLog.step(
+                    .orchestrator, 4, of: 4,
+                    "Abrindo painel \(sourceLabel) → \(targetLabel) — \(replaceHint)"
                 )
                 TranslationResultPanelController.shared.show(
                     .init(
@@ -177,36 +238,87 @@ final class TranslationOrchestrator {
                         showOriginal: canReplace,
                         sourceLanguageLabel: sourceLabel,
                         targetLanguageLabel: targetLabel,
+                        pairContextLabel: useOutgoing ? "Texto que escrevo" : "Texto que leio",
                         capture: capture,
                         targetApp: targetApp,
                         onReplace: { [weak self] capture, text, app in
-                            await self?.performReplace(capture: capture, text: text, targetApp: app)
+                            await self?.performReplaceFromPanel(
+                                capture: capture, text: text, targetApp: app)
                         }
                     )
                 )
                 onStatusChange?(.success)
-                AppLog.info(.orchestrator, "run \(runID) concluído com sucesso (painel)")
+                AppLog.info(
+                    .orchestrator,
+                    "── Tradução \(runID) concluída em \(AppLog.duration(since: runStarted)) — painel aberto em \(appName) ──"
+                )
                 return
             }
 
-            // 3) Replace the selection with the translation.
+            AppLog.step(
+                .orchestrator, 4, of: 4,
+                sendAfter
+                    ? "Substituindo o texto no campo e enviando Return"
+                    : "Substituindo o texto no campo (sem enviar)"
+            )
             await performReplace(capture: capture, text: output, targetApp: targetApp)
 
             if sendAfter {
                 try await Task.sleep(nanoseconds: 25_000_000)
-                AppLog.info(.orchestrator, "enviando Return (translate-and-send)")
+                AppLog.info(.orchestrator, "Enviando tecla Return (traduzir e enviar)")
                 pressReturnHandler?()
             }
 
             onStatusChange?(.success)
-            AppLog.info(.orchestrator, "run \(runID) concluído com sucesso (replace)")
+            let ending = sendAfter ? "texto substituído e enviado" : "texto substituído"
+            AppLog.info(
+                .orchestrator,
+                "── Tradução \(runID) concluída em \(AppLog.duration(since: runStarted)) — \(ending) em \(appName) ──"
+            )
         } catch {
             AppLog.error(
                 .orchestrator,
-                "run \(runID) falhou: \(error.localizedDescription) | \(String(describing: error))"
+                "Falhou: \(error.localizedDescription)"
             )
+            AppLog.debug(.orchestrator, "Erro técnico: \(String(describing: error))")
             onStatusChange?(.error(error.localizedDescription))
+            AppLog.error(
+                .orchestrator,
+                "── Tradução \(runID) falhou em \(AppLog.duration(since: runStarted)) — \(error.localizedDescription) ──"
+            )
         }
+    }
+
+    /// Replace from the popup — holds `isRunning` so a concurrent hotkey cannot
+    /// capture/paste while the clipboard session is still in use.
+    private func performReplaceFromPanel(
+        capture: FocusedTextCapture,
+        text: String,
+        targetApp: NSRunningApplication?
+    ) async {
+        if isRunning, let start = runStartDate {
+            let elapsed = Date().timeIntervalSince(start)
+            if elapsed > Self.maxRunDuration {
+                isRunning = false
+                runStartDate = nil
+            }
+        }
+        guard !isRunning else {
+            AppLog.warning(
+                .orchestrator,
+                "Ignorado: substituição do painel enquanto outra tradução ainda corre"
+            )
+            onStatusChange?(.error("Tradução anterior ainda em andamento — aguarde"))
+            return
+        }
+        isRunning = true
+        runStartDate = Date()
+        defer {
+            isRunning = false
+            runStartDate = nil
+            textIO.finishPasteboardSession()
+        }
+        await performReplace(capture: capture, text: text, targetApp: targetApp)
     }
 
     private func performReplace(
@@ -218,7 +330,7 @@ final class TranslationOrchestrator {
             if let targetApp, !targetApp.isActive {
                 AppLog.info(
                     .orchestrator,
-                    "reativando app de origem '\(targetApp.localizedName ?? "")' (pid=\(targetApp.processIdentifier))"
+                    "Reativando \(targetApp.localizedName ?? "o app de origem") (pid \(targetApp.processIdentifier)) para colar a tradução"
                 )
                 if #available(macOS 14.0, *) {
                     targetApp.activate()
@@ -230,16 +342,17 @@ final class TranslationOrchestrator {
 
             AppLog.info(
                 .orchestrator,
-                "substituindo seleção — chars=\(text.count), didSelectAll=\(capture.didSelectAll), clipboardPath=\(capture.usedClipboardForRead)"
+                "Substituindo seleção — \(text.count) caracteres (\(capture.logSummary))"
             )
             try await textIO.replaceSelection(capture, with: text)
-            AppLog.info(.orchestrator, "substituição concluída")
+            AppLog.info(.orchestrator, "Substituição concluída")
             onStatusChange?(.success)
         } catch {
             AppLog.error(
                 .orchestrator,
-                "erro ao substituir: \(error.localizedDescription) | \(String(describing: error))"
+                "Não deu para substituir o texto: \(error.localizedDescription)"
             )
+            AppLog.debug(.orchestrator, "Erro técnico na substituição: \(String(describing: error))")
             onStatusChange?(.error(error.localizedDescription))
         }
     }
@@ -248,13 +361,5 @@ final class TranslationOrchestrator {
         let leading = original.prefix(while: { $0.isWhitespace })
         let trailing = original.reversed().prefix(while: { $0.isWhitespace }).reversed()
         return String(leading) + translated.trimmingCharacters(in: .whitespacesAndNewlines) + String(trailing)
-    }
-
-    private static func preview(_ text: String, max: Int = 80) -> String {
-        let flat = text
-            .replacingOccurrences(of: "\n", with: "⏎")
-            .replacingOccurrences(of: "\t", with: "⇥")
-        if flat.count <= max { return flat }
-        return String(flat.prefix(max)) + "…"
     }
 }

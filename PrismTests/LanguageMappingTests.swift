@@ -12,6 +12,17 @@ final class LanguageMappingTests: XCTestCase {
         XCTAssertEqual(LanguageCode.displayName(for: "zh-Hant"), "中文 (繁體)")
     }
 
+    func testPairLabel() {
+        XCTAssertEqual(
+            LanguageCode.pairLabel(from: "pt", to: "en"),
+            "Português → English"
+        )
+        XCTAssertEqual(
+            LanguageCode.pairLabel(from: nil, to: "en"),
+            "detecção automática → English"
+        )
+    }
+
     func testDisplayNameFallsBackToRawCode() {
         XCTAssertEqual(LanguageCode.displayName(for: "xx"), "xx")
     }
@@ -81,5 +92,73 @@ final class LanguageMappingTests: XCTestCase {
     func testGooglePassthroughForOtherCodes() {
         XCTAssertEqual(GoogleTranslateProvider.apiCode(for: "pt"), "pt")
         XCTAssertEqual(GoogleTranslateProvider.apiCode(for: "en"), "en")
+    }
+
+    // MARK: Apple Translation locale map
+
+    func testAppleSpecUsesRegionWithoutScript() {
+        XCTAssertEqual(AppleTranslationLanguageMap.spec(forAppCode: "en").bcp47, "en-US")
+        XCTAssertEqual(AppleTranslationLanguageMap.spec(forAppCode: "pt").bcp47, "pt-BR")
+        XCTAssertEqual(AppleTranslationLanguageMap.spec(forAppCode: "zh-Hans").bcp47, "zh-CN")
+        XCTAssertEqual(AppleTranslationLanguageMap.spec(forAppCode: "zh-Hant").bcp47, "zh-TW")
+        XCTAssertNil(AppleTranslationLanguageMap.spec(forAppCode: "en").script)
+    }
+
+    func testAppleMakeLanguageOmitsLatnScript() {
+        let english = AppleTranslationLanguageMap.makeLanguage(forAppCode: "en")
+        XCTAssertEqual(english.languageCode?.identifier, "en")
+        XCTAssertEqual(english.region?.identifier, "US")
+        XCTAssertNil(english.script)
+    }
+
+    func testApplePickPrefersMatchingRegionFromSupportedList() {
+        let enGB = Locale.Language(
+            components: .init(
+                languageCode: Locale.LanguageCode("en"),
+                script: nil,
+                region: Locale.Region("GB")
+            )
+        )
+        let enUS = Locale.Language(
+            components: .init(
+                languageCode: Locale.LanguageCode("en"),
+                script: nil,
+                region: Locale.Region("US")
+            )
+        )
+        let picked = AppleTranslationLanguageMap.pick(appCode: "en", from: [enGB, enUS])
+        XCTAssertEqual(picked?.region?.identifier, "US")
+    }
+
+    func testAppleAppCodeCollapsesChineseRegions() {
+        let zhCN = Locale.Language(
+            components: .init(
+                languageCode: Locale.LanguageCode("zh"),
+                script: nil,
+                region: Locale.Region("CN")
+            )
+        )
+        let zhTW = Locale.Language(
+            components: .init(
+                languageCode: Locale.LanguageCode("zh"),
+                script: nil,
+                region: Locale.Region("TW")
+            )
+        )
+        XCTAssertEqual(AppleTranslationLanguageMap.appCode(from: zhCN), "zh-Hans")
+        XCTAssertEqual(AppleTranslationLanguageMap.appCode(from: zhTW), "zh-Hant")
+    }
+
+    func testAppleConcreteSourceAvoidsSameLanguageAsTarget() {
+        let source = AppleTranslationLanguageMap.concreteSource(preferred: "pt", target: "pt")
+        XCTAssertNotEqual(source, "pt")
+        XCTAssertFalse(source.isEmpty)
+    }
+
+    func testAppleConcreteSourceKeepsDistinctPreferred() {
+        XCTAssertEqual(
+            AppleTranslationLanguageMap.concreteSource(preferred: "en", target: "pt"),
+            "en"
+        )
     }
 }

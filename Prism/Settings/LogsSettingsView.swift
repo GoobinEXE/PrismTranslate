@@ -231,7 +231,7 @@ struct LogsSettingsView: View {
         let lines = AppLogExport.copyToPasteboard()
         guard lines > 0 else { return }
         copyFeedback = "Copiado (\(lines))"
-        AppLog.info(.settings, "log completo copiado (\(lines) linhas)")
+        AppLog.info(.settings, "Botão «Copiar» log (⇧⌘C) — \(lines) linhas na área de transferência")
         Task {
             try? await Task.sleep(nanoseconds: 1_800_000_000)
             if copyFeedback == "Copiado (\(lines))" {
@@ -259,7 +259,7 @@ struct LogsSettingsView: View {
             let lines = (try? String(contentsOf: url, encoding: .utf8))
                 .map { $0.split(separator: "\n", omittingEmptySubsequences: false).count } ?? 0
             exportFeedback = "Salvo: \(url.lastPathComponent) (\(lines) linhas)"
-            AppLog.info(.settings, "logs exportados para \(url.path) (\(lines) linhas)")
+            AppLog.info(.settings, "Botão «Salvar…» log — \(url.path) (\(lines) linhas)")
             Task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 if exportFeedback?.contains(url.lastPathComponent) == true {
@@ -268,7 +268,7 @@ struct LogsSettingsView: View {
             }
         case .failure(let error):
             exportFeedback = "Falha ao salvar"
-            AppLog.error(.settings, "falha ao exportar logs: \(error.localizedDescription)")
+            AppLog.error(.settings, "Falha ao exportar logs: \(error.localizedDescription)")
         case .none:
             break
         }

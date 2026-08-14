@@ -493,6 +493,57 @@ enum AppLog {
         AppLogStore.shared.endRun()
     }
 
+    /// Prévia curta de texto (quebras viram ⏎) para o log ficar legível.
+    static func preview(_ text: String, max: Int = 80) -> String {
+        let flat = text
+            .replacingOccurrences(of: "\n", with: "⏎")
+            .replacingOccurrences(of: "\t", with: "⇥")
+        if flat.count <= max { return flat }
+        return String(flat.prefix(max)) + "…"
+    }
+
+    static func duration(since date: Date) -> String {
+        formatDuration(Int(Date().timeIntervalSince(date) * 1000))
+    }
+
+    static func formatDuration(_ milliseconds: Int) -> String {
+        if milliseconds < 1000 { return "\(milliseconds) ms" }
+        let seconds = Double(milliseconds) / 1000
+        if seconds < 10 {
+            return String(format: "%.1f s", seconds)
+        }
+        return "\(Int(seconds.rounded())) s"
+    }
+
+    /// Corpo HTTP enxuto — sem quebras, limitado, para caber numa linha.
+    static func httpBodyPreview(_ body: String, max: Int = 240) -> String {
+        let flat = body
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !flat.isEmpty else { return "(vazio)" }
+        if flat.count <= max { return flat }
+        return String(flat.prefix(max)) + "…"
+    }
+
+    static func step(
+        _ category: AppLogCategory,
+        _ index: Int,
+        of total: Int,
+        _ message: String,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(
+            .info,
+            category,
+            "\(index)/\(total) \(message)",
+            file: file,
+            function: function,
+            line: line
+        )
+    }
+
     private static func log(
         _ level: AppLogLevel,
         _ category: AppLogCategory,
@@ -510,5 +561,76 @@ enum AppLog {
             function: function,
             line: line
         )
+    }
+}
+
+// MARK: - Provider HTTP narrative
+
+enum ProviderLog {
+    static func sending(
+        _ category: AppLogCategory,
+        engine: String,
+        method: String = "POST",
+        endpoint: String,
+        chars: Int,
+        from: String?,
+        to: String,
+        model: String? = nil,
+        extra: String? = nil
+    ) {
+        var parts = [
+            "\(engine): enviando \(method) \(endpoint)",
+            "\(chars) caracteres",
+            LanguageCode.pairLabel(from: from, to: to),
+        ]
+        if let model, !model.isEmpty {
+            parts.insert("modelo \(model)", at: 1)
+        }
+        if let extra, !extra.isEmpty {
+            parts.append(extra)
+        }
+        AppLog.info(category, parts.joined(separator: " · "))
+    }
+
+    static func received(
+        _ category: AppLogCategory,
+        engine: String,
+        status: Int,
+        bytes: Int,
+        since started: Date,
+        outChars: Int,
+        detected: String? = nil
+    ) {
+        var parts = [
+            "\(engine): resposta HTTP \(status) em \(AppLog.duration(since: started))",
+            "\(bytes) bytes recebidos",
+            "\(outChars) caracteres traduzidos",
+        ]
+        if let detected, !detected.isEmpty {
+            parts.append("origem detectada: \(LanguageCode.displayName(for: detected))")
+        }
+        AppLog.info(category, parts.joined(separator: " · "))
+    }
+
+    static func failed(
+        _ category: AppLogCategory,
+        engine: String,
+        status: Int?,
+        since started: Date,
+        body: String
+    ) {
+        let duration = AppLog.duration(since: started)
+        if let status {
+            let kind = TranslationError.classifyHTTPFailure(statusCode: status, body: body)
+            AppLog.error(
+                category,
+                "\(engine): falhou HTTP \(status) (\(kind.logLabel)) em \(duration) · \(AppLog.httpBodyPreview(body))"
+            )
+        } else {
+            AppLog.error(
+                category,
+                "\(engine): resposta inválida em \(duration) · \(AppLog.httpBodyPreview(body))"
+            )
+        }
     }
 }

@@ -18,6 +18,8 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         let showOriginal: Bool
         let sourceLanguageLabel: String
         let targetLanguageLabel: String
+        /// «Texto que leio» vs «Texto que escrevo».
+        let pairContextLabel: String
         let capture: FocusedTextCapture
         let targetApp: NSRunningApplication?
         var onReplace: ((FocusedTextCapture, String, NSRunningApplication?) async -> Void)?
@@ -25,8 +27,6 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
 
     private var panel: NSPanel?
     private var session: Session?
-    /// Preferências window we ordered out so activate only shows the popup.
-    private weak var hiddenSettingsWindow: NSWindow?
 
     var isVisible: Bool {
         panel?.isVisible == true
@@ -35,38 +35,38 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
     func show(_ session: Session) {
         AppLog.info(
             .resultPanel,
-            "show — original=\(session.original.count) chars, translated=\(session.translated.count) chars, canReplace=\(session.canReplace), \(session.sourceLanguageLabel)→\(session.targetLanguageLabel), app=\(session.targetApp?.localizedName ?? "nil")"
+            "Painel aberto — \(session.pairContextLabel), \(session.sourceLanguageLabel) → \(session.targetLanguageLabel), original \(session.original.count) caracteres, tradução \(session.translated.count), \(session.canReplace ? "Substituir habilitado (⏎)" : "só Copiar (⌘C)"), app \(session.targetApp?.localizedName ?? "desconhecido")"
         )
         self.session = session
-        closePanelChrome(restoreSettings: false)
+        closePanelChrome()
         present(session)
     }
 
-    func close() {
-        AppLog.info(.resultPanel, "close")
-        closePanelChrome(restoreSettings: true)
+    func close(reason: String = "usuário fechou") {
+        let origin = session?.targetApp
+        AppLog.info(.resultPanel, "Painel fechado — \(reason)")
+        closePanelChrome()
         session = nil
+        WindowCoordinator.shared.endTranslationPopupFront(reactivate: origin)
     }
 
     nonisolated func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
+            let origin = self.session?.targetApp
             self.panel = nil
             self.session = nil
-            self.restoreSettingsIfNeeded()
+            WindowCoordinator.shared.endTranslationPopupFront(reactivate: origin)
         }
     }
 
-    private func closePanelChrome(restoreSettings: Bool) {
+    private func closePanelChrome() {
         panel?.delegate = nil
         panel?.orderOut(nil)
         panel = nil
-        if restoreSettings {
-            restoreSettingsIfNeeded()
-        }
     }
 
     private func present(_ session: Session) {
-        hideSettingsIfNeeded()
+        StatusHUDController.shared.hide()
 
         let width: CGFloat = 420
         let root = TranslationResultPanelView(
@@ -76,26 +76,36 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
             showOriginal: session.showOriginal,
             sourceLanguageLabel: session.sourceLanguageLabel,
             targetLanguageLabel: session.targetLanguageLabel,
+            pairContextLabel: session.pairContextLabel,
             onCopy: { [weak self] in
                 guard let text = self?.session?.translated else { return }
-                AppLog.info(.resultPanel, "Copy — \(text.count) chars")
+                AppLog.info(
+                    .resultPanel,
+                    "Botão «Copiar» (⌘C) — \(text.count) caracteres na área de transferência"
+                )
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(text, forType: .string)
             },
             onReplace: { [weak self] in
                 guard let self, let current = self.session else { return }
-                AppLog.info(.resultPanel, "Replace acionado — \(current.translated.count) chars")
+                AppLog.info(
+                    .resultPanel,
+                    "Botão «Substituir» (⏎) — colando \(current.translated.count) caracteres em \(current.targetApp?.localizedName ?? "o app de origem")"
+                )
                 let capture = current.capture
                 let translated = current.translated
                 let app = current.targetApp
                 let handler = current.onReplace
-                self.close()
+                self.session = nil
+                self.closePanelChrome()
+                WindowCoordinator.shared.endTranslationPopupFront(reactivate: app)
                 Task { @MainActor in
                     await handler?(capture, translated, app)
                 }
             },
             onClose: { [weak self] in
-                self?.close()
+                AppLog.info(.resultPanel, "Botão «Fechar» (Esc)")
+                self?.close(reason: "botão Fechar / Esc")
             }
         )
 
@@ -154,6 +164,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         // Keyboard/VoiceOver still reach controls via Tab (HIG accessibility).
         _ = panel.makeFirstResponder(hostingView)
         self.panel = panel
+        WindowCoordinator.shared.beginTranslationPopupFront(panel: panel)
     }
 
     /// Places the panel just below the selection (or above if it would go off-screen).
@@ -181,22 +192,5 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
         origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
         panel.setFrameOrigin(origin)
-    }
-
-    // MARK: - Preferências (hide while popup is frontmost)
-
-    private func hideSettingsIfNeeded() {
-        guard let settings = SettingsNavigation.settingsWindow(), settings.isVisible else {
-            hiddenSettingsWindow = nil
-            return
-        }
-        settings.orderOut(nil)
-        hiddenSettingsWindow = settings
-    }
-
-    private func restoreSettingsIfNeeded() {
-        guard let settings = hiddenSettingsWindow else { return }
-        hiddenSettingsWindow = nil
-        settings.makeKeyAndOrderFront(nil)
     }
 }

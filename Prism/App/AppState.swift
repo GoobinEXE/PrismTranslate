@@ -36,6 +36,8 @@ final class AppState: ObservableObject {
     private var statusResetTask: Task<Void, Never>?
     private var permissionWatchTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
+    /// Snapshot used to describe which control changed in the log.
+    private var lastLoggedSettings: AppSettings?
 
     private init() {
         // Touch the log store early so session file + startup entry exist.
@@ -54,11 +56,15 @@ final class AppState: ObservableObject {
 
         AppLog.info(
             .app,
-            "AppState init — provider=\(settings.providerKind.displayName), enabled=\(settings.isEnabled), enterMode=\(settings.enterTranslatesAndSends), popup=\(settings.popupModeEnabled), macOS=\(ProcessInfo.processInfo.operatingSystemVersionString)"
+            "Prism iniciado — \(AppRelease.marketingVersion) (\(AppRelease.buildNumber)), \(AppRelease.runningMacOS), motor \(settings.engineLogDescription), \(settings.isEnabled ? "ligado" : "desligado"), Enter traduz \(settings.enterTranslatesAndSends ? "sim" : "não"), painel \(settings.popupModeEnabled ? "ligado" : "desligado")"
+        )
+        AppLog.info(
+            .hotkey,
+            "Atalhos: Traduzir \(settings.translateOnlyHotkey.displayString), Traduzir e enviar \(settings.translateAndSendHotkey.displayString), Painel \(settings.popupModeEnabled ? settings.popupHotkey.displayString : "desligado")"
         )
         AppLog.info(
             .permissions,
-            "AX=\(Permissions.isAccessibilityTrusted()), InputMonitoring=\(Permissions.isInputMonitoringGranted())"
+            "Permissões — Acessibilidade \(Permissions.isAccessibilityTrusted() ? "ok" : "ausente"), Monitoramento de Entrada \(Permissions.isInputMonitoringGranted() ? "ok" : "ausente")"
         )
 
         textIO.withInjection = { [weak self] work in
@@ -66,9 +72,7 @@ final class AppState: ObservableObject {
         }
 
         orchestrator.onStatusChange = { [weak self] status in
-            Task { @MainActor in
-                self?.applyStatus(status)
-            }
+            self?.applyStatus(status)
         }
         orchestrator.pressReturnHandler = { [weak self] in
             self?.hotkeyMonitor.withInjection {
@@ -80,14 +84,16 @@ final class AppState: ObservableObject {
             .dropFirst()
             .sink { [weak self] newSettings in
                 guard let self else { return }
-                AppLog.info(
-                    .settings,
-                    "settings salvos — provider=\(newSettings.providerKind.rawValue), enabled=\(newSettings.isEnabled), incoming=\(newSettings.incomingSourceLanguage ?? "auto")→\(newSettings.incomingTargetLanguage), outgoing=\(newSettings.outgoingSourceLanguage ?? "auto")→\(newSettings.outgoingTargetLanguage)"
-                )
+                let previous = self.lastLoggedSettings
+                self.logSettingsDelta(from: previous, to: newSettings)
+                self.lastLoggedSettings = newSettings
                 newSettings.save()
                 self.engine.updateSettings(newSettings)
                 self.orchestrator.updateSettings(newSettings)
                 self.applyHotkeyConfiguration(newSettings)
+                if !newSettings.showStatusHUD {
+                    StatusHUDController.shared.hide()
+                }
                 if newSettings.providerKind == .apple {
                     let pair = AppleTranslationBridge.defaultPackPair(settings: newSettings)
                     self.appleBridge.prewarm(from: pair.source, to: pair.target)
@@ -97,30 +103,52 @@ final class AppState: ObservableObject {
 
         // Persist initial load side-effects (login item) without dropFirst skipping.
         settings.save()
+        lastLoggedSettings = settings
 
         hotkeyMonitor.onTranslateOnly = { [weak self] in
             Task { @MainActor in
-                AppLog.info(.hotkey, "callback onTranslateOnly → orchestrator")
-                await self?.orchestrator.translateFocusedText(
-                    presentation: .replaceInPlace(sendAfter: false))
+                guard let self else { return }
+                await self.orchestrator.translateFocusedText(
+                    presentation: .replaceInPlace(sendAfter: false),
+                    trigger: .hotkeyTranslateOnly(chord: self.settings.translateOnlyHotkey.displayString)
+                )
             }
         }
         hotkeyMonitor.onTranslateAndSend = { [weak self] in
             Task { @MainActor in
-                AppLog.info(.hotkey, "callback onTranslateAndSend → orchestrator")
-                await self?.orchestrator.translateFocusedText(
-                    presentation: .replaceInPlace(sendAfter: true))
+                guard let self else { return }
+                await self.orchestrator.translateFocusedText(
+                    presentation: .replaceInPlace(sendAfter: true),
+                    trigger: .hotkeyTranslateAndSend(chord: self.settings.translateAndSendHotkey.displayString)
+                )
+            }
+        }
+        hotkeyMonitor.onEnterTranslateAndSend = { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                await self.orchestrator.translateFocusedText(
+                    presentation: .replaceInPlace(sendAfter: true),
+                    trigger: .enterKey
+                )
             }
         }
         hotkeyMonitor.onPopup = { [weak self] in
             Task { @MainActor in
-                AppLog.info(.hotkey, "callback onPopup → orchestrator")
-                await self?.orchestrator.translateFocusedText(presentation: .popup)
+                guard let self else { return }
+                await self.orchestrator.translateFocusedText(
+                    presentation: .popup,
+                    trigger: .hotkeyPopup(chord: self.settings.popupHotkey.displayString)
+                )
             }
         }
         hotkeyMonitor.onTapStatusChange = { [weak self] active in
             Task { @MainActor in
-                AppLog.info(.hotkey, "tap status → \(active ? "ativo" : "inativo")")
+                AppLog.info(
+                    .hotkey,
+                    active
+                        ? "Atalhos globais ativos"
+                        : "Atalhos globais inativos — verifique Monitoramento de Entrada"
+                )
                 self?.hotkeysActive = active
             }
         }
@@ -139,11 +167,11 @@ final class AppState: ObservableObject {
             if OnboardingController.hasCompleted {
                 Permissions.promptIfNeeded()
                 if !Permissions.isInputMonitoringGranted() {
-                    AppLog.warning(.permissions, "Input Monitoring ausente — solicitando")
+                    AppLog.warning(.permissions, "Monitoramento de Entrada ausente — solicitando permissão")
                     _ = Permissions.requestInputMonitoring()
                 }
             } else {
-                AppLog.info(.app, "onboarding pendente — exibindo tutorial")
+                AppLog.info(.app, "Onboarding pendente — abrindo o tutorial")
                 OnboardingController.shared.showIfNeeded()
             }
         }
@@ -174,7 +202,7 @@ final class AppState: ObservableObject {
             self.applySettingsAsync(updated)
             AppLog.info(
                 .settings,
-                "catálogo de modelos atualizou \(result.updatedProviders.map(\.rawValue).joined(separator: ", "))"
+                "Catálogo de modelos atualizou: \(result.updatedProviders.map(\.displayName).joined(separator: ", "))"
             )
         }
     }
@@ -287,6 +315,86 @@ final class AppState: ObservableObject {
         )
     }
 
+    private func logSettingsDelta(from previous: AppSettings?, to next: AppSettings) {
+        guard let previous else {
+            AppLog.info(.settings, "Configurações iniciais — motor \(next.engineLogDescription)")
+            return
+        }
+        if previous.isEnabled != next.isEnabled {
+            AppLog.info(
+                .settings,
+                "Controle «Ligado»: \(next.isEnabled ? "ativado" : "desativado")"
+            )
+        }
+        if previous.enterTranslatesAndSends != next.enterTranslatesAndSends {
+            AppLog.info(
+                .settings,
+                "Controle «Enter traduz e envia»: \(next.enterTranslatesAndSends ? "ativado" : "desativado")"
+            )
+        }
+        if previous.providerKind != next.providerKind
+            || previous.engineLogDescription != next.engineLogDescription
+        {
+            AppLog.info(
+                .settings,
+                "Motor: \(previous.engineLogDescription) → \(next.engineLogDescription)"
+            )
+        }
+        if previous.incomingSourceLanguage != next.incomingSourceLanguage
+            || previous.incomingTargetLanguage != next.incomingTargetLanguage
+        {
+            AppLog.info(
+                .settings,
+                "Idioma (texto que leio): \(LanguageCode.pairLabel(from: previous.incomingSourceLanguage, to: previous.incomingTargetLanguage)) → \(LanguageCode.pairLabel(from: next.incomingSourceLanguage, to: next.incomingTargetLanguage))"
+            )
+        }
+        if previous.outgoingSourceLanguage != next.outgoingSourceLanguage
+            || previous.outgoingTargetLanguage != next.outgoingTargetLanguage
+        {
+            AppLog.info(
+                .settings,
+                "Idioma (texto que escrevo): \(LanguageCode.pairLabel(from: previous.outgoingSourceLanguage, to: previous.outgoingTargetLanguage)) → \(LanguageCode.pairLabel(from: next.outgoingSourceLanguage, to: next.outgoingTargetLanguage))"
+            )
+        }
+        if previous.translateOnlyHotkey != next.translateOnlyHotkey {
+            AppLog.info(
+                .settings,
+                "Atalho «Traduzir»: \(previous.translateOnlyHotkey.displayString) → \(next.translateOnlyHotkey.displayString)"
+            )
+        }
+        if previous.translateAndSendHotkey != next.translateAndSendHotkey {
+            AppLog.info(
+                .settings,
+                "Atalho «Traduzir e enviar»: \(previous.translateAndSendHotkey.displayString) → \(next.translateAndSendHotkey.displayString)"
+            )
+        }
+        if previous.popupModeEnabled != next.popupModeEnabled
+            || previous.popupHotkey != next.popupHotkey
+        {
+            let old = previous.popupModeEnabled ? previous.popupHotkey.displayString : "desligado"
+            let new = next.popupModeEnabled ? next.popupHotkey.displayString : "desligado"
+            AppLog.info(.settings, "Atalho «Painel»: \(old) → \(new)")
+        }
+        if previous.showStatusHUD != next.showStatusHUD {
+            AppLog.info(
+                .settings,
+                "Controle «Aviso perto do ponteiro»: \(next.showStatusHUD ? "ativado" : "desativado")"
+            )
+        }
+        if previous.openAtLogin != next.openAtLogin {
+            AppLog.info(
+                .settings,
+                "Controle «Abrir no login»: \(next.openAtLogin ? "ativado" : "desativado")"
+            )
+        }
+        if previous.deeplUseFreeAPI != next.deeplUseFreeAPI {
+            AppLog.info(
+                .settings,
+                "DeepL: \(next.deeplUseFreeAPI ? "API gratuita" : "API Pro")"
+            )
+        }
+    }
+
     /// Binding que grava de volta em `settings` (dispara save/apply via publisher).
     /// Ignora writes idênticos — Pickers/Forms do SwiftUI reaplicam o valor durante
     /// o update da view; republicar `@Published` nesse momento gera
@@ -316,24 +424,28 @@ final class AppState: ObservableObject {
     private func applyStatus(_ status: Status) {
         statusResetTask?.cancel()
         self.status = status
-        StatusHUDController.shared.present(status: status, isEnabled: settings.isEnabled)
+        StatusHUDController.shared.present(
+            status: status,
+            isEnabled: settings.isEnabled,
+            hudEnabled: settings.showStatusHUD
+        )
         switch status {
         case .error(let message):
-            AppLog.error(.app, "status=error — \(message)")
+            AppLog.error(.app, "Status: erro — \(message)")
             lastErrorMessage = message
             statusResetTask = Task {
                 _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .success:
-            AppLog.info(.app, "status=success")
+            AppLog.info(.app, "Status: sucesso")
             lastErrorMessage = nil
             statusResetTask = Task {
                 _ = try? await Task.sleep(nanoseconds: 1_200_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .translating:
-            AppLog.info(.app, "status=translating")
+            AppLog.info(.app, "Status: traduzindo…")
         case .idle:
             break
         }

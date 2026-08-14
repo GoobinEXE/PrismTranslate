@@ -43,6 +43,7 @@
 		CC4E385301B942E2BE5847B1 /* TranslationHostPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */; };
 		C9D0E1F2A3B44517C8D9E0F1 /* TranslationResultPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */; };
 		D0E1F2A3B4C54618D9E0F1A2 /* TranslationResultPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */; };
+		E4B5C6D7E8F94A20C1D2E3F5 /* WindowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B5C6D7E8F94A20C1D2E3F4 /* WindowCoordinator.swift */; };
 		E7F539D921AC4DBFB0DACE66 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3776FCBBFCB4DB594C2A352 /* SettingsView.swift */; };
 		E83A33EA6757496AAAC165B0 /* PrismApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0956634C894D4AB5D6A0CC /* PrismApp.swift */; };
 		F1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E64788A9B0C1D2 /* DockIconController.swift */; };
@@ -70,6 +71,7 @@
 		7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationHostPanelController.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationResultPanelView.swift; sourceTree = "<group>"; };
 		B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationResultPanelController.swift; sourceTree = "<group>"; };
+		E4B5C6D7E8F94A20C1D2E3F4 /* WindowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCoordinator.swift; sourceTree = "<group>"; };
 		80A8750D021B4B2F8E4D7376 /* FocusedTextIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedTextIO.swift; sourceTree = "<group>"; };
 		810BB203E2784953BF911806 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		84B5B826F0CD4AD39FE94DDA /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				7792B983D8724A45A895B823 /* TranslationHostPanelController.swift */,
 				B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */,
 				A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */,
+				E4B5C6D7E8F94A20C1D2E3F4 /* WindowCoordinator.swift */,
 				03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */,
 			);
 			path = App;
@@ -324,6 +327,7 @@
 				CC4E385301B942E2BE5847B1 /* TranslationHostPanelController.swift in Sources */,
 				D0E1F2A3B4C54618D9E0F1A2 /* TranslationResultPanelController.swift in Sources */,
 				C9D0E1F2A3B44517C8D9E0F1 /* TranslationResultPanelView.swift in Sources */,
+				E4B5C6D7E8F94A20C1D2E3F5 /* WindowCoordinator.swift in Sources */,
 				324FB0F3FA2545FABA74289A /* TranslationOrchestrator.swift in Sources */,
 				900C80CD3E5A4A5FA922542A /* HotkeyMonitor.swift in Sources */,
 				A4B5C6D7E8F94011A2B3C4D5 /* HotkeyChord.swift in Sources */,
@@ -433,7 +437,7 @@
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = UXJP4APP32;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -443,7 +447,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -461,7 +465,7 @@
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = UXJP4APP32;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -471,7 +475,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

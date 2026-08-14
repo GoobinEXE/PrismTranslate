@@ -5,6 +5,25 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.7.0] - 2026-08-14
+
+Controles no menu bar (HUD e modo popup), coordenação do painel com Preferências, e pacotes Apple Translation mais confiáveis.
+
+### Adicionado
+
+- Toggle **Aviso perto do ponteiro** (HUD) e **Modo popup** no menu da barra.
+- `WindowCoordinator`: Preferências visível fica abaixo do painel de tradução, sem roubar o foco.
+
+### Changed
+
+- Mapeamento e cache de idiomas/pacotes do Apple Translation (pares concretos, menos falso “não baixado”).
+- Atalhos e Enter com Prism desligado passam o evento adiante; logs mais claros.
+
+### Notas de maturidade
+
+- Validado E2E: **Apple Translation**, **tradução por IA** e **DeepL**.
+- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+
 ## [0.6.0] - 2026-08-13
 
 Aba **Sobre** redesenhada: identidade, app, time, história, novidades, atualizações, suporte e legal.

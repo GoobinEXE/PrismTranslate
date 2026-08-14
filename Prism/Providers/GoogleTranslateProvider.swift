@@ -7,6 +7,7 @@ struct GoogleTranslateProvider: TranslationProvider {
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
+            AppLog.error(.google, "Google Translate: API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration("Configure a API key do Google nas Configurações")
         }
 
@@ -26,22 +27,34 @@ struct GoogleTranslateProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("URL Google inválida")
         }
 
-        AppLog.info(
+        ProviderLog.sending(
             .google,
-            "📡 [Google] POST translation.googleapis.com — chars=\(text.count), from=\(from ?? "auto"), to=\(to), keyConfigured=\(!apiKey.isEmpty)"
+            engine: "Google Translate",
+            endpoint: "translation.googleapis.com/language/translate/v2",
+            chars: text.count,
+            from: from,
+            to: to
         )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 12
 
+        let started = Date()
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            ProviderLog.failed(.google, engine: "Google Translate", status: nil, since: started, body: "")
             throw TranslationError.emptyResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(.google, "❌ [Google] HTTP \(http.statusCode): \(bodyText)")
+            ProviderLog.failed(
+                .google,
+                engine: "Google Translate",
+                status: http.statusCode,
+                since: started,
+                body: bodyText
+            )
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
@@ -61,9 +74,14 @@ struct GoogleTranslateProvider: TranslationProvider {
             throw TranslationError.emptyResponse
         }
         let detected = first.detectedSourceLanguage.map { LanguageCode.normalize($0) }
-        AppLog.info(
+        ProviderLog.received(
             .google,
-            "✅ [Google] HTTP \(http.statusCode) OK — \(first.translatedText.count) chars, detected=\(detected ?? "nil")"
+            engine: "Google Translate",
+            status: http.statusCode,
+            bytes: data.count,
+            since: started,
+            outChars: first.translatedText.count,
+            detected: detected
         )
         return TranslationOutcome(text: first.translatedText, detectedSourceLanguage: detected)
     }

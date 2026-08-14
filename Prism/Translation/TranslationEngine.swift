@@ -33,7 +33,7 @@ final class TranslationEngine {
         if providerChanged || languagesChanged {
             AppLog.info(
                 .engine,
-                "settings mudaram — limpando cache (providerChanged=\(providerChanged), languagesChanged=\(languagesChanged), provider=\(settings.providerKind.rawValue))"
+                "Motor ou idiomas mudaram — cache de traduções limpo (agora: \(settings.engineLogDescription))"
             )
             clearCache()
         }
@@ -46,13 +46,16 @@ final class TranslationEngine {
             to: to,
             provider: settings.providerKind.rawValue
         )
-        AppLog.debug(
+        AppLog.info(
             .engine,
-            "translate pedido — provider=\(settings.providerKind.rawValue), from=\(from ?? "auto"), to=\(to), chars=\(text.count), cacheSize=\(cacheValues.count)"
+            "Pedido ao motor \(settings.engineLogDescription) — \(LanguageCode.pairLabel(from: from, to: to)), \(text.count) caracteres, cache \(cacheValues.count)/\(Self.maxCacheEntries)"
         )
         if let cached = cacheValues[key] {
             touchCache(key)
-            AppLog.info(.engine, "cache HIT — retornando sem chamar provider (\(cached.text.count) chars)")
+            AppLog.info(
+                .engine,
+                "Cache: mesma frase já traduzida por este motor — reusando resultado (\(cached.text.count) caracteres, sem chamar a API)"
+            )
             if from == nil, cached.detectedSourceLanguage == nil,
                let detected = LanguageDetector.detect(in: text)
             {
@@ -61,7 +64,10 @@ final class TranslationEngine {
                     detectedSourceLanguage: detected
                 )
                 storeCache(key, value: enriched)
-                AppLog.info(.engine, "cache enriquecido com detecção local: \(detected)")
+                AppLog.info(
+                    .engine,
+                    "Idioma de origem detectado no Mac (NL): \(LanguageCode.displayName(for: detected))"
+                )
                 return enriched
             }
             return cached
@@ -70,12 +76,11 @@ final class TranslationEngine {
         let provider = makeProvider()
         AppLog.info(
             .engine,
-            "cache MISS — chamando provider '\(provider.displayName)' (id=\(provider.id))"
+            "Cache vazio — chamando \(provider.displayName)"
         )
         let started = Date()
         do {
             var outcome = try await provider.translate(text, from: from, to: to)
-            let ms = Int(Date().timeIntervalSince(started) * 1000)
             if from == nil, outcome.detectedSourceLanguage == nil,
                let detected = LanguageDetector.detect(in: text)
             {
@@ -83,19 +88,24 @@ final class TranslationEngine {
                     text: outcome.text,
                     detectedSourceLanguage: detected
                 )
-                AppLog.info(.engine, "idioma detectado localmente (NL): \(detected)")
+                AppLog.info(
+                    .engine,
+                    "Idioma de origem detectado no Mac (NL): \(LanguageCode.displayName(for: detected))"
+                )
             }
             storeCache(key, value: outcome)
             AppLog.info(
                 .engine,
-                "provider OK em \(ms)ms — outChars=\(outcome.text.count), detected=\(outcome.detectedSourceLanguage ?? "nil")"
+                "\(provider.displayName) concluiu em \(AppLog.duration(since: started)) — \(outcome.text.count) caracteres"
+                    + (outcome.detectedSourceLanguage.map {
+                        ", origem: \(LanguageCode.displayName(for: $0))"
+                    } ?? "")
             )
             return outcome
         } catch {
-            let ms = Int(Date().timeIntervalSince(started) * 1000)
             AppLog.error(
                 .engine,
-                "provider '\(provider.displayName)' falhou após \(ms)ms: \(error.localizedDescription) | \(String(describing: error))"
+                "\(provider.displayName) falhou após \(AppLog.duration(since: started)): \(error.localizedDescription)"
             )
             throw error
         }
@@ -132,7 +142,10 @@ final class TranslationEngine {
             if #available(macOS 15.0, *) {
                 return AppleTranslationProvider(bridge: appleBridge)
             }
-            AppLog.warning(.engine, "Apple Translation indisponível — requer macOS 15+")
+            AppLog.warning(
+                .engine,
+                "Apple Translation indisponível neste Mac — requer macOS 15 ou posterior"
+            )
             return UnavailableProvider(
                 id: ProviderKind.apple.rawValue,
                 displayName: ProviderKind.apple.displayName,
@@ -214,7 +227,7 @@ private struct UnavailableProvider: TranslationProvider {
     let message: String
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
-        AppLog.error(.engine, "provider indisponível: \(message)")
+        AppLog.error(.engine, "Motor indisponível: \(message)")
         throw TranslationError.providerUnavailable(message)
     }
 }

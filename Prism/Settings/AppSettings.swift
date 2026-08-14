@@ -30,6 +30,8 @@ struct AppSettings: Equatable {
     var popupModeEnabled: Bool = false
     /// ⌃⌥Y by default — show translation popup.
     var popupHotkey: HotkeyChord = .popupDefault
+    /// Toast perto do ponteiro (Traduzindo / concluído / erro) ao usar o atalho.
+    var showStatusHUD: Bool = true
 
     // DeepL
     var deeplUseFreeAPI: Bool = true
@@ -90,6 +92,25 @@ struct AppSettings: Equatable {
     /// Convenience for call sites that still think in “your messages” terms.
     var resolvedOutgoingSourceLanguage: String? {
         resolvedSourceLanguage(outgoing: true)
+    }
+
+    /// Nome do motor + modelo/endpoint — uma linha fácil de ler no log.
+    var engineLogDescription: String {
+        let name = providerKind.displayName
+        switch providerKind {
+        case .apple:
+            return "\(name) (no dispositivo)"
+        case .deepl:
+            return "\(name) · \(deeplUseFreeAPI ? "API gratuita" : "API Pro")"
+        case .google:
+            return name
+        case .groq, .gemini, .mistral, .deepSeek, .openRouter:
+            return "\(name) · modelo \(model(for: providerKind) ?? "?")"
+        case .openAICompatible:
+            return "\(name) · modelo \(openAIModel) · \(openAIBaseURL)"
+        case .customHTTP:
+            return "\(name) · \(customHTTPMethod.uppercased()) \(customHTTPURL)"
+        }
     }
 
     private static let defaultsKey = "AppSettings"
@@ -207,6 +228,7 @@ private struct CodableSettings: Codable {
     var translateAndSendHotkey: HotkeyChord?
     var popupModeEnabled: Bool?
     var popupHotkey: HotkeyChord?
+    var showStatusHUD: Bool?
     var deeplUseFreeAPI: Bool
     var groqModel: String?
     var geminiModel: String?
@@ -237,6 +259,7 @@ private struct CodableSettings: Codable {
         translateAndSendHotkey = settings.translateAndSendHotkey
         popupModeEnabled = settings.popupModeEnabled
         popupHotkey = settings.popupHotkey
+        showStatusHUD = settings.showStatusHUD
         deeplUseFreeAPI = settings.deeplUseFreeAPI
         groqModel = settings.groqModel
         geminiModel = settings.geminiModel
@@ -284,6 +307,7 @@ private struct CodableSettings: Codable {
         s.translateAndSendHotkey = translateAndSendHotkey ?? .translateAndSendDefault
         s.popupModeEnabled = popupModeEnabled ?? false
         s.popupHotkey = popupHotkey ?? .popupDefault
+        s.showStatusHUD = showStatusHUD ?? true
         s.deeplUseFreeAPI = deeplUseFreeAPI
         s.groqModel = groqModel ?? ProviderKind.groq.defaultModel ?? s.groqModel
         s.geminiModel = geminiModel ?? ProviderKind.gemini.defaultModel ?? s.geminiModel

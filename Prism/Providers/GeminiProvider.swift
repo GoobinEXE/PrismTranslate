@@ -11,6 +11,7 @@ struct GeminiProvider: TranslationProvider {
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKey.isEmpty else {
+            AppLog.error(.gemini, "Gemini: API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration(
                 "Configure a API key do Gemini (Google AI Studio) nas Configurações"
             )
@@ -27,9 +28,14 @@ struct GeminiProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("URL Gemini inválida")
         }
 
-        AppLog.info(
+        ProviderLog.sending(
             .gemini,
-            "📡 [Gemini] POST \(url.path) — model=\(trimmedModel), chars=\(text.count), from=\(from ?? "auto"), to=\(to)"
+            engine: "Gemini",
+            endpoint: "generativelanguage.googleapis.com/v1beta/models/\(trimmedModel):generateContent",
+            chars: text.count,
+            from: from,
+            to: to,
+            model: trimmedModel
         )
 
         let prompt = AITranslationPrompt.make(text: text, from: from, to: to)
@@ -56,17 +62,33 @@ struct GeminiProvider: TranslationProvider {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
+        let started = Date()
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            ProviderLog.failed(.gemini, engine: "Gemini", status: nil, since: started, body: "")
             throw TranslationError.emptyResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(.gemini, "❌ [Gemini] HTTP \(http.statusCode): \(bodyText)")
+            ProviderLog.failed(
+                .gemini,
+                engine: "Gemini",
+                status: http.statusCode,
+                since: started,
+                body: bodyText
+            )
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
         let content = try Self.parseGenerateContent(from: data)
+        ProviderLog.received(
+            .gemini,
+            engine: "Gemini",
+            status: http.statusCode,
+            bytes: data.count,
+            since: started,
+            outChars: content.count
+        )
         return TranslationOutcome(text: content)
     }
 

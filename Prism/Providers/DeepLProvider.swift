@@ -8,6 +8,7 @@ struct DeepLProvider: TranslationProvider {
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
+            AppLog.error(.deepl, "DeepL: API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration("Configure a API key do DeepL nas Configurações")
         }
 
@@ -16,9 +17,14 @@ struct DeepLProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration("URL DeepL inválida")
         }
 
-        AppLog.info(
+        ProviderLog.sending(
             .deepl,
-            "📡 [DeepL] POST https://\(host)/v2/translate — chars=\(text.count), from=\(from ?? "auto"), to=\(to), freeAPI=\(useFreeAPI), keyConfigured=\(!apiKey.isEmpty)"
+            engine: "DeepL",
+            endpoint: "https://\(host)/v2/translate",
+            chars: text.count,
+            from: from,
+            to: to,
+            extra: useFreeAPI ? "API gratuita" : "API Pro"
         )
 
         var request = URLRequest(url: url)
@@ -34,13 +40,15 @@ struct DeepLProvider: TranslationProvider {
         }
         request.httpBody = body.data(using: .utf8)
 
+        let started = Date()
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            ProviderLog.failed(.deepl, engine: "DeepL", status: nil, since: started, body: "")
             throw TranslationError.emptyResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            AppLog.error(.deepl, "❌ [DeepL] HTTP \(http.statusCode): \(bodyText)")
+            ProviderLog.failed(.deepl, engine: "DeepL", status: http.statusCode, since: started, body: bodyText)
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
 
@@ -59,10 +67,19 @@ struct DeepLProvider: TranslationProvider {
 
         let decoded = try JSONDecoder().decode(DeepLResponse.self, from: data)
         guard let first = decoded.translations.first else {
+            ProviderLog.failed(.deepl, engine: "DeepL", status: http.statusCode, since: started, body: "traduções vazias")
             throw TranslationError.emptyResponse
         }
-        AppLog.info(.deepl, "✅ [DeepL] resposta HTTP \(http.statusCode) OK (\(first.text.count) chars)")
         let detected = first.detectedSourceLanguage.map { LanguageCode.normalize($0) }
+        ProviderLog.received(
+            .deepl,
+            engine: "DeepL",
+            status: http.statusCode,
+            bytes: data.count,
+            since: started,
+            outChars: first.text.count,
+            detected: detected
+        )
         return TranslationOutcome(text: first.text, detectedSourceLanguage: detected)
     }
 

@@ -9,6 +9,7 @@ struct TranslationResultPanelView: View {
     let showOriginal: Bool
     let sourceLanguageLabel: String
     let targetLanguageLabel: String
+    let pairContextLabel: String
     var onCopy: () -> Void
     var onReplace: () -> Void
     var onClose: () -> Void
@@ -24,11 +25,18 @@ struct TranslationResultPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
             HStack(alignment: .center, spacing: QTDesign.Spacing.s) {
-                Text(languagePairLabel)
-                    .font(QTDesign.Fonts.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .accessibilityLabel("Idiomas \(languagePairLabel)")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(pairContextLabel)
+                        .font(QTDesign.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Text(languagePairLabel)
+                        .font(QTDesign.Fonts.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(pairContextLabel), idiomas \(languagePairLabel)")
                 Spacer(minLength: 0)
                 Button(action: onClose) {
                     Image(systemName: "xmark")

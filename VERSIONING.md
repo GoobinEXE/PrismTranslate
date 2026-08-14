@@ -8,7 +8,7 @@ baseline como ponto de partida (contexto do usuário prevalece se divergir).
 
 ## Baseline atual (atualize quando a realidade mudar)
 
-- **Versão justa agora:** `0.6.0` (pré-lançamento; MAJOR = 0)
+- **Versão justa agora:** `0.7.0` (pré-lançamento; MAJOR = 0)
 - **Lançado?** Não (sem tags `v*`, sem GitHub Release, sem DMG público)
 - **Validado E2E:** **Apple Translation**, **tradução por IA** e **DeepL** (atalho → traduzir → substituir)
 - **Identidade:** rebrand **Prism Translate** (display **Prism**; bundle `com.marcelopessoa.prism`)

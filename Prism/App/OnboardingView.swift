@@ -534,6 +534,14 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+
+                    Button("Abrir Idiomas de Tradução nos Ajustes…") {
+                        Permissions.openTranslationLanguagesSettings()
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                    .font(QTDesign.Fonts.caption)
+                    .accessibilityHint("Abre Ajustes do Sistema na lista de idiomas de tradução")
                 }
             }
             .padding(14)
@@ -578,7 +586,8 @@ struct OnboardingView: View {
             let pair = AppleTranslationBridge.defaultPackPair(settings: settings)
             let state = await appState.appleBridge.languagePackState(
                 from: pair.source,
-                to: pair.target
+                to: pair.target,
+                ignoreCache: true
             )
             guard stepIndex == 3 || stepIndex == 5, packState != .downloading else { return }
             // Keep the failure visible until the pack actually installs or the user retries.

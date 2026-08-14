@@ -57,6 +57,19 @@ struct FocusedTextCapture: Equatable {
         self.isEditable = isEditable
         self.selectionScreenRect = selectionScreenRect
     }
+
+    /// Resumo em português para o log (sem jargão de AX).
+    var logSummary: String {
+        var parts: [String] = ["\(text.count) caracteres"]
+        parts.append(isEditable ? "campo editável" : "texto só leitura")
+        if didSelectAll {
+            parts.append("campo inteiro (não havia seleção)")
+        } else {
+            parts.append("seleção do usuário")
+        }
+        parts.append(usedClipboardForRead ? "lido via clipboard (⌘C)" : "lido via Acessibilidade")
+        return parts.joined(separator: ", ")
+    }
 }
 
 /// Reads and replaces text in the focused UI element.
@@ -166,12 +179,12 @@ final class FocusedTextIO {
     /// Selects text if needed, then returns the selection for translation.
     /// Prefer existing selection; otherwise select-all (AX range or ⌘A) like DeepL on editable fields.
     func selectAndReadFocusedText() async throws -> FocusedTextCapture {
-        AppLog.debug(.textIO, "📖 selectAndReadFocusedText — tentando via Accessibility")
+        AppLog.debug(.textIO, "Leitura: tentando Acessibilidade no campo focado")
         let isEditable = Self.isFocusedTextEditable()
         let axError: FocusedTextIOError
         do {
             let capture = try selectAndReadViaAccessibility(isEditable: isEditable)
-            AppLog.info(.textIO, "📖 leitura AX OK: \(capture.text.count) chars, didSelectAll=\(capture.didSelectAll), editable=\(capture.isEditable)")
+            AppLog.info(.textIO, "Leitura via Acessibilidade: \(capture.logSummary)")
             return capture
         } catch let error as FocusedTextIOError {
             if error == .accessibilityDenied { throw error }
@@ -179,12 +192,15 @@ final class FocusedTextIO {
             // Mail/WebKit AXWebArea often omits AXSelectedText even when the user highlighted
             // text — still try ⌘C on the existing selection before asking them to select.
             if error == .noSelectionInReadOnly {
-                AppLog.warning(.textIO, "📖 AX sem seleção legível — tentando ⌘C da seleção existente")
+                AppLog.warning(.textIO, "Acessibilidade sem seleção — tentando copiar a seleção existente (⌘C)")
             } else if error == .readFallbackFailed {
                 // Editable host without AXValue — expected path into ⌘A+⌘C.
-                AppLog.debug(.textIO, "📖 AX sem AXValue em campo editável — tentando clipboard (⌘A+⌘C)")
+                AppLog.debug(.textIO, "Acessibilidade sem AXValue no campo editável — tentando clipboard (⌘A+⌘C)")
             } else {
-                AppLog.warning(.textIO, "📖 AX falhou: \(error.errorDescription ?? "desconhecido") — tentando clipboard fallback")
+                AppLog.warning(
+                    .textIO,
+                    "Acessibilidade falhou (\(error.errorDescription ?? "desconhecido")) — tentando clipboard"
+                )
             }
         }
 
@@ -204,7 +220,7 @@ final class FocusedTextIO {
             let treatAsEditable = isEditable && axError != .noFocusedElement
             AppLog.info(
                 .textIO,
-                "📖 clipboard selection OK: \(text.count) chars, treatAsEditable=\(treatAsEditable)"
+                "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
             )
             return FocusedTextCapture(
                 text: text,
@@ -214,7 +230,7 @@ final class FocusedTextIO {
                 selectionScreenRect: Self.mouseAnchorRect()
             )
         } catch {
-            AppLog.debug(.textIO, "📖 clipboard sem seleção existente — \(error.localizedDescription)")
+            AppLog.debug(.textIO, "Clipboard sem seleção existente — \(error.localizedDescription)")
         }
 
         // Step 2: no selection — select-all only for editable / AX-blind compose.
@@ -225,7 +241,7 @@ final class FocusedTextIO {
 
         do {
             let text = try await readViaClipboard(selectAllFirst: true)
-            AppLog.info(.textIO, "📖 clipboard select-all OK: \(text.count) chars")
+            AppLog.info(.textIO, "Leitura via clipboard (⌘A + ⌘C no campo inteiro): \(text.count) caracteres")
             return FocusedTextCapture(
                 text: text,
                 didSelectAll: true,
@@ -234,7 +250,7 @@ final class FocusedTextIO {
                 selectionScreenRect: Self.mouseAnchorRect()
             )
         } catch {
-            AppLog.error(.textIO, "📖 clipboard fallback falhou: \(error.localizedDescription)")
+            AppLog.error(.textIO, "Clipboard também falhou: \(error.localizedDescription)")
             restorePendingUserPasteboard(after: 0.2)
             if axError == .noFocusedElement, Self.focusedElement() == nil {
                 throw FocusedTextIOError.readFallbackFailed
@@ -247,12 +263,12 @@ final class FocusedTextIO {
     /// Re-selects the whole field when the capture used select-all (selection often drops during async translate).
     func replaceSelection(_ capture: FocusedTextCapture, with text: String) async throws {
         if capture.usedClipboardForRead {
-            AppLog.debug(.textIO, "✏️ replaceSelection — pulando AX (leitura foi via clipboard); paste direto")
+            AppLog.debug(.textIO, "Substituição: pulando Acessibilidade (leitura foi via clipboard); colando direto")
         } else {
-            AppLog.debug(.textIO, "✏️ replaceSelection — tentando via Accessibility (didSelectAll=\(capture.didSelectAll))")
+            AppLog.debug(.textIO, "Substituição: tentando Acessibilidade (campo inteiro=\(capture.didSelectAll))")
             do {
                 try writeViaAccessibility(text, preferSelectionOnly: true, previousText: capture.text)
-                AppLog.info(.textIO, "✏️ escrita AX OK (verificada)")
+                AppLog.info(.textIO, "Escrita via Acessibilidade confirmada")
                 // AX path may still hold a pending borrow from a prior attempt; flush it.
                 restorePendingUserPasteboard(after: 0.35)
                 return
@@ -260,7 +276,10 @@ final class FocusedTextIO {
                 if error == .accessibilityDenied {
                     throw error
                 }
-                AppLog.warning(.textIO, "✏️ AX escrita falhou (\(error.errorDescription ?? "?")) — tentando clipboard paste")
+                AppLog.warning(
+                    .textIO,
+                    "Acessibilidade não escreveu (\(error.errorDescription ?? "?")) — tentando colar via clipboard (⌘V)"
+                )
             }
         }
 
@@ -272,14 +291,14 @@ final class FocusedTextIO {
         let hasSelection = Self.focusedElement().flatMap { selectedText(of: $0) }.map { !$0.isEmpty } ?? false
         let selectAllFirst = capture.didSelectAll || !hasSelection
         if selectAllFirst && !capture.didSelectAll {
-            AppLog.debug(.textIO, "✏️ clipboard: forçando selectAll (seleção ausente após captura)")
+            AppLog.debug(.textIO, "Clipboard: forçando ⌘A (a seleção sumiu depois da captura)")
         }
 
         do {
             try await writeViaClipboard(text, selectAllFirst: selectAllFirst)
-            AppLog.info(.textIO, "✏️ clipboard paste OK")
+            AppLog.info(.textIO, "Colagem via clipboard (⌘V) concluída")
         } catch {
-            AppLog.error(.textIO, "✏️ clipboard paste falhou: \(error.localizedDescription)")
+            AppLog.error(.textIO, "Colagem via clipboard falhou: \(error.localizedDescription)")
             restorePendingUserPasteboard(after: 0.2)
             throw FocusedTextIOError.writeFallbackFailed
         }
@@ -452,7 +471,7 @@ final class FocusedTextIO {
                     if axWriteTookEffect(on: element, expected: text, previous: previousText, viaSelection: true) {
                         return
                     }
-                    AppLog.warning(.textIO, "✏️ AX setSelectedText retornou success mas o texto não mudou (falso positivo)")
+                    AppLog.warning(.textIO, "Acessibilidade disse sucesso mas o texto não mudou (falso positivo) — tentando outro caminho")
                     // Confirmed no-op: skip setValue — Chromium often mirrors AXValue after Set without
                     // updating the real editor, which would look like a verified setValue success.
                     if text != previousText,
@@ -477,7 +496,7 @@ final class FocusedTextIO {
             if axWriteTookEffect(on: element, expected: text, previous: previousText, viaSelection: false) {
                 return
             }
-            AppLog.warning(.textIO, "✏️ AX setValue retornou success mas o texto não mudou (falso positivo)")
+            AppLog.warning(.textIO, "Acessibilidade disse sucesso ao setValue mas o texto não mudou (falso positivo)")
         } else {
             AppLog.debug(.textIO, "✏️ AX setValue falhou: status=\(setValue.rawValue)")
         }
@@ -634,7 +653,7 @@ final class FocusedTextIO {
                 timeoutNanoseconds: 350_000_000
             )
         } catch {
-            AppLog.warning(.textIO, "📋 clipboard continua vazio após poll — desistindo")
+            AppLog.warning(.textIO, "Clipboard ainda vazio depois de esperar a cópia — desistindo")
             throw FocusedTextIOError.emptyClipboard
         }
     }
@@ -656,7 +675,7 @@ final class FocusedTextIO {
 
         // Re-assert immediately before ⌘V so any concurrent pasteboard mutation cannot win.
         if pasteboard.string(forType: .string) != text {
-            AppLog.warning(.textIO, "📋 clipboard divergiu antes do paste — regravando tradução")
+            AppLog.warning(.textIO, "Clipboard mudou antes de colar — regravando a tradução")
             pasteboard.clearContents()
             pasteboard.setString(text, forType: .string)
         }

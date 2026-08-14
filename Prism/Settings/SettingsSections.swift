@@ -10,7 +10,10 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Os controles Ligado, Enter e idiomas também ficam no ícone da barra de menus.")
+                Text("Os controles Ligado, Enter, HUD, idiomas destino e modo popup também ficam no ícone da barra de menus.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("O atalho Traduzir substitui no lugar se o campo for editável; em texto só leitura abre o painel (Copiar). O modo popup (opt-in) abre o painel em qualquer seleção.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -20,6 +23,13 @@ struct GeneralSettingsView: View {
                 Toggle(
                     "Enter traduz e envia",
                     isOn: appState.settingsBinding(\.enterTranslatesAndSends))
+                Toggle(
+                    "Aviso perto do ponteiro",
+                    isOn: appState.settingsBinding(\.showStatusHUD)
+                )
+                Text("Mostra «Traduzindo…», concluído e erros junto ao mouse ao usar o atalho.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Texto que leio") {
@@ -105,6 +115,7 @@ struct ProviderSettingsView: View {
     @State private var deepSeekKey: String = KeychainStore.string(for: .deepSeekAPIKey) ?? ""
     @State private var openRouterKey: String = KeychainStore.string(for: .openRouterAPIKey) ?? ""
     @State private var applePackState: LanguagePackState = .checking
+    @State private var applePackRows: [ApplePackRow] = []
     @State private var isRefreshingModels = false
     @State private var modelRefreshNote: String?
 
@@ -158,7 +169,18 @@ struct ProviderSettingsView: View {
         }
         .formStyle(.grouped)
         .onDisappear(perform: persistSecrets)
-        // Refresh automático fica no AppState (fora do ciclo de layout da Form).
+        .task(id: applePackTaskID) {
+            guard appState.settings.providerKind == .apple else { return }
+            await refreshApplePackState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            guard appState.settings.providerKind == .apple, applePackState != .downloading else { return }
+            guard applePackState == .needsDownload || applePackState.isFailed || applePackState == .checking else {
+                return
+            }
+            Task { await refreshApplePackState() }
+        }
+        // Refresh automático de modelos fica no AppState (fora do ciclo de layout da Form).
         // Aqui só o botão “Atualizar” força consulta à API.
     }
 
@@ -166,28 +188,56 @@ struct ProviderSettingsView: View {
     private var providerFields: some View {
         switch appState.settings.providerKind {
         case .apple:
-            Text("Sem configuração. Usa o Translation framework da Apple (on-device).")
+            Text("Sem API key. A tradução roda no aparelho com os idiomas baixados no macOS.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            ForEach(applePackRows) { row in
+                LabeledContent(row.label) {
+                    HStack(spacing: 8) {
+                        Image(systemName: packIcon(for: row.state))
+                            .foregroundStyle(packColor(for: row.state))
+                        Text(packStatusText(for: row.state))
+                            .foregroundStyle(packColor(for: row.state))
+                        if row.state == .needsDownload || row.state.isFailed {
+                            Button("Baixar…") {
+                                Task { await prepareApplePacks(pair: (row.source, row.target)) }
+                            }
+                            .disabled(applePackState == .downloading)
+                        }
+                    }
+                }
+            }
+
             HStack {
                 Label(applePackLabel, systemImage: applePackIcon)
                     .foregroundStyle(applePackColor)
                 Spacer()
-                if applePackState == .checking || applePackState == .downloading {
+                if applePackState.isBusy {
                     ProgressView()
                         .controlSize(.small)
-                } else if applePackState != .installed {
-                    Button("Preparar idiomas…") {
-                        Task { await prepareApplePacks() }
-                    }
                 }
             }
-            .task(
-                id:
-                    "\(appState.settings.outgoingTargetLanguage)-\(appState.settings.outgoingSourceLanguage ?? "auto")-\(appState.settings.incomingTargetLanguage)-\(appState.settings.incomingSourceLanguage ?? "auto")"
-            ) {
-                await refreshApplePackState()
+
+            if applePackState == .needsDownload || applePackState.isFailed {
+                Button("Baixar idiomas usados…") {
+                    Task { await prepareApplePacks() }
+                }
+                .disabled(applePackState == .downloading)
+                .accessibilityHint("Abre o diálogo do sistema para baixar os pacotes de origem e destino")
             }
+
+            Button("Abrir Idiomas de Tradução nos Ajustes…") {
+                Permissions.openTranslationLanguagesSettings()
+            }
+            .accessibilityHint("Abre Ajustes do Sistema na lista de idiomas de tradução")
+
+            Text(
+                "Baixe origem e destino. O botão acima pede o download pelo diálogo do macOS; se ele não aparecer, use Ajustes › Geral › Idioma e Região › Idiomas de Tradução. Com “Modo no dispositivo” ligado, a tradução fica offline."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         case .deepl:
             SecureField("API Key DeepL", text: $deeplKey)
                 .help("Chave da API DeepL (conta Free ou Pro). Guardada no Keychain.")
@@ -300,19 +350,37 @@ struct ProviderSettingsView: View {
         }
     }
 
+    private var applePackTaskID: String {
+        "\(appState.settings.providerKind.rawValue)-\(appState.settings.outgoingTargetLanguage)-\(appState.settings.outgoingSourceLanguage ?? "auto")-\(appState.settings.incomingTargetLanguage)-\(appState.settings.incomingSourceLanguage ?? "auto")"
+    }
+
     private var applePackLabel: String {
         switch applePackState {
         case .checking: return "Verificando idiomas…"
         case .installed: return "Idiomas de tradução prontos"
-        case .needsDownload: return "Pacotes de idioma não baixados"
+        case .needsDownload: return "Falta baixar um ou mais idiomas"
         case .downloading: return "Baixando — confirme o diálogo do sistema"
         case .unsupported: return "Par de idiomas não suportado"
         case .failed(let message): return "Falha: \(message)"
         }
     }
 
-    private var applePackIcon: String {
-        switch applePackState {
+    private var applePackIcon: String { packIcon(for: applePackState) }
+    private var applePackColor: Color { packColor(for: applePackState) }
+
+    private func packStatusText(for state: LanguagePackState) -> String {
+        switch state {
+        case .checking: return "Verificando…"
+        case .installed: return "Pronto"
+        case .needsDownload: return "Não baixado"
+        case .downloading: return "Baixando…"
+        case .unsupported: return "Não suportado"
+        case .failed: return "Falhou"
+        }
+    }
+
+    private func packIcon(for state: LanguagePackState) -> String {
+        switch state {
         case .installed: return "checkmark.circle"
         case .checking, .downloading: return "arrow.down.circle"
         case .needsDownload: return "exclamationmark.triangle"
@@ -320,8 +388,8 @@ struct ProviderSettingsView: View {
         }
     }
 
-    private var applePackColor: Color {
-        switch applePackState {
+    private func packColor(for state: LanguagePackState) -> Color {
+        switch state {
         case .installed: return .green
         case .checking, .downloading: return .primary
         case .needsDownload: return .orange
@@ -331,38 +399,56 @@ struct ProviderSettingsView: View {
 
     private func refreshApplePackState() async {
         await Task.yield()
-        applePackState = .checking
+        if applePackRows.isEmpty, let cached = appState.appleBridge.cachedOverallPackState {
+            applePackState = cached
+        } else if applePackState != .installed && applePackState != .needsDownload && !applePackState.isFailed {
+            applePackState = .checking
+        }
+
+        var rows: [ApplePackRow] = []
         var worst: LanguagePackState = .installed
         for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
-            let state = await appState.appleBridge.languagePackState(
-                from: pair.source,
-                to: pair.target
+            let source = pair.source ?? AppleTranslationLanguageMap.concreteSource(
+                preferred: nil,
+                target: pair.target
             )
+            let state = await appState.appleBridge.languagePackState(
+                from: source,
+                to: pair.target,
+                ignoreCache: true
+            )
+            rows.append(ApplePackRow(source: source, target: pair.target, state: state))
             worst = Self.mergePackState(worst, state)
             if case .unsupported = worst { break }
             if worst.isFailed { break }
         }
+        applePackRows = rows
         applePackState = worst
+        appState.appleBridge.rememberOverallPackState(worst)
     }
 
-    private func prepareApplePacks() async {
+    private func prepareApplePacks(pair: (source: String, target: String)? = nil) async {
         applePackState = .downloading
         var lastError: Error?
         var anyNeedsWork = false
-        for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
+        let pairs: [(source: String?, target: String)] = {
+            if let pair { return [(pair.source, pair.target)] }
+            return AppleTranslationBridge.packPairs(settings: appState.settings)
+        }()
+        for item in pairs {
             do {
                 try await appState.appleBridge.ensureLanguagePacks(
-                    from: pair.source, to: pair.target)
+                    from: item.source, to: item.target)
             } catch {
                 lastError = error
                 anyNeedsWork = true
             }
         }
         if let lastError, anyNeedsWork {
-            let pair = AppleTranslationBridge.defaultPackPair(settings: appState.settings)
+            let fallback = AppleTranslationBridge.defaultPackPair(settings: appState.settings)
             let current = await appState.appleBridge.languagePackState(
-                from: pair.source,
-                to: pair.target
+                from: fallback.source,
+                to: fallback.target
             )
             applePackState =
                 current == .installed
@@ -371,6 +457,7 @@ struct ProviderSettingsView: View {
         } else {
             applePackState = .installed
         }
+        await refreshApplePackState()
     }
 
     private static func mergePackState(_ a: LanguagePackState, _ b: LanguagePackState)
@@ -449,6 +536,12 @@ struct ProviderSettingsView: View {
 
         // Sai do ciclo de update da view antes de tocar em @State / @Published.
         await Task.yield()
+        if force {
+            AppLog.info(
+                .settings,
+                "Botão «Atualizar» modelos — consultando \(targets.map(\.displayName).joined(separator: ", "))"
+            )
+        }
         isRefreshingModels = true
         defer { isRefreshingModels = false }
 
@@ -468,6 +561,15 @@ struct ProviderSettingsView: View {
                 : result.notes.joined(separator: " ")
         }
     }
+}
+
+private struct ApplePackRow: Identifiable, Equatable {
+    let source: String
+    let target: String
+    var state: LanguagePackState
+
+    var id: String { "\(source)-\(target)" }
+    var label: String { LanguageCode.pairLabel(from: source, to: target) }
 }
 
 /// Chip compacto ao lado do nome do motor (substitui sufixos entre parênteses).
@@ -571,15 +673,7 @@ struct ShortcutsSettingsView: View {
 
             Section {
                 Text(
-                    "Clique no atalho e pressione a nova combinação. Esc cancela. Prefira ⌃⌥ para evitar conflitos com outros apps."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                Text("Com “Enter traduz e envia” ligado, Enter sozinho também traduz e envia.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(
-                    "No atalho principal, texto só leitura abre o painel (Copiar). O atalho de popup funciona em qualquer seleção."
+                    "Clique no atalho e pressione a nova combinação. Esc cancela. Prefira ⌃⌥ para evitar conflitos. O atalho Traduzir substitui no lugar (campo editável) ou abre o painel só com Copiar (só leitura). O atalho de popup — se estiver ligado — abre o painel em qualquer seleção, com Substituir quando o campo for editável. Com “Enter traduz e envia”, Enter sozinho também traduz e envia."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -683,11 +777,19 @@ struct TestSettingsView: View {
                     Task { await runTest() }
                 }
                 .disabled(
-                    isTesting || testText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    isTesting
+                        || appState.orchestrator.isBusy
+                        || testText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
             Section("Resultado") {
                 resultView
+            }
+
+            Section {
+                Text("Valida o motor e o par «texto que escrevo» nesta janela. Não abre o painel, o HUD nem dispara atalhos.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -727,23 +829,52 @@ struct TestSettingsView: View {
     }
 
     private func runTest() async {
+        guard !appState.orchestrator.isBusy else {
+            testResult = .failure(
+                NSError(
+                    domain: "Prism",
+                    code: 1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "Uma tradução por atalho ainda está em andamento. Aguarde e tente de novo."
+                    ]
+                )
+            )
+            return
+        }
         isTesting = true
         defer { isTesting = false }
+        let runID = AppLog.beginRun(prefix: "TEST")
+        defer { AppLog.endRun() }
+        let from = appState.settings.resolvedOutgoingSourceLanguage
+        let to = appState.settings.outgoingTargetLanguage
+        AppLog.info(.settings, "── Teste \(runID) iniciado ──")
         AppLog.info(
             .settings,
-            "teste manual iniciado — chars=\(testText.count), provider=\(appState.settings.providerKind.displayName)"
+            "Disparo: botão «Testar tradução» — \(testText.count) caracteres, «\(AppLog.preview(testText))»"
+        )
+        AppLog.info(
+            .settings,
+            "Motor: \(appState.settings.engineLogDescription) · \(LanguageCode.pairLabel(from: from, to: to))"
         )
         do {
+            let started = Date()
             let result = try await appState.engine.translate(
                 testText,
-                from: appState.settings.resolvedOutgoingSourceLanguage,
-                to: appState.settings.outgoingTargetLanguage
+                from: from,
+                to: to
             )
             testResult = .success(result.text)
-            AppLog.info(.settings, "teste manual OK — \(result.text.count) chars")
+            AppLog.info(
+                .settings,
+                "── Teste \(runID) OK em \(AppLog.duration(since: started)) — \(result.text.count) caracteres: «\(AppLog.preview(result.text))» ──"
+            )
         } catch {
             testResult = .failure(error)
-            AppLog.error(.settings, "teste manual falhou: \(error.localizedDescription)")
+            AppLog.error(
+                .settings,
+                "── Teste \(runID) falhou — \(error.localizedDescription) ──"
+            )
         }
     }
 }
@@ -972,26 +1103,26 @@ struct AboutSettingsView: View {
         ].joined(separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(info, forType: .string)
-        AppLog.info(.settings, "informações do app copiadas")
+        AppLog.info(.settings, "Botão «Copiar informações» na aba Sobre")
     }
 
     private func checkForUpdates() async {
         isCheckingUpdate = true
         defer { isCheckingUpdate = false }
-        AppLog.info(.settings, "verificando atualizações no GitHub")
+        AppLog.info(.settings, "Botão «Verificar atualizações» — consultando GitHub Releases")
         let result = await GitHubUpdateChecker.check(currentVersion: marketingVersion)
         updateResult = result
         switch result {
         case .available(let version, _):
-            AppLog.info(.settings, "atualização disponível: \(version)")
+            AppLog.info(.settings, "Atualização disponível: \(version)")
         case .upToDate:
-            AppLog.info(.settings, "já está na versão mais recente")
+            AppLog.info(.settings, "Já está na versão mais recente")
         case .aheadOfRelease(let published):
-            AppLog.info(.settings, "build local à frente da publicação \(published)")
+            AppLog.info(.settings, "Build local à frente da publicação \(published)")
         case .nonePublished:
-            AppLog.info(.settings, "nenhum release público no GitHub")
+            AppLog.info(.settings, "Nenhum release público no GitHub")
         case .failed(let message):
-            AppLog.error(.settings, "falha ao verificar atualizações: \(message)")
+            AppLog.error(.settings, "Falha ao verificar atualizações: \(message)")
         }
     }
 

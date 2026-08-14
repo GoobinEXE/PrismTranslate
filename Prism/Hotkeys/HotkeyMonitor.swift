@@ -7,6 +7,8 @@ final class HotkeyMonitor {
     var onTranslateOnly: (() -> Void)?
     var onTranslateAndSend: (() -> Void)?
     var onPopup: (() -> Void)?
+    /// Enter in a text field when “Enter traduz e envia” is on (distinct from the ⌃⌥⏎ hotkey).
+    var onEnterTranslateAndSend: (() -> Void)?
     /// Fired on the main queue whenever tap install state changes.
     var onTapStatusChange: ((Bool) -> Void)?
 
@@ -42,6 +44,13 @@ final class HotkeyMonitor {
         popup: HotkeyChord = .popupDefault
     ) {
         lock.lock()
+        let changed =
+            self.enabled != enabled
+            || self.enterTranslatesAndSends != enterTranslatesAndSends
+            || self.translateOnly != translateOnly
+            || self.translateAndSend != translateAndSend
+            || self.popupModeEnabled != popupModeEnabled
+            || self.popupChord != popup
         self.enabled = enabled
         self.enterTranslatesAndSends = enterTranslatesAndSends
         self.translateOnly = translateOnly
@@ -49,6 +58,13 @@ final class HotkeyMonitor {
         self.popupModeEnabled = popupModeEnabled
         self.popupChord = popup
         lock.unlock()
+
+        guard changed else { return }
+        let popupLabel = popupModeEnabled ? popup.displayString : "desligado"
+        AppLog.info(
+            .hotkey,
+            "Atalhos atualizados — Traduzir \(translateOnly.displayString), Traduzir e enviar \(translateAndSend.displayString), Painel \(popupLabel), Enter traduz \(enterTranslatesAndSends ? "sim" : "não"), Prism \(enabled ? "ligado" : "desligado")"
+        )
     }
 
     /// While true, all hotkey matching is skipped so the settings recorder can capture keys.
@@ -156,7 +172,10 @@ final class HotkeyMonitor {
             callback: callback,
             userInfo: refcon
         ) else {
-            AppLog.error(.hotkey, "falha ao criar event tap — Input Monitoring provavelmente negado")
+            AppLog.error(
+                .hotkey,
+                "Não foi possível instalar o interceptor de teclado — conceda Monitoramento de Entrada em Ajustes › Privacidade"
+            )
             if !didPromptInputMonitoring {
                 didPromptInputMonitoring = true
                 DispatchQueue.main.async {
@@ -173,14 +192,17 @@ final class HotkeyMonitor {
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        AppLog.info(.hotkey, "event tap instalado com sucesso")
+        AppLog.info(.hotkey, "Interceptor de teclado ativo — atalhos globais passam a funcionar")
         DispatchQueue.main.async { self.onTapStatusChange?(true) }
         return true
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            AppLog.warning(.hotkey, "⚠️ event tap desabilitado (\(type == .tapDisabledByTimeout ? "timeout" : "user input")) — reabilitando")
+            AppLog.warning(
+                .hotkey,
+                "Interceptor de teclado foi desativado pelo sistema (\(type == .tapDisabledByTimeout ? "timeout" : "entrada do usuário")) — reativando"
+            )
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
@@ -198,32 +220,41 @@ final class HotkeyMonitor {
         let popup = popupChord
         lock.unlock()
 
-        if !isEnabled || injecting || recording || type != .keyDown {
+        if injecting || recording || type != .keyDown {
             return Unmanaged.passUnretained(event)
         }
 
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         let flags = event.flags
 
-        // Configured: translate only
         if onlyChord.matches(keyCode: keyCode, flags: flags) {
-            AppLog.info(.hotkey, "🎯 hotkey translateOnly matched (keyCode=\(keyCode))")
-            Task { @MainActor in self.onTranslateOnly?() }
-            return nil
+            return consumeOrPass(
+                event,
+                name: "Traduzir",
+                chord: onlyChord,
+                isEnabled: isEnabled,
+                action: { self.onTranslateOnly?() }
+            )
         }
 
-        // Configured: translate and send
         if sendChord.matches(keyCode: keyCode, flags: flags) {
-            AppLog.info(.hotkey, "🎯 hotkey translateAndSend matched (keyCode=\(keyCode))")
-            Task { @MainActor in self.onTranslateAndSend?() }
-            return nil
+            return consumeOrPass(
+                event,
+                name: "Traduzir e enviar",
+                chord: sendChord,
+                isEnabled: isEnabled,
+                action: { self.onTranslateAndSend?() }
+            )
         }
 
-        // Configured: popup panel (opt-in)
         if popupEnabled, popup.matches(keyCode: keyCode, flags: flags) {
-            AppLog.info(.hotkey, "🎯 hotkey popup matched (keyCode=\(keyCode))")
-            Task { @MainActor in self.onPopup?() }
-            return nil
+            return consumeOrPass(
+                event,
+                name: "Painel",
+                chord: popup,
+                isEnabled: isEnabled,
+                action: { self.onPopup?() }
+            )
         }
 
         // Enter mode: plain Return/Enter translates and sends (text fields only)
@@ -231,17 +262,52 @@ final class HotkeyMonitor {
            (keyCode == Int64(kVK_Return) || keyCode == Int64(kVK_ANSI_KeypadEnter)),
            !flags.contains(.maskCommand),
            !flags.contains(.maskAlternate),
-           !flags.contains(.maskControl) {
+           !flags.contains(.maskControl)
+        {
             let editable = FocusedTextIO.isFocusedTextEditable()
-            AppLog.debug(.hotkey, "⏎ Enter-mode: isFocusedTextEditable=\(editable)")
             if editable {
-                AppLog.info(.hotkey, "🎯 Enter-mode triggered — translateAndSend")
-                Task { @MainActor in self.onTranslateAndSend?() }
+                if !isEnabled {
+                    AppLog.warning(
+                        .hotkey,
+                        "Enter ignorado no campo de texto — Prism está desligado (modo «traduz e envia» ativo)"
+                    )
+                    return Unmanaged.passUnretained(event)
+                }
+                AppLog.info(
+                    .hotkey,
+                    "Tecla Enter no campo de texto — modo «traduz e envia» (traduz, substitui e envia)"
+                )
+                Task { @MainActor in
+                    if let enter = self.onEnterTranslateAndSend {
+                        enter()
+                    } else {
+                        self.onTranslateAndSend?()
+                    }
+                }
                 return nil
             }
         }
 
         return Unmanaged.passUnretained(event)
+    }
+
+    private func consumeOrPass(
+        _ event: CGEvent,
+        name: String,
+        chord: HotkeyChord,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> Unmanaged<CGEvent>? {
+        if !isEnabled {
+            AppLog.warning(
+                .hotkey,
+                "Atalho «\(name)» (\(chord.displayString)) ignorado — Prism está desligado"
+            )
+            return Unmanaged.passUnretained(event)
+        }
+        AppLog.info(.hotkey, "Atalho usado: «\(name)» (\(chord.displayString))")
+        Task { @MainActor in action() }
+        return nil
     }
 
     /// Marks synthetic key injection so the tap does not re-intercept it.

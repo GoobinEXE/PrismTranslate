@@ -44,7 +44,7 @@ final class TranslationHostPanelController {
         panel.orderFrontRegardless()
         self.panel = panel
 
-        AppLog.info(.hostPanel, "🍏 TranslationHostPanelController installed with persistent NSHostingView")
+        AppLog.info(.hostPanel, "Host Apple Translation instalado (janela persistente para o sistema)")
     }
 
     /// Brings a visible panel on-screen so `prepareTranslation()` can anchor
@@ -61,13 +61,18 @@ final class TranslationHostPanelController {
             panel.setFrame(NSRect(origin: origin, size: size), display: true)
             panel.ignoresMouseEvents = false
             panel.alphaValue = 1
-            NSApp.activate(ignoringOtherApps: true)
-            panel.makeKeyAndOrderFront(nil)
-            panel.orderFrontRegardless()
+            if WindowCoordinator.shared.isTranslationPopupFront {
+                panel.orderFrontRegardless()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+                panel.makeKeyAndOrderFront(nil)
+                panel.orderFrontRegardless()
+            }
         } else {
             panel.ignoresMouseEvents = true
             panel.alphaValue = 0
             panel.orderFrontRegardless()
+            WindowCoordinator.shared.restorePopupKeyIfNeeded()
         }
     }
 }
@@ -79,7 +84,7 @@ private struct TranslationHostView: View {
         Color.clear
             .frame(width: 1, height: 1)
             .translationTask(bridge.configuration) { session in
-                AppLog.info(.hostPanel, "🍏 .translationTask triggered by configuration change!")
+                AppLog.info(.hostPanel, "Sistema entregou uma sessão de tradução (configuration mudou)")
                 await bridge.handle(session: session)
             }
     }
