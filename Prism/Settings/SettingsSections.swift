@@ -109,15 +109,8 @@ struct ProviderSettingsView: View {
     @State private var deeplKey: String = KeychainStore.string(for: .deeplAPIKey) ?? ""
     @State private var googleKey: String = KeychainStore.string(for: .googleAPIKey) ?? ""
     @State private var openAIKey: String = KeychainStore.string(for: .openAIAPIKey) ?? ""
-    @State private var groqKey: String = KeychainStore.string(for: .groqAPIKey) ?? ""
-    @State private var geminiKey: String = KeychainStore.string(for: .geminiAPIKey) ?? ""
-    @State private var mistralKey: String = KeychainStore.string(for: .mistralAPIKey) ?? ""
-    @State private var deepSeekKey: String = KeychainStore.string(for: .deepSeekAPIKey) ?? ""
-    @State private var openRouterKey: String = KeychainStore.string(for: .openRouterAPIKey) ?? ""
     @State private var applePackState: LanguagePackState = .checking
     @State private var applePackRows: [ApplePackRow] = []
-    @State private var isRefreshingModels = false
-    @State private var modelRefreshNote: String?
 
     var body: some View {
         Form {
@@ -180,8 +173,6 @@ struct ProviderSettingsView: View {
             }
             Task { await refreshApplePackState() }
         }
-        // Refresh automático de modelos fica no AppState (fora do ciclo de layout da Form).
-        // Aqui só o botão “Atualizar” força consulta à API.
     }
 
     @ViewBuilder
@@ -255,67 +246,6 @@ struct ProviderSettingsView: View {
                 .onChange(of: googleKey) { _, newValue in
                     KeychainStore.set(newValue, for: .googleAPIKey)
                 }
-        case .groq:
-            SecureField("API Key Groq", text: $groqKey)
-                .help("Chave gratuita em console.groq.com. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API Groq, armazenada no Keychain")
-                .onChange(of: groqKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .groqAPIKey)
-                }
-            aiModelFields(
-                model: appState.settingsBinding(\.groqModel),
-                kind: .groq,
-                help: "Ex.: llama-3.1-8b-instant, llama-3.3-70b-versatile"
-            )
-        case .gemini:
-            SecureField("API Key Gemini (AI Studio)", text: $geminiKey)
-                .help("Chave gratuita em aistudio.google.com — diferente da Google Cloud Translation. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API Gemini, armazenada no Keychain")
-                .onChange(of: geminiKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .geminiAPIKey)
-                }
-            aiModelFields(
-                model: appState.settingsBinding(\.geminiModel),
-                kind: .gemini,
-                help: "Ex.: gemini-flash-lite-latest, gemini-3.5-flash-lite"
-            )
-        case .mistral:
-            SecureField("API Key Mistral", text: $mistralKey)
-                .help("Chave gratuita em console.mistral.ai. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API Mistral, armazenada no Keychain")
-                .onChange(of: mistralKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .mistralAPIKey)
-                }
-            aiModelFields(
-                model: appState.settingsBinding(\.mistralModel),
-                kind: .mistral,
-                help: "Ex.: mistral-small-latest, mistral-medium-latest"
-            )
-        case .deepSeek:
-            SecureField("API Key DeepSeek", text: $deepSeekKey)
-                .help("Chave em platform.deepseek.com. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API DeepSeek, armazenada no Keychain")
-                .onChange(of: deepSeekKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .deepSeekAPIKey)
-                }
-            aiModelFields(
-                model: appState.settingsBinding(\.deepSeekModel),
-                kind: .deepSeek,
-                help: "Ex.: deepseek-chat, deepseek-reasoner"
-            )
-        case .openRouter:
-            SecureField("API Key OpenRouter", text: $openRouterKey)
-                .help("Chave gratuita em openrouter.ai. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API OpenRouter, armazenada no Keychain")
-                .onChange(of: openRouterKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .openRouterAPIKey)
-                }
-            aiModelFields(
-                model: appState.settingsBinding(\.openRouterModel),
-                kind: .openRouter,
-                help: "Ex.: openrouter/free ou meta-llama/llama-3.3-70b-instruct:free",
-                captionExtra: " — roteia modelos gratuitos"
-            )
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
                 .help("Endpoint compatível com OpenAI, por exemplo LM Studio local.")
@@ -481,85 +411,12 @@ struct ProviderSettingsView: View {
         KeychainStore.set(deeplKey, for: .deeplAPIKey)
         KeychainStore.set(googleKey, for: .googleAPIKey)
         KeychainStore.set(openAIKey, for: .openAIAPIKey)
-        KeychainStore.set(groqKey, for: .groqAPIKey)
-        KeychainStore.set(geminiKey, for: .geminiAPIKey)
-        KeychainStore.set(mistralKey, for: .mistralAPIKey)
-        KeychainStore.set(deepSeekKey, for: .deepSeekAPIKey)
-        KeychainStore.set(openRouterKey, for: .openRouterAPIKey)
-    }
-
-    @ViewBuilder
-    private func aiModelFields(
-        model: Binding<String>,
-        kind: ProviderKind,
-        help: String,
-        captionExtra: String = ""
-    ) -> some View {
-        TextField("Modelo", text: model)
-            .help(help)
-        HStack {
-            Text("Recomendado: \(kind.defaultModel ?? "")\(captionExtra)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button {
-                Task { await refreshModelsIfNeeded(force: true, kinds: [kind]) }
-            } label: {
-                if isRefreshingModels {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Label("Atualizar", systemImage: "arrow.triangle.2.circlepath")
-                }
-            }
-            .disabled(isRefreshingModels)
-            .help("Consulta a API do provedor e troca o modelo se estiver descontinuado ou houver opção melhor para tradução.")
-        }
-        if let modelRefreshNote {
-            Text(modelRefreshNote)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-        }
     }
 
     private func providerAccessibilityLabel(_ kind: ProviderKind) -> String {
         let badges = kind.badges.map(\.rawValue).joined(separator: ", ")
         if badges.isEmpty { return kind.displayName }
         return "\(kind.displayName), \(badges)"
-    }
-
-    private func refreshModelsIfNeeded(force: Bool, kinds: [ProviderKind]? = nil) async {
-        let kind = appState.settings.providerKind
-        let targets = kinds ?? (kind.supportsLiveModelCatalog ? [kind] : [])
-        guard !targets.isEmpty else { return }
-
-        // Sai do ciclo de update da view antes de tocar em @State / @Published.
-        await Task.yield()
-        if force {
-            AppLog.info(
-                .settings,
-                "Botão «Atualizar» modelos — consultando \(targets.map(\.displayName).joined(separator: ", "))"
-            )
-        }
-        isRefreshingModels = true
-        defer { isRefreshingModels = false }
-
-        var settings = appState.settings
-        let result = await AIModelCatalog.refreshModels(
-            settings: &settings,
-            force: force,
-            kinds: targets
-        )
-        if result.didChange {
-            appState.applySettingsAsync(settings)
-        }
-        if force || result.didChange {
-            modelRefreshNote =
-                result.notes.isEmpty
-                ? "Modelos verificados — configuração atual permanece válida."
-                : result.notes.joined(separator: " ")
-        }
     }
 }
 
@@ -925,7 +782,7 @@ struct AboutSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
                 Text(
-                    "Motores: Apple Translation no aparelho, DeepL, Google Translate e IA (Gemini, Groq, Mistral e outros). A interface fica na barra de menus — quase invisível."
+                    "Motores: Apple Translation no aparelho, DeepL, Google Translate e LM Studio local. A interface fica na barra de menus — quase invisível."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1060,12 +917,30 @@ struct AboutSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                Text(AppRelease.licenseName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 Text(
-                    "Apple Translation, DeepL, Google Translate e os provedores de IA são marcas dos respectivos donos. O Prism os usa como motores de tradução opcionais."
+                    "Código-fonte disponível para uso não comercial. Apple Translation, DeepL, Google Translate e LM Studio são marcas dos respectivos donos. O Prism os usa como motores de tradução opcionais."
                 )
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
+
+                Button("Ver licença") {
+                    if let url = AppRelease.bundledLicenseURL {
+                        NSWorkspace.shared.open(url)
+                    } else {
+                        NSWorkspace.shared.open(AppRelease.licenseURL)
+                    }
+                }
+                .accessibilityLabel("Abrir o texto da licença PolyForm Noncommercial")
+
+                Button("PolyForm Noncommercial 1.0.0") {
+                    NSWorkspace.shared.open(AppRelease.licenseURL)
+                }
+                .accessibilityLabel("Abrir a página da licença PolyForm Noncommercial")
 
                 Button("Repositório no GitHub") {
                     NSWorkspace.shared.open(AppRelease.repositoryURL)

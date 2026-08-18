@@ -9,7 +9,7 @@ final class TranslationEngine {
         let text: String
         let from: String?
         let to: String
-        let provider: String
+        let engine: String
     }
 
     /// Small LRU of recent translations (same phrase re-translated instantly).
@@ -24,13 +24,15 @@ final class TranslationEngine {
 
     func updateSettings(_ settings: AppSettings) {
         let providerChanged = settings.providerKind != self.settings.providerKind
+        let engineFingerprintChanged =
+            settings.engineLogDescription != self.settings.engineLogDescription
         let languagesChanged =
             settings.incomingSourceLanguage != self.settings.incomingSourceLanguage
             || settings.incomingTargetLanguage != self.settings.incomingTargetLanguage
             || settings.outgoingSourceLanguage != self.settings.outgoingSourceLanguage
             || settings.outgoingTargetLanguage != self.settings.outgoingTargetLanguage
         self.settings = settings
-        if providerChanged || languagesChanged {
+        if providerChanged || engineFingerprintChanged || languagesChanged {
             AppLog.info(
                 .engine,
                 "Motor ou idiomas mudaram — cache de traduções limpo (agora: \(settings.engineLogDescription))"
@@ -44,7 +46,7 @@ final class TranslationEngine {
             text: text,
             from: from,
             to: to,
-            provider: settings.providerKind.rawValue
+            engine: settings.engineLogDescription
         )
         AppLog.info(
             .engine,
@@ -159,47 +161,6 @@ final class TranslationEngine {
         case .google:
             return GoogleTranslateProvider(
                 apiKey: KeychainStore.string(for: .googleAPIKey) ?? ""
-            )
-        case .groq:
-            return OpenAICompatibleProvider(
-                kind: .groq,
-                baseURL: ProviderKind.groq.openAICompatibleBaseURL ?? "",
-                model: settings.groqModel,
-                apiKey: KeychainStore.string(for: .groqAPIKey) ?? "",
-                requiresAPIKey: true
-            )
-        case .gemini:
-            return GeminiProvider(
-                apiKey: KeychainStore.string(for: .geminiAPIKey) ?? "",
-                model: settings.geminiModel
-            )
-        case .mistral:
-            return OpenAICompatibleProvider(
-                kind: .mistral,
-                baseURL: ProviderKind.mistral.openAICompatibleBaseURL ?? "",
-                model: settings.mistralModel,
-                apiKey: KeychainStore.string(for: .mistralAPIKey) ?? "",
-                requiresAPIKey: true
-            )
-        case .deepSeek:
-            return OpenAICompatibleProvider(
-                kind: .deepSeek,
-                baseURL: ProviderKind.deepSeek.openAICompatibleBaseURL ?? "",
-                model: settings.deepSeekModel,
-                apiKey: KeychainStore.string(for: .deepSeekAPIKey) ?? "",
-                requiresAPIKey: true
-            )
-        case .openRouter:
-            return OpenAICompatibleProvider(
-                kind: .openRouter,
-                baseURL: ProviderKind.openRouter.openAICompatibleBaseURL ?? "",
-                model: settings.openRouterModel,
-                apiKey: KeychainStore.string(for: .openRouterAPIKey) ?? "",
-                requiresAPIKey: true,
-                extraHeaders: [
-                    "HTTP-Referer": "https://prism.translate",
-                    "X-Title": "Prism"
-                ]
             )
         case .openAICompatible:
             return OpenAICompatibleProvider(

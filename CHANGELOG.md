@@ -4,24 +4,48 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
+A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
 ## [0.7.0] - 2026-08-14
 
-Controles no menu bar (HUD e modo popup), coordenação do painel com Preferências, e pacotes Apple Translation mais confiáveis.
+Edição Community para o primeiro lançamento público: licença PolyForm Noncommercial, sem motores de IA na nuvem. Controles no menu bar (HUD e modo popup) e pacotes Apple Translation mais confiáveis.
+
+### Novidades
+
+- Edição Community com código-fonte disponível para uso não comercial (PolyForm Noncommercial 1.0.0).
+- Novos controles no menu da barra: aviso perto do ponteiro e modo janela.
+- O painel de tradução e as Preferências convivem melhor na tela.
+- A tradução da Apple escolhe idiomas com mais confiança.
+- Com o Prism desligado, o teclado volta a funcionar como de costume.
+- Correções ao substituir o texto e ao copiar a tradução.
+- Melhorias de estabilidade e correção de bugs.
 
 ### Adicionado
 
 - Toggle **Aviso perto do ponteiro** (HUD) e **Modo popup** no menu da barra.
-- `WindowCoordinator`: Preferências visível fica abaixo do painel de tradução, sem roubar o foco.
+- `LICENSE` e `NOTICE` (PolyForm Noncommercial 1.0.0) no repositório e no app.
+
+### Removed
+
+- Motores de IA na nuvem: Groq, Gemini, Mistral, DeepSeek e OpenRouter. Permanece LM Studio / OpenAI-compatible local.
 
 ### Changed
 
-- Mapeamento e cache de idiomas/pacotes do Apple Translation (pares concretos, menos falso “não baixado”).
+- Mapeamento e cache de idiomas/pacotes do Apple Translation (pares concretos, menos falso “não baixado”); sessão e packs usam o mesmo mapa (chinês inclusive).
 - Atalhos e Enter com Prism desligado passam o evento adiante; logs mais claros.
+- Cache de tradução inclui motor/modelo/endpoint.
+- Google Translate v2 envia `q`/`target` no body do POST.
+- Repositório GitHub: `GoobinEXE/PrismTranslate`.
+
+### Fixed
+
+- Substituição falha não marca sucesso nem dispara Return.
+- Copiar no painel não é mais apagado pelo restore do clipboard.
+- APIs mortas removidas (`openSettings`, toggles, `settingsTest`, `isLocalDefault`, `isAIEngine`).
 
 ### Notas de maturidade
 
-- Validado E2E: **Apple Translation**, **tradução por IA** e **DeepL**.
+- Validado E2E: **Apple Translation**, **DeepL** e **LM Studio / OpenAI local**.
 - Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
 
 ## [0.6.0] - 2026-08-13

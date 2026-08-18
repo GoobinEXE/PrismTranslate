@@ -5,7 +5,6 @@ import SwiftUI
 /// status no topo, controles frequentes, alertas acionáveis, navegação no rodapé.
 struct MenuBarView: View {
     @EnvironmentObject private var appState: AppState
-    @Environment(\.openSettings) private var openSettings
     @State private var showFullError = false
 
     var body: some View {
@@ -34,10 +33,6 @@ struct MenuBarView: View {
         }
         .padding(14)
         .frame(width: 320)
-        // Bridge para callers AppKit (`AppState.openSettings`) sem seletor privado.
-        .onReceive(NotificationCenter.default.publisher(for: .qtRequestOpenSettings)) { _ in
-            openSettings()
-        }
     }
 
     // MARK: - Header

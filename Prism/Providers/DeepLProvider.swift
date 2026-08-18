@@ -41,16 +41,14 @@ struct DeepLProvider: TranslationProvider {
         request.httpBody = body.data(using: .utf8)
 
         let started = Date()
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            ProviderLog.failed(.deepl, engine: "DeepL", status: nil, since: started, body: "")
-            throw TranslationError.emptyResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            ProviderLog.failed(.deepl, engine: "DeepL", status: http.statusCode, since: started, body: bodyText)
-            throw TranslationError.httpStatus(http.statusCode, bodyText)
-        }
+        let (raw, response) = try await URLSession.shared.data(for: request)
+        let (http, data) = try ProviderLog.requireSuccess(
+            data: raw,
+            response: response,
+            category: .deepl,
+            engine: "DeepL",
+            since: started
+        )
 
         struct DeepLResponse: Decodable {
             struct Translation: Decodable {

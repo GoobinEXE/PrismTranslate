@@ -2,19 +2,10 @@ import AppKit
 import Foundation
 import SwiftUI
 
-extension Notification.Name {
-    /// Pedido para abrir a scene Settings via `OpenSettingsAction` / bridge SwiftUI.
-    static let qtRequestOpenSettings = Notification.Name("com.marcelopessoa.prism.requestOpenSettings")
-}
-
 /// Ponto único de navegação entre MenuBarExtra, Preferências e superfícies AppKit.
 @MainActor
 enum SettingsNavigation {
     private static let settingsAutosaveName = "com_apple_SwiftUI_Settings_window"
-
-    static func isMenuBarExtraVisible() -> Bool {
-        !menuBarExtraWindows().isEmpty
-    }
 
     static func closeMenuBarExtra() {
         for window in menuBarExtraWindows() {
@@ -30,7 +21,7 @@ enum SettingsNavigation {
         }
     }
 
-    /// Janela da scene `Settings` — mesma heurística para Dock e painel de resultado.
+    /// Janela da scene `Settings` — usada pelo Dock enquanto Preferências está aberta.
     static func settingsWindow() -> NSWindow? {
         if let named = NSApp.windows.first(where: {
             $0.frameAutosaveName == settingsAutosaveName

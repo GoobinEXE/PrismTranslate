@@ -6,6 +6,23 @@ Passo a passo para gerar, assinar, notarizar e publicar uma versão do Prism for
 
 ---
 
+## 0. Tornar o repositório público (primeira vez)
+
+Checklist **antes** do DMG / tag `v0.7.0`. Não rode isto no automático — é o passo seu, na hora de publicar.
+
+- [ ] Confirme que não há secrets (`.env`, `Secrets.xcconfig`, chaves, `.p12`)
+- [ ] `LICENSE` na raiz é a PolyForm Noncommercial 1.0.0; GitHub deve detectar a licença
+- [ ] Remote: `GoobinEXE/PrismTranslate` (slug sem espaço; nome de exibição **Prism Translate**)
+  - No GitHub: Settings → General → Repository name → `PrismTranslate` (hoje ainda é `QuickTranslate`)
+  - Local: `git remote set-url origin https://github.com/GoobinEXE/PrismTranslate.git`
+- [ ] Description do repo: app de menu bar para traduzir o campo focado; Topics: `macos`, `translation`, `menubar`
+- [ ] Tornar o repositório **público**
+- [ ] Tag anotada `v0.7.0` + GitHub Release (DMG opcional nesta primeira vez)
+
+Versão do primeiro artefato público: **0.7.0** (não 1.0.0).
+
+---
+
 ## 1. Requisitos
 
 - **Apple Developer Program** ativo (US$ 99/ano) — necessário para Developer ID e notarização.

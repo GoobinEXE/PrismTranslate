@@ -156,7 +156,6 @@ final class AppState: ObservableObject {
         hotkeyMonitor.start()
         applyHotkeyConfiguration(settings)
         startPermissionWatch()
-        scheduleAIModelCatalogRefresh()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             TranslationHostPanelController.shared.install(bridge: self.appleBridge)
@@ -181,29 +180,16 @@ final class AppState: ObservableObject {
         permissionWatchTask?.cancel()
         permissionWatchTask = Task { [weak self] in
             while !Task.isCancelled {
-                _ = try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard let self else { return }
-                // Event tap needs Input Monitoring; retry whenever it is still missing.
-                self.hotkeyMonitor.retryInstallIfNeeded()
-                self.hotkeysActive = self.hotkeyMonitor.isTapActive
+                let tapActive = self.hotkeyMonitor.isTapActive
+                self.hotkeysActive = tapActive
+                if !tapActive {
+                    self.hotkeyMonitor.retryInstallIfNeeded()
+                    _ = try? await Task.sleep(nanoseconds: 2_000_000_000)
+                } else {
+                    _ = try? await Task.sleep(nanoseconds: 10_000_000_000)
+                }
             }
-        }
-    }
-
-    /// Consulta APIs dos motores de IA (quando há chave) e troca modelos descontinuados.
-    private func scheduleAIModelCatalogRefresh() {
-        Task { [weak self] in
-            // Evita competir com o cold start / onboarding / primeiro layout.
-            _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
-            guard let self else { return }
-            var updated = self.settings
-            let result = await AIModelCatalog.refreshModels(settings: &updated, force: false)
-            guard result.didChange else { return }
-            self.applySettingsAsync(updated)
-            AppLog.info(
-                .settings,
-                "Catálogo de modelos atualizou: \(result.updatedProviders.map(\.displayName).joined(separator: ", "))"
-            )
         }
     }
 
@@ -237,13 +223,6 @@ final class AppState: ObservableObject {
         SettingsNavigation.prepareOpenSettings(closeMenuBar: closeMenuBar)
     }
 
-    /// Abre Configurações pedindo à bridge SwiftUI (`SettingsLink` / `openSettings`).
-    func openSettings(section: SettingsSection? = nil) {
-        prepareSettings(section: section, closeMenuBar: false)
-        NotificationCenter.default.post(name: .qtRequestOpenSettings, object: nil)
-        SettingsNavigation.closeMenuBarExtra()
-    }
-
     private static func loadRememberedSettingsSection() -> SettingsSection {
         guard let raw = UserDefaults.standard.string(forKey: lastSettingsSectionKey),
             let section = SettingsSection(rawValue: raw)
@@ -270,14 +249,6 @@ final class AppState: ObservableObject {
         case .error:
             return "exclamationmark.triangle"
         }
-    }
-
-    func toggleEnabled() {
-        settings.isEnabled.toggle()
-    }
-
-    func toggleEnterMode() {
-        settings.enterTranslatesAndSends.toggle()
     }
 
     func setOutgoingTargetLanguage(_ code: String) {
@@ -409,16 +380,6 @@ final class AppState: ObservableObject {
                 self.settings = updated
             }
         )
-    }
-
-    /// Aplica settings fora do ciclo de update da view (catálogo de modelos, etc.).
-    func applySettingsAsync(_ newSettings: AppSettings) {
-        guard newSettings != settings else { return }
-        Task { @MainActor in
-            await Task.yield()
-            guard newSettings != self.settings else { return }
-            self.settings = newSettings
-        }
     }
 
     private func applyStatus(_ status: Status) {

@@ -12,16 +12,7 @@ struct GoogleTranslateProvider: TranslationProvider {
         }
 
         var components = URLComponents(string: "https://translation.googleapis.com/language/translate/v2")!
-        var query: [URLQueryItem] = [
-            URLQueryItem(name: "key", value: apiKey),
-            URLQueryItem(name: "q", value: text),
-            URLQueryItem(name: "target", value: Self.apiCode(for: to)),
-            URLQueryItem(name: "format", value: "text")
-        ]
-        if let from, !from.isEmpty {
-            query.append(URLQueryItem(name: "source", value: Self.apiCode(for: from)))
-        }
-        components.queryItems = query
+        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
 
         guard let url = components.url else {
             throw TranslationError.invalidConfiguration("URL Google inválida")
@@ -39,24 +30,25 @@ struct GoogleTranslateProvider: TranslationProvider {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 12
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+
+        var body = "q=\(formEncode(text))"
+        body += "&target=\(formEncode(Self.apiCode(for: to)))"
+        body += "&format=text"
+        if let from, !from.isEmpty {
+            body += "&source=\(formEncode(Self.apiCode(for: from)))"
+        }
+        request.httpBody = body.data(using: .utf8)
 
         let started = Date()
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            ProviderLog.failed(.google, engine: "Google Translate", status: nil, since: started, body: "")
-            throw TranslationError.emptyResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            ProviderLog.failed(
-                .google,
-                engine: "Google Translate",
-                status: http.statusCode,
-                since: started,
-                body: bodyText
-            )
-            throw TranslationError.httpStatus(http.statusCode, bodyText)
-        }
+        let (raw, response) = try await URLSession.shared.data(for: request)
+        let (http, data) = try ProviderLog.requireSuccess(
+            data: raw,
+            response: response,
+            category: .google,
+            engine: "Google Translate",
+            since: started
+        )
 
         struct GoogleResponse: Decodable {
             struct DataBlock: Decodable {
@@ -93,5 +85,12 @@ struct GoogleTranslateProvider: TranslationProvider {
         case "zh-Hant": return "zh-TW"
         default: return code
         }
+    }
+
+    private func formEncode(_ value: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._*")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed)?
+            .replacingOccurrences(of: " ", with: "+") ?? value
     }
 }

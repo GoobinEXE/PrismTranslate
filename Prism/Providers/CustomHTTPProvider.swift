@@ -53,22 +53,14 @@ struct CustomHTTPProvider: TranslationProvider {
         }
 
         let started = Date()
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            ProviderLog.failed(.customHTTP, engine: "HTTP personalizado", status: nil, since: started, body: "")
-            throw TranslationError.emptyResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            ProviderLog.failed(
-                .customHTTP,
-                engine: "HTTP personalizado",
-                status: http.statusCode,
-                since: started,
-                body: bodyText
-            )
-            throw TranslationError.httpStatus(http.statusCode, bodyText)
-        }
+        let (raw, response) = try await URLSession.shared.data(for: request)
+        let (http, data) = try ProviderLog.requireSuccess(
+            data: raw,
+            response: response,
+            category: .customHTTP,
+            engine: "HTTP personalizado",
+            since: started
+        )
 
         if responseJSONPath.isEmpty {
             guard let raw = String(data: data, encoding: .utf8), !raw.isEmpty else {

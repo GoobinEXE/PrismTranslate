@@ -172,8 +172,10 @@ final class FocusedTextIO {
     }
 
     /// Restores any borrowed user clipboard (e.g. translate failed after a clipboard read).
-    func finishPasteboardSession() {
-        restorePendingUserPasteboard(after: 0.35)
+    /// When `onlyIfUnchanged` is true, skip restore if the user copied something else (panel Copiar).
+    func finishPasteboardSession(onlyIfUnchanged: Bool = false) {
+        let changeCount = onlyIfUnchanged ? NSPasteboard.general.changeCount : nil
+        restorePendingUserPasteboard(after: 0.35, onlyIfChangeCount: changeCount)
     }
 
     /// Selects text if needed, then returns the selection for translation.
@@ -688,11 +690,11 @@ final class FocusedTextIO {
         backup.restore(after: 0.45, onlyIfChangeCount: changeCountAtPaste)
     }
 
-    private func restorePendingUserPasteboard(after delay: TimeInterval) {
+    private func restorePendingUserPasteboard(after delay: TimeInterval, onlyIfChangeCount: Int? = nil) {
         guard let backup = pendingUserPasteboard else { return }
         pendingUserPasteboard = nil
         AppLog.debug(.textIO, "📋 restaurando clipboard do usuário (pending session)")
-        backup.restore(after: delay)
+        backup.restore(after: delay, onlyIfChangeCount: onlyIfChangeCount)
     }
 }
 

@@ -212,16 +212,16 @@ final class AppleTranslationBridge: ObservableObject {
 
     /// Publishes a configuration early so the first real translate hits a warm session.
     func prewarm(from: String?, to: String) {
-        let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
-        let targetLang = Locale.Language(identifier: normalize(to))
         guard pending == nil else { return }
-        AppLog.info(
-            .apple,
-            "Preparando sessão Apple Translation para \(self.pairKey(source: sourceLang, target: targetLang))"
-        )
-        publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
         Task { [weak self] in
-            guard let self else { return }
+            guard let self, self.pending == nil else { return }
+            let sourceLang = await self.resolvedSourceLanguage(from)
+            let targetLang = await self.resolvedAppleLanguage(for: to)
+            AppLog.info(
+                .apple,
+                "Preparando sessão Apple Translation para \(self.pairKey(source: sourceLang, target: targetLang))"
+            )
+            self.publishConfiguration(source: sourceLang, target: targetLang, forceNew: false)
             _ = try? await self.checkAvailability(
                 source: sourceLang,
                 target: targetLang,
@@ -236,8 +236,8 @@ final class AppleTranslationBridge: ObservableObject {
         to: String,
         forcePrepare: Bool
     ) async throws -> String {
-        let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
-        let targetLang = Locale.Language(identifier: normalize(to))
+        let sourceLang = await resolvedSourceLanguage(from)
+        let targetLang = await resolvedAppleLanguage(for: to)
 
         // Fail fast on unsupported pairs. Pack status is advisory — online vs offline
         // follows System Settings › Translation Languages › On-Device Mode.
@@ -543,6 +543,11 @@ final class AppleTranslationBridge: ObservableObject {
         return primary
     }
 
+    private func resolvedSourceLanguage(_ from: String?) async -> Locale.Language? {
+        guard let from, !from.isEmpty else { return nil }
+        return await resolvedAppleLanguage(for: from)
+    }
+
     private func resolvedAppleLanguage(for code: String) async -> Locale.Language {
         let supported = await cachedSupportedLanguages()
         return AppleTranslationLanguageMap.pick(appCode: code, from: supported)
@@ -605,8 +610,8 @@ final class AppleTranslationBridge: ObservableObject {
     }
 
     private func invalidateAvailabilityCache(from: String?, to: String) {
-        let sourceLang: Locale.Language? = from.map { Locale.Language(identifier: normalize($0)) }
-        let targetLang = Locale.Language(identifier: normalize(to))
+        let sourceLang = from.map { AppleTranslationLanguageMap.makeLanguage(forAppCode: $0) }
+        let targetLang = AppleTranslationLanguageMap.makeLanguage(forAppCode: to)
         invalidateAvailabilityCache(source: sourceLang, target: targetLang)
     }
 
@@ -672,29 +677,6 @@ final class AppleTranslationBridge: ObservableObject {
             source: source,
             target: target
         )
-    }
-
-    /// Map UI codes to the locale tags Apple's offline packs use (en_US, pt_BR, …).
-    private func normalize(_ code: String) -> String {
-        switch code {
-        case "en": return "en-US"
-        case "pt": return "pt-BR"
-        case "es": return "es-ES"
-        case "fr": return "fr-FR"
-        case "de": return "de-DE"
-        case "it": return "it-IT"
-        case "ja": return "ja-JP"
-        case "ko": return "ko-KR"
-        case "ru": return "ru-RU"
-        case "ar": return "ar-AE"
-        case "nl": return "nl-NL"
-        case "pl": return "pl-PL"
-        case "tr": return "tr-TR"
-        case "hi": return "hi-IN"
-        case "zh-Hans": return "zh-Hans"
-        case "zh-Hant": return "zh-Hant"
-        default: return code
-        }
     }
 }
 

@@ -10,16 +10,21 @@ final class AppReleaseTests: XCTestCase {
         XCTAssertGreaterThan(SemanticVersion.parse("0.10.0")!, SemanticVersion.parse("0.9.0")!)
     }
 
-    func testChangelogSummaryKeepsUserFacingBullets() {
+    func testChangelogSummaryUsesNovidadesNotTechnicalSections() {
         let markdown = """
         ## [0.6.0] - 2026-08-13
 
-        Aba **Sobre** voltada ao usuário.
+        Resumo técnico para o CHANGELOG.
+
+        ### Novidades
+
+        - Novos controles no menu da barra
+        - Melhorias de estabilidade e correção de bugs
 
         ### Changed
 
-        - Novidades da versão
-        - Verificar atualizações
+        - Cache de tradução inclui motor/modelo/endpoint
+        - Google Translate v2 envia `q` no POST
 
         ### Notas de maturidade
 
@@ -33,18 +38,34 @@ final class AppReleaseTests: XCTestCase {
         XCTAssertEqual(
             summary,
             """
-            Aba Sobre voltada ao usuário.
-            • Novidades da versão
-            • Verificar atualizações
+            • Novos controles no menu da barra
+            • Melhorias de estabilidade e correção de bugs
             """
         )
+        XCTAssertFalse(summary?.contains("Cache de tradução") == true)
         XCTAssertNil(ChangelogHighlights.summary(for: "9.9.9", markdown: markdown))
+    }
+
+    func testChangelogSummaryFallsBackToLeadParagraph() {
+        let markdown = """
+        ## [0.5.0] - 2026-08-13
+
+        Novo nome e visual do app.
+
+        ### Changed
+
+        - bundle ID `com.marcelopessoa.prism`
+        """
+        XCTAssertEqual(
+            ChangelogHighlights.summary(for: "0.5.0", markdown: markdown),
+            "Novo nome e visual do app."
+        )
     }
 
     func testUpdateCheckAvailableAndNonePublished() {
         let newer = GitHubUpdateChecker.Release(
             tagName: "v0.7.0",
-            htmlURL: "https://github.com/GoobinEXE/QuickTranslate/releases/tag/v0.7.0",
+            htmlURL: "https://github.com/GoobinEXE/PrismTranslate/releases/tag/v0.7.0",
             draft: false,
             prerelease: false
         )
@@ -72,6 +93,15 @@ final class AppReleaseTests: XCTestCase {
         XCTAssertEqual(
             GitHubUpdateChecker.evaluate(releases: [draft], currentVersion: "0.6.0"),
             .nonePublished
+        )
+    }
+
+    func testLicenseIdentity() {
+        XCTAssertEqual(AppRelease.licenseName, "PolyForm Noncommercial License 1.0.0")
+        XCTAssertEqual(AppRelease.githubRepo, "PrismTranslate")
+        XCTAssertEqual(AppRelease.licenseURL.host, "polyformproject.org")
+        XCTAssertTrue(
+            AppRelease.repositoryURL.absoluteString.contains("PrismTranslate")
         )
     }
 }

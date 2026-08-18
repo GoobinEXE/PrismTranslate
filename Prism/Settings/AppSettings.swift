@@ -36,20 +36,8 @@ struct AppSettings: Equatable {
     // DeepL
     var deeplUseFreeAPI: Bool = true
 
-    // Free AI engines (API key in Keychain)
-    var groqModel: String = ProviderKind.groq.defaultModel ?? "llama-3.1-8b-instant"
-    var geminiModel: String = ProviderKind.gemini.defaultModel ?? "gemini-flash-lite-latest"
-    var mistralModel: String = ProviderKind.mistral.defaultModel ?? "mistral-small-latest"
-    var deepSeekModel: String = ProviderKind.deepSeek.defaultModel ?? "deepseek-chat"
-    var openRouterModel: String = ProviderKind.openRouter.defaultModel ?? "openrouter/free"
-
     func model(for kind: ProviderKind) -> String? {
         switch kind {
-        case .groq: return groqModel
-        case .gemini: return geminiModel
-        case .mistral: return mistralModel
-        case .deepSeek: return deepSeekModel
-        case .openRouter: return openRouterModel
         case .openAICompatible: return openAIModel
         default: return nil
         }
@@ -57,11 +45,6 @@ struct AppSettings: Equatable {
 
     mutating func setModel(_ model: String, for kind: ProviderKind) {
         switch kind {
-        case .groq: groqModel = model
-        case .gemini: geminiModel = model
-        case .mistral: mistralModel = model
-        case .deepSeek: deepSeekModel = model
-        case .openRouter: openRouterModel = model
         case .openAICompatible: openAIModel = model
         default: break
         }
@@ -104,8 +87,6 @@ struct AppSettings: Equatable {
             return "\(name) · \(deeplUseFreeAPI ? "API gratuita" : "API Pro")"
         case .google:
             return name
-        case .groq, .gemini, .mistral, .deepSeek, .openRouter:
-            return "\(name) · modelo \(model(for: providerKind) ?? "?")"
         case .openAICompatible:
             return "\(name) · modelo \(openAIModel) · \(openAIBaseURL)"
         case .customHTTP:
@@ -135,28 +116,13 @@ struct AppSettings: Equatable {
         if let data = UserDefaults.standard.data(forKey: defaultsKey),
            let decoded = try? JSONDecoder().decode(CodableSettings.self, from: data) {
             settings = decoded.asSettings()
+            if ProviderKind(rawValue: decoded.providerKind) == nil {
+                settings.save()
+            }
         } else {
             settings = AppSettings()
         }
-        return migrateDeprecatedAIModelsIfNeeded(
-            migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
-        )
-    }
-
-    /// Bumps known-dead model ids to the current built-in default (offline-safe).
-    private static func migrateDeprecatedAIModelsIfNeeded(_ settings: AppSettings) -> AppSettings {
-        var updated = settings
-        var changed = false
-        for kind in ProviderKind.allCases where kind.supportsLiveModelCatalog {
-            let current = updated.model(for: kind) ?? ""
-            guard AIModelCatalog.isKnownDeprecated(kind, model: current) else { continue }
-            let fallback = kind.defaultModel ?? kind.preferredModelsForTranslation.first
-            guard let fallback, fallback != current else { continue }
-            updated.setModel(fallback, for: kind)
-            changed = true
-        }
-        if changed { updated.save() }
-        return updated
+        return migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
     }
 
     /// One-time: old default was `nil` (auto). Switch outgoing source to the system language once.
@@ -222,7 +188,8 @@ private struct CodableSettings: Codable {
     var incomingTargetLanguage: String?
     var outgoingSourceLanguage: String?
     var outgoingTargetLanguage: String?
-    var providerKind: ProviderKind
+    /// Stored as string so unknown former cloud engines (groq, gemini, …) still decode.
+    var providerKind: String
     var openAtLogin: Bool
     var translateOnlyHotkey: HotkeyChord?
     var translateAndSendHotkey: HotkeyChord?
@@ -230,11 +197,6 @@ private struct CodableSettings: Codable {
     var popupHotkey: HotkeyChord?
     var showStatusHUD: Bool?
     var deeplUseFreeAPI: Bool
-    var groqModel: String?
-    var geminiModel: String?
-    var mistralModel: String?
-    var deepSeekModel: String?
-    var openRouterModel: String?
     var openAIBaseURL: String
     var openAIModel: String
     var customHTTPURL: String
@@ -253,7 +215,7 @@ private struct CodableSettings: Codable {
         incomingTargetLanguage = settings.incomingTargetLanguage
         outgoingSourceLanguage = settings.outgoingSourceLanguage
         outgoingTargetLanguage = settings.outgoingTargetLanguage
-        providerKind = settings.providerKind
+        providerKind = settings.providerKind.rawValue
         openAtLogin = settings.openAtLogin
         translateOnlyHotkey = settings.translateOnlyHotkey
         translateAndSendHotkey = settings.translateAndSendHotkey
@@ -261,11 +223,6 @@ private struct CodableSettings: Codable {
         popupHotkey = settings.popupHotkey
         showStatusHUD = settings.showStatusHUD
         deeplUseFreeAPI = settings.deeplUseFreeAPI
-        groqModel = settings.groqModel
-        geminiModel = settings.geminiModel
-        mistralModel = settings.mistralModel
-        deepSeekModel = settings.deepSeekModel
-        openRouterModel = settings.openRouterModel
         openAIBaseURL = settings.openAIBaseURL
         openAIModel = settings.openAIModel
         customHTTPURL = settings.customHTTPURL
@@ -301,7 +258,7 @@ private struct CodableSettings: Codable {
             s.incomingSourceLanguage = nil
         }
 
-        s.providerKind = providerKind
+        s.providerKind = ProviderKind(rawValue: providerKind) ?? .apple
         s.openAtLogin = openAtLogin
         s.translateOnlyHotkey = translateOnlyHotkey ?? .translateOnlyDefault
         s.translateAndSendHotkey = translateAndSendHotkey ?? .translateAndSendDefault
@@ -309,11 +266,6 @@ private struct CodableSettings: Codable {
         s.popupHotkey = popupHotkey ?? .popupDefault
         s.showStatusHUD = showStatusHUD ?? true
         s.deeplUseFreeAPI = deeplUseFreeAPI
-        s.groqModel = groqModel ?? ProviderKind.groq.defaultModel ?? s.groqModel
-        s.geminiModel = geminiModel ?? ProviderKind.gemini.defaultModel ?? s.geminiModel
-        s.mistralModel = mistralModel ?? ProviderKind.mistral.defaultModel ?? s.mistralModel
-        s.deepSeekModel = deepSeekModel ?? ProviderKind.deepSeek.defaultModel ?? s.deepSeekModel
-        s.openRouterModel = openRouterModel ?? ProviderKind.openRouter.defaultModel ?? s.openRouterModel
         s.openAIBaseURL = openAIBaseURL
         s.openAIModel = openAIModel
         s.customHTTPURL = customHTTPURL

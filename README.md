@@ -2,7 +2,7 @@
 
 App de menu bar para macOS que traduz o texto do campo focado com atalhos — rápido e quase sem interface.
 
-No sistema (Dock, barra de menus, Ajustes) o nome de display é **Prism**.
+No sistema (Dock, barra de menus, Ajustes) o nome de display é **Prism**. Esta é a edição **Community**: código-fonte disponível para uso não comercial.
 
 ## Requisitos
 
@@ -47,12 +47,7 @@ Em **Preferências**:
 - **Apple Translation** (padrão, zero config)
 - **DeepL** (API key)
 - **Google Cloud Translation** (API key)
-- **Groq** (IA gratuita — API key em console.groq.com)
-- **Google Gemini** (IA gratuita — API key em aistudio.google.com)
-- **Mistral** (IA gratuita — API key em console.mistral.ai)
-- **DeepSeek** (IA — API key em platform.deepseek.com)
-- **OpenRouter** (IA gratuita — API key em openrouter.ai; modelos `:free`)
-- **OpenAI-compatible / LM Studio** (base URL + modelo; key opcional)
+- **OpenAI-compatible / LM Studio** (base URL + modelo; key opcional — servidor local)
 - **Custom HTTP** (URL, template JSON, path da resposta)
 
 Chaves de API ficam no Keychain.
@@ -64,16 +59,17 @@ A v1.0 está pronta quando todos os itens abaixo funcionam de ponta a ponta:
 - [ ] **Traduzir / substituir** — com o foco em um campo de texto, `⌃⌥T` lê o texto, traduz e substitui no lugar (sem enviar)
 - [ ] **Traduzir + enviar** — `⌃⌥⏎` traduz, substitui e simula Enter
 - [ ] **Onboarding de permissões** — na primeira execução, o tutorial guia Acessibilidade e Monitoramento de Entrada, com links para Ajustes do Sistema
-- [ ] **Provedores** — Apple Translation, DeepL, Google Cloud Translation, Groq, Gemini, Mistral, DeepSeek, OpenRouter, OpenAI-compatible / LM Studio e Custom HTTP selecionáveis em Preferências
+- [ ] **Provedores** — Apple Translation, DeepL, Google Cloud Translation, OpenAI-compatible / LM Studio e Custom HTTP selecionáveis em Preferências
 - [ ] **Atalhos configuráveis** — gravar novos atalhos e restaurar os padrões `⌃⌥T` / `⌃⌥⏎` em Preferências → Atalhos
 - [ ] **Abrir no login** — o toggle em Preferências registra/desregistra o login item
 
 Fonte da verdade dos atalhos padrão: `HotkeyChord.swift` / `AppSettings.swift`.
 
-## Roadmap
+## Licença
 
-- **Localização EN**: a interface hoje é em português (Brasil); a localização para inglês (base EN + PT via String Catalog) está planejada para uma versão futura.
-- **Prompt de tradução customizável (versão paga / Pro)**: permitir que o usuário edite o system prompt dos motores de IA (Groq, Gemini, Mistral, OpenRouter, OpenAI-compatible). O prompt padrão do sistema permanece o de alta fidelidade (significado, tom, dialeto, nuance). Customização de prompt é feature paga futura — não implementada na versão gratuita.
+Prism Translate Community é distribuído sob a [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+Você pode usar, estudar e modificar o código para **fins não comerciais** (uso pessoal, pesquisa, organizações listadas na licença). Uso comercial exige uma licença à parte, concedida pelo autor. O texto completo está em [`LICENSE`](LICENSE); o aviso obrigatório está em [`NOTICE`](NOTICE).
 
 ## Estrutura
 
@@ -83,7 +79,7 @@ Prism/
   Hotkeys/       # CGEvent tap (atalhos + Enter)
   TextIO/        # Accessibility + fallback clipboard
   Translation/   # Protocolo e engine
-  Providers/     # Apple, DeepL, Google, Groq, Gemini, Mistral, DeepSeek, OpenRouter, OpenAI, Custom HTTP
+  Providers/     # Apple, DeepL, Google, LM Studio / OpenAI local, Custom HTTP
   Settings/      # Preferências
   Design/        # Tokens visuais e glifo Prism
   Utilities/     # Teclado, Keychain, permissões

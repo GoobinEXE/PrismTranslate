@@ -3,7 +3,16 @@ import Foundation
 /// Identidade pública do produto e links de suporte (GitHub).
 enum AppRelease {
     static let githubOwner = "GoobinEXE"
-    static let githubRepo = "QuickTranslate"
+    static let githubRepo = "PrismTranslate"
+
+    static let licenseName = "PolyForm Noncommercial License 1.0.0"
+    static var licenseURL: URL {
+        URL(string: "https://polyformproject.org/licenses/noncommercial/1.0.0")!
+    }
+
+    static var bundledLicenseURL: URL? {
+        Bundle.main.url(forResource: "LICENSE", withExtension: nil)
+    }
 
     static var repositoryURL: URL {
         URL(string: "https://github.com/\(githubOwner)/\(githubRepo)")!
@@ -113,27 +122,14 @@ enum ChangelogHighlights {
             .flatMap { try? String(contentsOf: $0, encoding: .utf8) }
     }
 
+    /// Texto da aba Sobre: só a seção `### Novidades` (linguagem para o público).
+    /// Sem essa seção, usa o parágrafo de abertura — nunca Adicionado/Changed/Fixed.
     static func summary(for version: String, markdown: String) -> String? {
         guard let section = section(for: version, in: markdown) else { return nil }
-        var lines: [String] = []
-        var skippingMaturity = false
-
-        for raw in section.components(separatedBy: "\n") {
-            let line = raw.trimmingCharacters(in: .whitespaces)
-            if line.lowercased().hasPrefix("### notas") {
-                skippingMaturity = true
-                continue
-            }
-            if line.hasPrefix("### ") {
-                skippingMaturity = false
-                continue
-            }
-            if skippingMaturity || line.isEmpty { continue }
-            lines.append(stripMarkdown(line))
+        if let novidades = subsection(named: "Novidades", in: section) {
+            return formatLines(novidades)
         }
-
-        let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? nil : text
+        return formatLines(leadParagraph(in: section))
     }
 
     static func summaryForCurrentVersion() -> String {
@@ -148,7 +144,7 @@ enum ChangelogHighlights {
 
     /// Usado se o CHANGELOG não estiver no bundle (dev) ou a versão não tiver seção.
     static let fallbackSummary = """
-        Aba Sobre com novidades desta versão, verificação de atualizações, reporte de problemas e atalhos de diagnóstico.
+        Melhorias de estabilidade e correção de bugs.
         """
 
     static func section(for version: String, in markdown: String) -> String? {
@@ -162,6 +158,41 @@ enum ChangelogHighlights {
             return String(rest[..<next.lowerBound])
         }
         return String(rest)
+    }
+
+    private static func subsection(named name: String, in section: String) -> [String]? {
+        let needle = "### \(name)".lowercased()
+        var collecting = false
+        var lines: [String] = []
+        for raw in section.components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.lowercased().hasPrefix("### ") {
+                if collecting { break }
+                collecting = line.lowercased().hasPrefix(needle)
+                continue
+            }
+            if collecting, !line.isEmpty {
+                lines.append(line)
+            }
+        }
+        return lines.isEmpty ? nil : lines
+    }
+
+    private static func leadParagraph(in section: String) -> [String] {
+        var lines: [String] = []
+        for raw in section.components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("### ") { break }
+            if line.isEmpty { continue }
+            lines.append(line)
+        }
+        return lines
+    }
+
+    private static func formatLines(_ lines: [String]) -> String? {
+        let text = lines.map(stripMarkdown).joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
     }
 
     private static func stripMarkdown(_ line: String) -> String {

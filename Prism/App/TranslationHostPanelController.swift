@@ -61,18 +61,13 @@ final class TranslationHostPanelController {
             panel.setFrame(NSRect(origin: origin, size: size), display: true)
             panel.ignoresMouseEvents = false
             panel.alphaValue = 1
-            if WindowCoordinator.shared.isTranslationPopupFront {
-                panel.orderFrontRegardless()
-            } else {
-                NSApp.activate(ignoringOtherApps: true)
-                panel.makeKeyAndOrderFront(nil)
-                panel.orderFrontRegardless()
-            }
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            panel.orderFrontRegardless()
         } else {
             panel.ignoresMouseEvents = true
             panel.alphaValue = 0
             panel.orderFrontRegardless()
-            WindowCoordinator.shared.restorePopupKeyIfNeeded()
         }
     }
 }

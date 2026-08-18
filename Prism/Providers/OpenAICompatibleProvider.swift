@@ -28,15 +28,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
         self.extraHeaders = extraHeaders
     }
 
-    private var logCategory: AppLogCategory {
-        switch kind {
-        case .groq: return .groq
-        case .mistral: return .mistral
-        case .deepSeek: return .deepSeek
-        case .openRouter: return .openRouter
-        default: return .openAI
-        }
-    }
+    private var logCategory: AppLogCategory { .openAI }
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         let trimmedBase = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -93,22 +85,14 @@ struct OpenAICompatibleProvider: TranslationProvider {
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
         let started = Date()
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            ProviderLog.failed(logCategory, engine: displayName, status: nil, since: started, body: "")
-            throw TranslationError.emptyResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            ProviderLog.failed(
-                logCategory,
-                engine: displayName,
-                status: http.statusCode,
-                since: started,
-                body: bodyText
-            )
-            throw TranslationError.httpStatus(http.statusCode, bodyText)
-        }
+        let (raw, response) = try await URLSession.shared.data(for: request)
+        let (http, data) = try ProviderLog.requireSuccess(
+            data: raw,
+            response: response,
+            category: logCategory,
+            engine: displayName,
+            since: started
+        )
 
         let content = try Self.parseChatContent(from: data)
         ProviderLog.received(

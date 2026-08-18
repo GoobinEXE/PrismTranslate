@@ -14,7 +14,6 @@ enum TranslationTrigger: Equatable {
     case hotkeyTranslateAndSend(chord: String)
     case hotkeyPopup(chord: String)
     case enterKey
-    case settingsTest
 
     var title: String {
         switch self {
@@ -26,8 +25,6 @@ enum TranslationTrigger: Equatable {
             return "atalho «Painel» (\(chord))"
         case .enterKey:
             return "tecla Enter (modo «traduz e envia»)"
-        case .settingsTest:
-            return "botão «Testar tradução» nas Configurações"
         }
     }
 
@@ -39,8 +36,6 @@ enum TranslationTrigger: Equatable {
             return "traduz, substitui e envia (Return)"
         case .hotkeyPopup:
             return "mostra o resultado no painel flutuante"
-        case .settingsTest:
-            return "valida o motor com o texto de teste"
         }
     }
 }
@@ -73,17 +68,6 @@ final class TranslationOrchestrator {
         AppLog.debug(
             .orchestrator,
             "Configuração do tradutor atualizada — motor \(settings.engineLogDescription), Prism \(settings.isEnabled ? "ligado" : "desligado"), painel \(settings.popupModeEnabled ? "ligado" : "desligado")"
-        )
-    }
-
-    /// Backward-compatible entry used by existing call sites.
-    func translateFocusedText(sendAfter: Bool) async {
-        let trigger: TranslationTrigger = sendAfter
-            ? .hotkeyTranslateAndSend(chord: settings.translateAndSendHotkey.displayString)
-            : .hotkeyTranslateOnly(chord: settings.translateOnlyHotkey.displayString)
-        await translateFocusedText(
-            presentation: .replaceInPlace(sendAfter: sendAfter),
-            trigger: trigger
         )
     }
 
@@ -145,12 +129,15 @@ final class TranslationOrchestrator {
 
         isRunning = true
         runStartDate = Date()
+        /// Panel keeps the borrowed clipboard until dismiss so Copiar is not wiped.
+        var holdPasteboardForPanel = false
         defer {
             isRunning = false
             runStartDate = nil
-            // If we borrowed the clipboard for read and never pasted (error / empty), restore it.
-            textIO.finishPasteboardSession()
-            AppLog.debug(.orchestrator, "Fim do run — sessão de clipboard encerrada")
+            if !holdPasteboardForPanel {
+                textIO.finishPasteboardSession()
+                AppLog.debug(.orchestrator, "Fim do run — sessão de clipboard encerrada")
+            }
         }
 
         onStatusChange?(.translating)
@@ -230,6 +217,7 @@ final class TranslationOrchestrator {
                     .orchestrator, 4, of: 4,
                     "Abrindo painel \(sourceLabel) → \(targetLabel) — \(replaceHint)"
                 )
+                holdPasteboardForPanel = true
                 TranslationResultPanelController.shared.show(
                     .init(
                         original: capture.text,
@@ -244,6 +232,9 @@ final class TranslationOrchestrator {
                         onReplace: { [weak self] capture, text, app in
                             await self?.performReplaceFromPanel(
                                 capture: capture, text: text, targetApp: app)
+                        },
+                        onDismissWithoutReplace: { [weak self] in
+                            self?.textIO.finishPasteboardSession(onlyIfUnchanged: true)
                         }
                     )
                 )
@@ -261,7 +252,7 @@ final class TranslationOrchestrator {
                     ? "Substituindo o texto no campo e enviando Return"
                     : "Substituindo o texto no campo (sem enviar)"
             )
-            await performReplace(capture: capture, text: output, targetApp: targetApp)
+            try await performReplace(capture: capture, text: output, targetApp: targetApp)
 
             if sendAfter {
                 try await Task.sleep(nanoseconds: 25_000_000)
@@ -318,34 +309,8 @@ final class TranslationOrchestrator {
             runStartDate = nil
             textIO.finishPasteboardSession()
         }
-        await performReplace(capture: capture, text: text, targetApp: targetApp)
-    }
-
-    private func performReplace(
-        capture: FocusedTextCapture,
-        text: String,
-        targetApp: NSRunningApplication?
-    ) async {
         do {
-            if let targetApp, !targetApp.isActive {
-                AppLog.info(
-                    .orchestrator,
-                    "Reativando \(targetApp.localizedName ?? "o app de origem") (pid \(targetApp.processIdentifier)) para colar a tradução"
-                )
-                if #available(macOS 14.0, *) {
-                    targetApp.activate()
-                } else {
-                    targetApp.activate(options: .activateIgnoringOtherApps)
-                }
-                try await Task.sleep(nanoseconds: 20_000_000)
-            }
-
-            AppLog.info(
-                .orchestrator,
-                "Substituindo seleção — \(text.count) caracteres (\(capture.logSummary))"
-            )
-            try await textIO.replaceSelection(capture, with: text)
-            AppLog.info(.orchestrator, "Substituição concluída")
+            try await performReplace(capture: capture, text: text, targetApp: targetApp)
             onStatusChange?(.success)
         } catch {
             AppLog.error(
@@ -355,6 +320,32 @@ final class TranslationOrchestrator {
             AppLog.debug(.orchestrator, "Erro técnico na substituição: \(String(describing: error))")
             onStatusChange?(.error(error.localizedDescription))
         }
+    }
+
+    private func performReplace(
+        capture: FocusedTextCapture,
+        text: String,
+        targetApp: NSRunningApplication?
+    ) async throws {
+        if let targetApp, !targetApp.isActive {
+            AppLog.info(
+                .orchestrator,
+                "Reativando \(targetApp.localizedName ?? "o app de origem") (pid \(targetApp.processIdentifier)) para colar a tradução"
+            )
+            if #available(macOS 14.0, *) {
+                targetApp.activate()
+            } else {
+                targetApp.activate(options: .activateIgnoringOtherApps)
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        AppLog.info(
+            .orchestrator,
+            "Substituindo seleção — \(text.count) caracteres (\(capture.logSummary))"
+        )
+        try await textIO.replaceSelection(capture, with: text)
+        AppLog.info(.orchestrator, "Substituição concluída")
     }
 
     private func preserveSurroundingWhitespace(original: String, translated: String) -> String {

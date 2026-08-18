@@ -74,14 +74,14 @@ swiftly.pkg
 *.crash
 *.ips
 
-# Cursor — keep rules/skills; ignore debug, plans, local junk
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
+# Agent / IDE — not part of the Community launch
+.cursor/
+AGENTS.md
+.vscode/
+buildServer.json
+VERSIONING.md
 
-# SourceKit / xcode-build-server (buildServer.json is committed; keep index local)
+# SourceKit / xcode-build-server
 .buildServer/
 compile_commands.json
 *.xcindex
@@ -94,4 +94,3 @@ compile_commands.json
 *~
 *~.nib
 *.sublime-workspace
-.vscode/*.local.json
