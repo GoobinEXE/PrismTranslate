@@ -72,15 +72,12 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         panel.delegate = self
         // Tahoe: chrome em Liquid Glass; antes disso a vibrancy fica por conta
         // do VisualEffectBackground dentro da própria OnboardingView.
-        if #available(macOS 26.0, *) {
-            let glass = NSGlassEffectView(frame: contentRect)
-            glass.cornerRadius = 16
-            hostingView.autoresizingMask = [.width, .height]
-            glass.contentView = hostingView
-            panel.contentView = glass
-        } else {
-            panel.contentView = hostingView
-        }
+        GlassPanelChrome.install(
+            contentView: hostingView,
+            in: panel,
+            frame: contentRect,
+            cornerRadius: 16
+        )
         panel.center()
         panel.makeKeyAndOrderFront(nil)
 

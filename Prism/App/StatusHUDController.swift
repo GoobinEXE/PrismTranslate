@@ -92,15 +92,12 @@ final class StatusHUDController {
         panel.ignoresMouseEvents = !needsClicks
         panel.worksWhenModal = true
 
-        if #available(macOS 26.0, *) {
-            let glass = NSGlassEffectView(frame: contentRect)
-            glass.cornerRadius = 12
-            hostingView.autoresizingMask = [.width, .height]
-            glass.contentView = hostingView
-            panel.contentView = glass
-        } else {
-            panel.contentView = hostingView
-        }
+        GlassPanelChrome.install(
+            contentView: hostingView,
+            in: panel,
+            frame: contentRect,
+            cornerRadius: 12
+        )
 
         panel.setContentSize(NSSize(width: width, height: height))
         positionNearCursor(panel, size: NSSize(width: width, height: height))

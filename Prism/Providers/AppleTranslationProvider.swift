@@ -337,6 +337,7 @@ final class AppleTranslationBridge: ObservableObject {
         // macOS 26+: the session needs to be warmed up with prepareTranslation()
         // when the packs are installed but not yet loaded into memory. Trying to
         // translate directly on Tahoe often throws "Unable to Translate".
+#if PRISM_MACOS26_SDK
         if #available(macOS 26.0, *) {
             if await session.isReady {
                 do {
@@ -356,6 +357,7 @@ final class AppleTranslationBridge: ObservableObject {
                 }
             }
         }
+#endif
 
         // Online path (On-Device Mode off) often works without installed packs.
         do {

@@ -6,6 +6,14 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.4] - 2026-08-19
+
+Correção de build no CI — sem mudança visível para quem já usa o app no macOS 26.
+
+### Fixed
+
+- APIs Liquid Glass protegidas com `PRISM_MACOS26_SDK` (`SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=macos26*]`) para compilar com Xcode 16 / SDK macOS 15 no GitHub Actions.
+
 ## [1.0.3] - 2026-08-19
 
 Higiene de repositório e empacotamento — sem mudança de funcionalidade para quem já usa o app.

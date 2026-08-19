@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// Quando `true`, `GlassSurface` / `QTGlassGroup` usam material em vez de
 /// `.glassEffect` — obrigatório sob `NSGlassEffectView` (evitar nesting que
@@ -37,16 +40,25 @@ struct GlassSurface<Content: View>: View {
     }
 
     var body: some View {
+#if PRISM_MACOS26_SDK
         if #available(macOS 26.0, *), !reduceTransparency, !preferMaterialOverGlass {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.quaternary.opacity(prominent ? 0.55 : 0.4))
-                )
+            materialBackground
         }
+#else
+        materialBackground
+#endif
+    }
+
+    @ViewBuilder
+    private var materialBackground: some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.quaternary.opacity(prominent ? 0.55 : 0.4))
+            )
     }
 }
 
@@ -62,6 +74,7 @@ struct QTGlassGroup<Content: View>: View {
     }
 
     var body: some View {
+#if PRISM_MACOS26_SDK
         if #available(macOS 26.0, *), !preferMaterialOverGlass {
             GlassEffectContainer {
                 content
@@ -69,5 +82,32 @@ struct QTGlassGroup<Content: View>: View {
         } else {
             content
         }
+#else
+        content
+#endif
     }
 }
+
+#if canImport(AppKit)
+/// Instala `NSGlassEffectView` como content view quando o SDK e o runtime suportam Tahoe.
+enum GlassPanelChrome {
+    static func install(
+        contentView: NSView,
+        in window: NSWindow,
+        frame: NSRect,
+        cornerRadius: CGFloat
+    ) {
+#if PRISM_MACOS26_SDK
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView(frame: frame)
+            glass.cornerRadius = cornerRadius
+            contentView.autoresizingMask = [.width, .height]
+            glass.contentView = contentView
+            window.contentView = glass
+            return
+        }
+#endif
+        window.contentView = contentView
+    }
+}
+#endif
