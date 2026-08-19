@@ -95,6 +95,7 @@ scripts/community-gitignore
 !/README.md
 !/CHANGELOG.md
 !/INSTALL.md
+!/docs/security/*.md
 
 # IDE
 .idea/

@@ -224,3 +224,22 @@ private struct UnavailableProvider: TranslationProvider {
         throw TranslationError.providerUnavailable(message)
     }
 }
+
+extension TranslationEngine {
+    var testingCacheCount: Int { cacheValues.count }
+
+    func testingSeedCache(
+        text: String,
+        outcome: TranslationOutcome,
+        from: String? = nil,
+        to: String = "pt"
+    ) {
+        let key = CacheKey(
+            text: text,
+            from: from,
+            to: to,
+            engine: settings.engineLogDescription
+        )
+        storeCache(key, value: outcome)
+    }
+}

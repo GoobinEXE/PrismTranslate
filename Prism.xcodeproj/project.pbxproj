@@ -67,6 +67,7 @@
 		SEC0000000000000000000010 /* AppLogRedactionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEC0000000000000000000011 /* AppLogRedactionTests.swift */; };
 		SEC0000000000000000000012 /* SensitiveDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEC0000000000000000000013 /* SensitiveDataTests.swift */; };
 		SEC0000000000000000000014 /* GoogleTranslateProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEC0000000000000000000015 /* GoogleTranslateProviderTests.swift */; };
+		SEC0000000000000000000016 /* TranslationEngineCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEC0000000000000000000017 /* TranslationEngineCacheTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */

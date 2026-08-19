@@ -19,4 +19,11 @@ final class SensitiveDataTests: XCTestCase {
         XCTAssertTrue(HTTPHostSecurity.isLocalHost("::1"))
         XCTAssertFalse(HTTPHostSecurity.isLocalHost("api.example.com"))
     }
+
+    func testCustomHTTPDetectsCredentialHeaders() {
+        let json = #"{"Authorization":"Bearer x","Content-Type":"application/json"}"#
+        XCTAssertTrue(CustomHTTPProvider.headersContainCredentials(json))
+        let safe = #"{"Content-Type":"application/json"}"#
+        XCTAssertFalse(CustomHTTPProvider.headersContainCredentials(safe))
+    }
 }
