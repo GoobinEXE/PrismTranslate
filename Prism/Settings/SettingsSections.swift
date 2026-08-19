@@ -270,12 +270,8 @@ struct ProviderSettingsView: View {
         case .customHTTP:
             TextField("URL", text: appState.settingsBinding(\.customHTTPURL))
             TextField("Method", text: appState.settingsBinding(\.customHTTPMethod))
-            SecureField(
-                "JSON headers", text: appState.settingsBinding(\.customHTTPHeadersJSON),
-                axis: .vertical
-            )
-            .lineLimit(2...4)
-            .help("Stored in the Keychain. Use for Authorization or API keys.")
+            SecureField("JSON headers", text: appState.settingsBinding(\.customHTTPHeadersJSON))
+                .help("Stored in the Keychain. Use for Authorization or API keys.")
             TextField(
                 "Body template", text: appState.settingsBinding(\.customHTTPBodyTemplate),
                 axis: .vertical
