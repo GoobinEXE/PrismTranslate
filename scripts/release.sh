@@ -223,7 +223,12 @@ pkgbuild \
   --min-os-version 15.0 \
   "$COMPONENT_PKG"
 
-sed "s/__VERSION__/${VERSION}/g" "$PACKAGING_DIR/distribution.xml" > "$DIST_XML"
+ARCHS_CSV="$(lipo -archs "$APP_PATH/Contents/MacOS/$APP_NAME" | awk '{ for (i = 1; i <= NF; i++) printf "%s%s", $i, (i < NF ? "," : "") }')"
+[[ -n "$ARCHS_CSV" ]] || ARCHS_CSV="arm64"
+info "Arquiteturas do app: $ARCHS_CSV"
+
+sed -e "s/__VERSION__/${VERSION}/g" -e "s/__ARCHS__/${ARCHS_CSV}/g" \
+  "$PACKAGING_DIR/distribution.xml" > "$DIST_XML"
 
 UNSIGNED_PKG="$BUILD_DIR/$APP_NAME-$VERSION-unsigned.pkg"
 productbuild \

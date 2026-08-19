@@ -20,13 +20,16 @@
 ## Instalar
 
 <p align="center">
-  <img src="docs/readme/instalar.svg" width="840" alt="Quatro passos: baixar o DMG, arrastar para Aplicativos, abrir o Prism e autorizar as permissões.">
+  <img src="docs/readme/instalar.svg" width="840" alt="Quatro passos: baixar o DMG, correr o instalador, abrir o Prism e autorizar as permissões. Não precisa do Xcode.">
 </p>
 
+Não precisa do Xcode, nem de Homebrew, nem de ferramentas de linha de comando. O DMG já traz o app pronto.
+
 1. Baixe o `Prism-x.y.z.dmg` mais recente em [GitHub Releases](../../releases)
-2. Abra o arquivo e arraste **Prism** para **Aplicativos**
-3. Abra o app. O macOS avisa que veio da internet — clique em **Abrir**. Se bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**
-4. Na primeira vez o Prism pede duas permissões. Sem elas ele não lê nem troca o texto.
+2. Abra o arquivo e dê dois cliques em **Instalar Prism**. O instalador verifica o macOS (15 ou mais novo), copia o Prism para **Aplicativos** e abre o app.
+   - Alternativa: arraste **Prism** para a pasta **Aplicativos**
+3. Se o Mac avisar que veio da internet, clique em **Abrir**. Se bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**
+4. Na primeira vez o Prism pede duas permissões. Sem elas ele não lê nem troca o texto. Pacotes de idioma da Apple, se faltarem, o próprio app baixa.
 
 <p align="center">
   <img src="docs/readme/permissoes.svg" width="840" alt="Nas Ajustes do Sistema, em Privacidade e Segurança, ligue Prism em Acessibilidade e em Monitoramento de Entrada.">

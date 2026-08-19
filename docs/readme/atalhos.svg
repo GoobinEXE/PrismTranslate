@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="168" viewBox="0 0 880 168" role="img" aria-labelledby="title desc">
-  <title id="title">Atalhos padrão</title>
+  <title id="title">Atalhos padrao</title>
   <desc id="desc">Control Option T traduz no lugar. Control Option Enter traduz e envia.</desc>
   <defs>
     <style>
@@ -14,7 +15,7 @@
 
   <rect x="0.5" y="0.5" width="428" height="167" rx="18" class="card"/>
   <text x="28" y="40" class="title">Traduz no lugar</text>
-  <text x="28" y="62" class="sub">Troca o texto. Não envia a mensagem.</text>
+  <text x="28" y="62" class="sub">Troca o texto. N&#227;o envia a mensagem.</text>
   <g transform="translate(28, 88)">
     <rect class="key" x="0" y="0" width="86" height="36" rx="8"/>
     <text x="43" y="23" text-anchor="middle" class="klabel">Control</text>
@@ -25,11 +26,11 @@
     <rect class="key" x="224" y="0" width="40" height="36" rx="8"/>
     <text x="244" y="23" text-anchor="middle" class="klabel">T</text>
   </g>
-  <text x="28" y="148" class="sub">Dá para mudar em Preferências.</text>
+  <text x="28" y="148" class="sub">D&#225; para mudar em Prefer&#234;ncias.</text>
 
   <rect x="452.5" y="0.5" width="427" height="167" rx="18" class="card"/>
   <text x="480" y="40" class="title">Traduz e envia</text>
-  <text x="480" y="62" class="sub">Troca o texto e aperta Enter por você.</text>
+  <text x="480" y="62" class="sub">Troca o texto e aperta Enter por voc&#234;.</text>
   <g transform="translate(480, 88)">
     <rect class="key" x="0" y="0" width="86" height="36" rx="8"/>
     <text x="43" y="23" text-anchor="middle" class="klabel">Control</text>
@@ -40,5 +41,5 @@
     <rect class="key" x="224" y="0" width="72" height="36" rx="8"/>
     <text x="260" y="23" text-anchor="middle" class="klabel">Enter</text>
   </g>
-  <text x="480" y="148" class="sub">Útil no chat, e-mail e formulários.</text>
+  <text x="480" y="148" class="sub">&#218;til no chat, e-mail e formul&#225;rios.</text>
 </svg>

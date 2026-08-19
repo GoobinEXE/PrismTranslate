@@ -163,7 +163,7 @@ xcrun stapler validate build/export/Prism.app
 
 O Prism é um `.app` autocontido: não há Homebrew, Python, CLT nem runtime extra para o usuário instalar. O `.pkg` ainda assim faz três coisas úteis:
 
-1. **Recusa macOS &lt; 15** (`preinstall` + `allowed-os-versions` no `packaging/distribution.xml`)
+1. **Recusa macOS anterior ao 15** (`preinstall` + `allowed-os-versions` no `packaging/distribution.xml`)
 2. **Copia** `Prism.app` para `/Applications`
 3. **Abre o app** na conta do usuário logado (`postinstall`), para o onboarding pedir permissões e o Prism baixar pacotes de idioma da Apple se faltarem
 

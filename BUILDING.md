@@ -9,7 +9,7 @@ Esta é a edição **Community**. O código é para uso não comercial. Trabalho
 ## O que você precisa
 
 - macOS 15.0+ (Sequoia) — a tradução da Apple depende disso
-- Xcode 16+
+- Xcode 16+ (só neste caminho de desenvolvimento; quem instala pelo DMG não precisa)
 - Permissões de **Acessibilidade** e **Monitoramento de Entrada** (o onboarding pede na primeira execução)
 
 ## Abrir e rodar
