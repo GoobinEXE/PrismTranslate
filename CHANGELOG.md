@@ -6,6 +6,25 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.2] - 2026-08-18
+
+Ajustes de localização, acessibilidade e documentação antes do primeiro lançamento público. A `1.0.1` não foi publicada.
+
+### Novidades
+
+- Onboarding e textos da interface seguem o idioma do sistema com mais consistência, inclusive para leitores de ecrã.
+- Instalação e compatibilidade mais claras no README (macOS 15+, sem Xcode para quem só usa o app).
+
+### Changed
+
+- Onboarding e componentes relacionados passam a usar `LocalizedStringKey`.
+- Instruções de instalação e SVGs de compatibilidade.
+
+### Notas de maturidade
+
+- Validado E2E: **Apple Translation**, **DeepL** e **LM Studio / OpenAI local**.
+- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+
 ## [1.0.0] - 2026-08-18
 
 Primeiro lançamento público. Instale pelo DMG — **não precisa do Xcode**.

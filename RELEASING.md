@@ -10,7 +10,7 @@ O artefato público é um **`.dmg`**. Quem baixa **não precisa do Xcode**: o di
 
 ## 0. Tornar o repositório público (primeira vez)
 
-Checklist **antes** do DMG / tag `v1.0.0`. Não rode isto no automático — é o passo seu, na hora de publicar.
+Checklist **antes** do DMG / tag `v1.0.2`. Não rode isto no automático — é o passo seu, na hora de publicar.
 
 - [ ] Confirme que não há secrets (`.env`, `Secrets.xcconfig`, chaves, `.p12`)
 - [ ] `LICENSE` na raiz é a PolyForm Noncommercial 1.0.0; GitHub deve detectar a licença
@@ -19,9 +19,9 @@ Checklist **antes** do DMG / tag `v1.0.0`. Não rode isto no automático — é 
   - Local: `git remote set-url origin https://github.com/GoobinEXE/PrismTranslate.git`
 - [ ] Description do repo: app de menu bar para traduzir o campo focado; Topics: `macos`, `translation`, `menubar`
 - [ ] Tornar o repositório **público**
-- [ ] Tag anotada `v1.0.0` + GitHub Release com `Prism-1.0.0.dmg`
+- [ ] Tag anotada `v1.0.2` + GitHub Release com `Prism-1.0.2.dmg`
 
-Versão do primeiro artefato público: **1.0.0**.
+Versão do primeiro artefato público: **1.0.2**.
 
 ---
 
@@ -172,7 +172,7 @@ Scripts e textos do instalador estão em [`packaging/`](packaging/). O `scripts/
 Resumo manual:
 
 ```bash
-VERSION=1.0.0
+VERSION=1.0.2
 pkgbuild \
   --root build/pkg-root \
   --identifier com.marcelopessoa.prism \
@@ -204,7 +204,7 @@ xcrun stapler staple build/Prism-$VERSION.pkg
 O disco contém o instalador **e** o arrastar-para-Aplicativos:
 
 ```bash
-VERSION=1.0.0
+VERSION=1.0.2
 STAGING=build/dmg-staging
 rm -rf "$STAGING" && mkdir -p "$STAGING"
 
@@ -257,13 +257,13 @@ Inclua isto na página de release / README:
 3. Crie a tag e o release:
 
    ```bash
-   git tag -a v1.0.0 -m "Prism 1.0.0"
-   git push origin v1.0.0
+   git tag -a v1.0.2 -m "Prism 1.0.2"
+   git push origin v1.0.2
 
-   gh release create v1.0.0 \
-     build/Prism-1.0.0.dmg \
-     --title "Prism 1.0.0" \
-     --notes-file <(sed -n '/## \[1.0.0\]/,/^## /p' CHANGELOG.md | sed '$d')
+   gh release create v1.0.2 \
+     build/Prism-1.0.2.dmg \
+     --title "Prism 1.0.2" \
+     --notes-file <(sed -n '/## \[1.0.2\]/,/^## /p' CHANGELOG.md | sed '$d')
    ```
 
    (Ou crie o release pela interface web e anexe o DMG manualmente.)
@@ -271,7 +271,7 @@ Inclua isto na página de release / README:
 4. Publique um checksum junto às notas, para o usuário verificar o download:
 
    ```bash
-   shasum -a 256 build/Prism-1.0.0.dmg
+   shasum -a 256 build/Prism-1.0.2.dmg
    ```
 
 Não anexe o projeto Xcode nem peça Xcode nas notas do release. O zip de código-fonte da tag já cobre quem quer compilar.
