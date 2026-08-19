@@ -6,6 +6,19 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.14] - 2026-08-19
+
+Hardening de dados sensíveis: logs, Keychain, transporte HTTP e retenção em memória.
+
+### Security
+
+- Logs: prévias de texto desligadas por padrão (opt-in em Configurações › Logs › Privacidade); OSLog `private` em info/debug; redação expandida; aviso ao exportar.
+- Keychain: `WhenUnlockedThisDeviceOnly`; headers Custom HTTP migrados do UserDefaults; credenciais efémeras (`SensitiveData`).
+- Google Translate: API key no header `X-Goog-Api-Key` (não na query string).
+- Custom HTTP: `jsonEscape` completo; warning ao enviar credenciais sobre HTTP não-local.
+- Cache LRU: TTL 5 min, limite 512 chars, clear ao perder foco; toggle para desligar cache.
+- Clipboard backup: só tipos de texto, timeout 60 s, wipe após restore.
+
 ## [1.0.13] - 2026-08-19
 
 Correção: ⌃⌥T no Discord — chat no painel, compose in-place, sem depender do cursor.

@@ -4,7 +4,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
     let kind: ProviderKind
     let baseURL: String
     let model: String
-    let apiKey: String
+    let apiKey: SensitiveData
     /// When true, empty API key fails fast with a configuration error.
     let requiresAPIKey: Bool
     let extraHeaders: [String: String]
@@ -16,7 +16,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
         kind: ProviderKind = .openAICompatible,
         baseURL: String,
         model: String,
-        apiKey: String,
+        apiKey: SensitiveData,
         requiresAPIKey: Bool = false,
         extraHeaders: [String: String] = [:]
     ) {
@@ -39,7 +39,7 @@ struct OpenAICompatibleProvider: TranslationProvider {
                 String(format: String(localized: "Set base URL and model for %@"), displayName)
             )
         }
-        if requiresAPIKey, apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if requiresAPIKey, apiKey.isEmpty {
             AppLog.error(logCategory, "\(displayName): API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration(
                 String(format: String(localized: "Set the API key for %@ in Settings"), displayName)
@@ -49,6 +49,13 @@ struct OpenAICompatibleProvider: TranslationProvider {
         guard let url = URL(string: "\(trimmedBase)/chat/completions") else {
             throw TranslationError.invalidConfiguration(String(localized: "Invalid base URL"))
         }
+
+        HTTPHostSecurity.warnIfPlaintextCredentials(
+            urlString: trimmedBase,
+            hasCredentials: !apiKey.isEmpty,
+            category: logCategory,
+            engine: displayName
+        )
 
         ProviderLog.sending(
             logCategory,
@@ -68,7 +75,10 @@ struct OpenAICompatibleProvider: TranslationProvider {
         request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            apiKey.withUTF8 { ptr in
+                let key = String(decoding: ptr, as: UTF8.self)
+                request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            }
         }
         for (header, value) in extraHeaders {
             request.setValue(value, forHTTPHeaderField: header)

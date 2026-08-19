@@ -322,7 +322,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Falhou: \(error.localizedDescription)"
             )
-            AppLog.debug(.orchestrator, "Erro técnico: \(String(describing: error))")
+            AppLog.debug(.orchestrator, "Erro técnico: \(error.debugLogSummary)")
             onStatusChange?(.error(error.localizedDescription))
             AppLog.error(
                 .orchestrator,
@@ -369,7 +369,7 @@ final class TranslationOrchestrator {
                 "Não deu para substituir o texto: \(error.localizedDescription)"
             )
             AppLog.debug(
-                .orchestrator, "Erro técnico na substituição: \(String(describing: error))")
+                .orchestrator, "Erro técnico na substituição: \(error.debugLogSummary)")
             onStatusChange?(.error(error.localizedDescription))
         }
     }

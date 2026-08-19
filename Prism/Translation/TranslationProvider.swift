@@ -47,6 +47,23 @@ enum TranslationError: LocalizedError {
         return lower.contains("not supported") || lower.contains("não suportado")
     }
 
+    /// Safe technical summary for logs — never includes HTTP response bodies.
+    var debugLogSummary: String {
+        switch self {
+        case .providerUnavailable(let name):
+            return "providerUnavailable(\(name))"
+        case .invalidConfiguration(let message):
+            return "invalidConfiguration(\(message))"
+        case .emptyResponse:
+            return "emptyResponse"
+        case .httpStatus(let code, let body):
+            let kind = Self.classifyHTTPFailure(statusCode: code, body: body)
+            return "httpStatus(\(code), \(kind.logLabel))"
+        case .appleTranslationFailed(let message):
+            return "appleTranslationFailed(\(message))"
+        }
+    }
+
     /// Maps provider HTTP failures to short user-facing copy.
     static func userFacingHTTPMessage(statusCode: Int, body: String) -> String {
         switch classifyHTTPFailure(statusCode: statusCode, body: body) {
@@ -165,6 +182,16 @@ enum TranslationError: LocalizedError {
             return message
         }
         return nil
+    }
+}
+
+extension Error {
+    /// Log-safe error description — strips HTTP bodies from `TranslationError`.
+    var debugLogSummary: String {
+        if let translation = self as? TranslationError {
+            return translation.debugLogSummary
+        }
+        return localizedDescription
     }
 }
 

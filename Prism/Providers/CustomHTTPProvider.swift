@@ -14,6 +14,14 @@ struct CustomHTTPProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration(String(localized: "Set the Custom HTTP URL"))
         }
 
+        let hasSensitiveHeaders = Self.headersContainCredentials(headersJSON)
+        HTTPHostSecurity.warnIfPlaintextCredentials(
+            urlString: url,
+            hasCredentials: hasSensitiveHeaders,
+            category: .customHTTP,
+            engine: "HTTP personalizado"
+        )
+
         ProviderLog.sending(
             .customHTTP,
             engine: "HTTP personalizado",
@@ -35,15 +43,10 @@ struct CustomHTTPProvider: TranslationProvider {
             }
         }
 
-        let escapedText = text
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: "\\n")
-
         let body = bodyTemplate
-            .replacingOccurrences(of: "{{text}}", with: escapedText)
-            .replacingOccurrences(of: "{{to}}", with: to)
-            .replacingOccurrences(of: "{{from}}", with: from ?? "")
+            .replacingOccurrences(of: "{{text}}", with: Self.jsonEscape(text))
+            .replacingOccurrences(of: "{{to}}", with: Self.jsonEscape(to))
+            .replacingOccurrences(of: "{{from}}", with: Self.jsonEscape(from ?? ""))
 
         if method.uppercased() != "GET" {
             request.httpBody = body.data(using: .utf8)
@@ -104,6 +107,34 @@ struct CustomHTTPProvider: TranslationProvider {
             outChars: extracted.count
         )
         return TranslationOutcome(text: extracted)
+    }
+
+    /// Escapes a string for safe embedding inside a JSON string value.
+    static func jsonEscape(_ value: String) -> String {
+        var result = value
+        result = result.replacingOccurrences(of: "\\", with: "\\\\")
+        result = result.replacingOccurrences(of: "\"", with: "\\\"")
+        result = result.replacingOccurrences(of: "\n", with: "\\n")
+        result = result.replacingOccurrences(of: "\r", with: "\\r")
+        result = result.replacingOccurrences(of: "\t", with: "\\t")
+        result = result.replacingOccurrences(of: "\0", with: "")
+        result = String(
+            result.unicodeScalars.filter {
+                !CharacterSet.controlCharacters.contains($0)
+                    || $0 == "\n" || $0 == "\r" || $0 == "\t"
+            }
+        )
+        return result
+    }
+
+    static func headersContainCredentials(_ headersJSON: String) -> Bool {
+        guard let headers = try? JSONSerialization.jsonObject(with: Data(headersJSON.utf8)) as? [String: String]
+        else { return false }
+        let sensitiveNames = ["authorization", "x-api-key", "x-goog-api-key", "api-key"]
+        return headers.keys.contains { key in
+            sensitiveNames.contains(key.lowercased())
+                || headers[key]?.lowercased().hasPrefix("bearer ") == true
+        }
     }
 
     /// Walks a dot-separated path ("data.translations.0.text") through parsed JSON.

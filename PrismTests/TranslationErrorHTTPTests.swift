@@ -72,4 +72,11 @@ final class TranslationErrorHTTPTests: XCTestCase {
         )
         XCTAssertFalse(message.contains("{\"error\""))
     }
+
+    func testDebugLogSummaryOmitsHTTPBody() {
+        let body = #"{"error":{"message":"secret payload"}}"#
+        let error = TranslationError.httpStatus(401, body)
+        XCTAssertFalse(error.debugLogSummary.contains("secret payload"))
+        XCTAssertTrue(error.debugLogSummary.contains("401"))
+    }
 }

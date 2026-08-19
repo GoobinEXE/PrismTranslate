@@ -3,7 +3,7 @@ import Foundation
 struct DeepLProvider: TranslationProvider {
     let id = ProviderKind.deepl.rawValue
     let displayName = ProviderKind.deepl.displayName
-    let apiKey: String
+    let apiKey: SensitiveData
     let useFreeAPI: Bool
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
@@ -30,8 +30,11 @@ struct DeepLProvider: TranslationProvider {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 12
-        request.setValue("DeepL-Auth-Key \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        apiKey.withUTF8 { ptr in
+            let key = String(decoding: ptr, as: UTF8.self)
+            request.setValue("DeepL-Auth-Key \(key)", forHTTPHeaderField: "Authorization")
+        }
 
         var body = "text=\(formEncode(text))"
         body += "&target_lang=\(formEncode(Self.apiCode(for: to, isTarget: true)))"

@@ -278,9 +278,9 @@ final class AppLogStore: ObservableObject {
         let text = entry.runID.map { "[\($0)] \(entry.message)" } ?? entry.message
         switch entry.level {
         case .debug:
-            logger.debug("\(text, privacy: .public)")
+            logger.debug("\(text, privacy: .private)")
         case .info:
-            logger.info("\(text, privacy: .public)")
+            logger.info("\(text, privacy: .private)")
         case .warning:
             logger.warning("\(text, privacy: .public)")
         case .error:
@@ -356,12 +356,13 @@ final class AppLogStore: ObservableObject {
     }
 
     /// Strip obvious secrets before storing/displaying.
-    private static func redactSecrets(in message: String) -> String {
+    static func redactSecrets(in message: String) -> String {
         var result = message
         let patterns: [(String, String)] = [
             (#"(?i)(api[_-]?key|authorization|bearer|token|auth-key)\s*[:=]\s*\S+"#, "$1=***"),
             (#"(?i)DeepL-Auth-Key\s+\S+"#, "DeepL-Auth-Key ***"),
             (#"(?i)Bearer\s+\S+"#, "Bearer ***"),
+            (#"(?i)[?&]key=\S+"#, "key=***"),
         ]
         for (pattern, template) in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern) {
@@ -373,6 +374,23 @@ final class AppLogStore: ObservableObject {
                 )
             }
         }
+        return redactJSONStringFields(in: result)
+    }
+
+    private static func redactJSONStringFields(in message: String) -> String {
+        let fieldNames = ["text", "q", "messages", "content", "prompt", "Authorization", "X-Api-Key", "X-Goog-Api-Key"]
+        var result = message
+        for name in fieldNames {
+            let pattern = #"(?i)"\#(name)"\s*:\s*"[^"]*""#
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let range = NSRange(result.startIndex..<result.endIndex, in: result)
+                result = regex.stringByReplacingMatches(
+                    in: result,
+                    range: range,
+                    withTemplate: "\"\(name)\": \"***\""
+                )
+            }
+        }
         return result
     }
 }
@@ -380,9 +398,18 @@ final class AppLogStore: ObservableObject {
 // MARK: - Export
 
 enum AppLogExport {
+    static func exportMayContainPrivateText() -> Bool {
+        if AppLogPreferences.logTextPreviews { return true }
+        let text = AppLogStore.shared.fullExportText()
+        return text.contains("Prévia original:")
+            || text.contains("Prévia traduzida:")
+            || text.contains("Teste ") && text.contains("OK em")
+    }
+
     @MainActor
     @discardableResult
     static func copyToPasteboard() -> Int {
+        guard confirmExportIfNeeded() else { return 0 }
         let store = AppLogStore.shared
         let text = store.fullExportText()
         guard !text.isEmpty else { return 0 }
@@ -394,6 +421,7 @@ enum AppLogExport {
     /// `nil` se o usuário cancelar.
     @MainActor
     static func presentSavePanel() -> Result<URL, Error>? {
+        guard confirmExportIfNeeded() else { return nil }
         let panel = NSSavePanel()
         panel.title = String(localized: "Save Prism log")
         panel.message = "Arquivo de texto completo — pode anexar ou colar no chat."
@@ -425,6 +453,21 @@ enum AppLogExport {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         return formatter.string(from: Date())
+    }
+
+    @MainActor
+    private static func confirmExportIfNeeded() -> Bool {
+        guard exportMayContainPrivateText() else { return true }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Log may contain private text")
+        alert.informativeText = String(
+            localized:
+                "The log may include snippets of translated text. Do not share it if it contains private content."
+        )
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "Continue"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }
 
@@ -488,12 +531,16 @@ enum AppLog {
 
     /// Prévia curta de texto (quebras viram ⏎) para o log ficar legível.
     static func preview(_ text: String, max: Int = 80) -> String {
+        guard AppLogPreferences.logTextPreviews else {
+            return "(\(text.count) caracteres)"
+        }
         let flat =
             text
             .replacingOccurrences(of: "\n", with: "⏎")
             .replacingOccurrences(of: "\t", with: "⇥")
-        if flat.count <= max { return flat }
-        return String(flat.prefix(max)) + "…"
+        let truncated =
+            flat.count <= max ? flat : String(flat.prefix(max)) + "…"
+        return AppLogStore.redactSecrets(in: truncated)
     }
 
     static func duration(since date: Date) -> String {
@@ -516,8 +563,9 @@ enum AppLog {
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !flat.isEmpty else { return "(vazio)" }
-        if flat.count <= max { return flat }
-        return String(flat.prefix(max)) + "…"
+        let redacted = AppLogStore.redactSecrets(in: flat)
+        if redacted.count <= max { return redacted }
+        return String(redacted.prefix(max)) + "…"
     }
 
     static func step(

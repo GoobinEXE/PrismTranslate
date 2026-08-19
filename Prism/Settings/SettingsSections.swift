@@ -109,6 +109,9 @@ struct ProviderSettingsView: View {
     @State private var deeplKey: String = KeychainStore.string(for: .deeplAPIKey) ?? ""
     @State private var googleKey: String = KeychainStore.string(for: .googleAPIKey) ?? ""
     @State private var openAIKey: String = KeychainStore.string(for: .openAIAPIKey) ?? ""
+    @State private var deeplKeySaveTask: Task<Void, Never>?
+    @State private var googleKeySaveTask: Task<Void, Never>?
+    @State private var openAIKeySaveTask: Task<Void, Never>?
     @State private var applePackState: LanguagePackState = .checking
     @State private var applePackRows: [ApplePackRow] = []
 
@@ -161,7 +164,12 @@ struct ProviderSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onDisappear(perform: persistSecrets)
+        .onDisappear {
+            persistSecrets()
+            deeplKey = ""
+            googleKey = ""
+            openAIKey = ""
+        }
         .task(id: applePackTaskID) {
             guard appState.settings.providerKind == .apple else { return }
             await refreshApplePackState()
@@ -234,7 +242,7 @@ struct ProviderSettingsView: View {
                 .help("DeepL API key (Free or Pro account). Stored in the Keychain.")
                 .accessibilityHint("Secret DeepL API key, stored in the Keychain")
                 .onChange(of: deeplKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .deeplAPIKey)
+                    scheduleKeychainSave(newValue, for: .deeplAPIKey, task: &deeplKeySaveTask)
                 }
             Toggle(
                 "Use Free API (api-free.deepl.com)",
@@ -244,7 +252,7 @@ struct ProviderSettingsView: View {
                 .help("Google Cloud Translation API key. Stored in the Keychain.")
                 .accessibilityHint("Secret Google Cloud API key, stored in the Keychain")
                 .onChange(of: googleKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .googleAPIKey)
+                    scheduleKeychainSave(newValue, for: .googleAPIKey, task: &googleKeySaveTask)
                 }
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
@@ -254,7 +262,7 @@ struct ProviderSettingsView: View {
                 .help("Optional for local servers. Stored in the Keychain.")
                 .accessibilityHint("Optional API key, stored in the Keychain")
                 .onChange(of: openAIKey) { _, newValue in
-                    KeychainStore.set(newValue, for: .openAIAPIKey)
+                    scheduleKeychainSave(newValue, for: .openAIAPIKey, task: &openAIKeySaveTask)
                 }
             Text("Default LM Studio: http://localhost:1234/v1")
                 .font(.caption)
@@ -262,11 +270,12 @@ struct ProviderSettingsView: View {
         case .customHTTP:
             TextField("URL", text: appState.settingsBinding(\.customHTTPURL))
             TextField("Method", text: appState.settingsBinding(\.customHTTPMethod))
-            TextField(
+            SecureField(
                 "JSON headers", text: appState.settingsBinding(\.customHTTPHeadersJSON),
                 axis: .vertical
             )
             .lineLimit(2...4)
+            .help("Stored in the Keychain. Use for Authorization or API keys.")
             TextField(
                 "Body template", text: appState.settingsBinding(\.customHTTPBodyTemplate),
                 axis: .vertical
@@ -408,9 +417,25 @@ struct ProviderSettingsView: View {
     }
 
     private func persistSecrets() {
+        deeplKeySaveTask?.cancel()
+        googleKeySaveTask?.cancel()
+        openAIKeySaveTask?.cancel()
         KeychainStore.set(deeplKey, for: .deeplAPIKey)
         KeychainStore.set(googleKey, for: .googleAPIKey)
         KeychainStore.set(openAIKey, for: .openAIAPIKey)
+    }
+
+    private func scheduleKeychainSave(
+        _ value: String,
+        for key: KeychainStore.Key,
+        task: inout Task<Void, Never>?
+    ) {
+        task?.cancel()
+        task = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            KeychainStore.set(value, for: key)
+        }
     }
 
     private func providerAccessibilityLabel(_ kind: ProviderKind) -> String {

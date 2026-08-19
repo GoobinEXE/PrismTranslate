@@ -54,6 +54,8 @@ final class AppState: ObservableObject {
         )
         self.hotkeyMonitor = HotkeyMonitor()
 
+        AppLogPreferences.update(from: settings)
+
         AppLog.info(
             .app,
             "Prism iniciado — \(AppRelease.marketingVersion) (\(AppRelease.buildNumber)), \(AppRelease.runningMacOS), motor \(settings.engineLogDescription), \(settings.isEnabled ? "ligado" : "desligado"), Enter traduz \(settings.enterTranslatesAndSends ? "sim" : "não"), painel \(settings.popupModeEnabled ? "ligado" : "desligado")"
@@ -87,6 +89,7 @@ final class AppState: ObservableObject {
                 let previous = self.lastLoggedSettings
                 self.logSettingsDelta(from: previous, to: newSettings)
                 self.lastLoggedSettings = newSettings
+                AppLogPreferences.update(from: newSettings)
                 newSettings.save()
                 self.engine.updateSettings(newSettings)
                 self.orchestrator.updateSettings(newSettings)
@@ -156,6 +159,7 @@ final class AppState: ObservableObject {
         hotkeyMonitor.start()
         applyHotkeyConfiguration(settings)
         startPermissionWatch()
+        observeBackgroundCacheClear()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             TranslationHostPanelController.shared.install(bridge: self.appleBridge)
@@ -367,6 +371,30 @@ final class AppState: ObservableObject {
                 .settings,
                 "DeepL: \(next.deeplUseFreeAPI ? "API gratuita" : "API Pro")"
             )
+        }
+        if previous.logTextPreviews != next.logTextPreviews {
+            AppLog.info(
+                .settings,
+                "Privacidade — prévias de texto nos logs: \(next.logTextPreviews ? "ativado" : "desativado")"
+            )
+        }
+        if previous.cacheTranslations != next.cacheTranslations {
+            AppLog.info(
+                .settings,
+                "Privacidade — cache de traduções: \(next.cacheTranslations ? "ativado" : "desativado")"
+            )
+        }
+    }
+
+    private func observeBackgroundCacheClear() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.engine.clearCacheOnBackground()
+            }
         }
     }
 

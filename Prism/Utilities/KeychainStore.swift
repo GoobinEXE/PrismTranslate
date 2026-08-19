@@ -6,6 +6,7 @@ enum KeychainStore {
         case deeplAPIKey = "deeplAPIKey"
         case googleAPIKey = "googleAPIKey"
         case openAIAPIKey = "openAIAPIKey"
+        case customHTTPHeadersJSON = "customHTTPHeadersJSON"
     }
 
     private static var service: String { AppRelease.bundleIdentifier }
@@ -35,6 +36,8 @@ enum KeychainStore {
         guard !value.isEmpty else { return }
         var attributes = query
         attributes[kSecValueData as String] = data
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        attributes[kSecAttrSynchronizable as String] = false
         SecItemAdd(attributes as CFDictionary, nil)
     }
 }

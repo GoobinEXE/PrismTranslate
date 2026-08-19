@@ -3,7 +3,7 @@ import Foundation
 struct GoogleTranslateProvider: TranslationProvider {
     let id = ProviderKind.google.rawValue
     let displayName = ProviderKind.google.displayName
-    let apiKey: String
+    let apiKey: SensitiveData
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
@@ -11,12 +11,7 @@ struct GoogleTranslateProvider: TranslationProvider {
             throw TranslationError.invalidConfiguration(String(localized: "Set the Google API key in Settings"))
         }
 
-        var components = URLComponents(string: "https://translation.googleapis.com/language/translate/v2")!
-        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
-
-        guard let url = components.url else {
-            throw TranslationError.invalidConfiguration(String(localized: "Invalid Google URL"))
-        }
+        let request = Self.makeRequest(apiKey: apiKey, text: text, from: from, to: to)
 
         ProviderLog.sending(
             .google,
@@ -26,19 +21,6 @@ struct GoogleTranslateProvider: TranslationProvider {
             from: from,
             to: to
         )
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 12
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-
-        var body = "q=\(formEncode(text))"
-        body += "&target=\(formEncode(Self.apiCode(for: to)))"
-        body += "&format=text"
-        if let from, !from.isEmpty {
-            body += "&source=\(formEncode(Self.apiCode(for: from)))"
-        }
-        request.httpBody = body.data(using: .utf8)
 
         let started = Date()
         let (raw, response) = try await URLSession.shared.data(for: request)
@@ -87,10 +69,34 @@ struct GoogleTranslateProvider: TranslationProvider {
         }
     }
 
-    private func formEncode(_ value: String) -> String {
+    static func makeRequest(apiKey: SensitiveData, text: String, from: String?, to: String) -> URLRequest {
+        let url = URL(string: "https://translation.googleapis.com/language/translate/v2")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 12
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        apiKey.withUTF8 { ptr in
+            let key = String(decoding: ptr, as: UTF8.self)
+            request.setValue(key, forHTTPHeaderField: "X-Goog-Api-Key")
+        }
+        var body = "q=\(formEncodeStatic(text))"
+        body += "&target=\(formEncodeStatic(apiCode(for: to)))"
+        body += "&format=text"
+        if let from, !from.isEmpty {
+            body += "&source=\(formEncodeStatic(apiCode(for: from)))"
+        }
+        request.httpBody = body.data(using: .utf8)
+        return request
+    }
+
+    private static func formEncodeStatic(_ value: String) -> String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._*")
         return value.addingPercentEncoding(withAllowedCharacters: allowed)?
             .replacingOccurrences(of: " ", with: "+") ?? value
+    }
+
+    private func formEncode(_ value: String) -> String {
+        Self.formEncodeStatic(value)
     }
 }

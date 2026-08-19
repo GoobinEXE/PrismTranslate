@@ -12,10 +12,17 @@ final class TranslationEngine {
         let engine: String
     }
 
+    private struct CacheEntry {
+        let outcome: TranslationOutcome
+        let storedAt: Date
+    }
+
     /// Small LRU of recent translations (same phrase re-translated instantly).
     private var cacheOrder: [CacheKey] = []
-    private var cacheValues: [CacheKey: TranslationOutcome] = [:]
+    private var cacheValues: [CacheKey: CacheEntry] = [:]
     private static let maxCacheEntries = 64
+    private static let maxCacheableCharacters = 512
+    private static let cacheTTL: TimeInterval = 5 * 60
 
     init(settings: AppSettings, appleBridge: AppleTranslationBridge) {
         self.settings = settings
@@ -31,14 +38,22 @@ final class TranslationEngine {
             || settings.incomingTargetLanguage != self.settings.incomingTargetLanguage
             || settings.outgoingSourceLanguage != self.settings.outgoingSourceLanguage
             || settings.outgoingTargetLanguage != self.settings.outgoingTargetLanguage
+        let cacheSettingChanged = settings.cacheTranslations != self.settings.cacheTranslations
         self.settings = settings
-        if providerChanged || engineFingerprintChanged || languagesChanged {
+        if providerChanged || engineFingerprintChanged || languagesChanged || cacheSettingChanged {
             AppLog.info(
                 .engine,
                 "Motor ou idiomas mudaram — cache de traduções limpo (agora: \(settings.engineLogDescription))"
             )
             clearCache()
         }
+    }
+
+    func clearCacheOnBackground() {
+        let count = cacheValues.count
+        guard count > 0 else { return }
+        clearCache()
+        AppLog.info(.engine, "Cache limpo ao perder foco (\(count) entradas)")
     }
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
@@ -52,17 +67,18 @@ final class TranslationEngine {
             .engine,
             "Pedido ao motor \(settings.engineLogDescription) — \(LanguageCode.pairLabel(from: from, to: to)), \(text.count) caracteres, cache \(cacheValues.count)/\(Self.maxCacheEntries)"
         )
-        if let cached = cacheValues[key] {
+        purgeExpiredCacheEntries()
+        if let cached = cacheValues[key], !isExpired(cached) {
             touchCache(key)
             AppLog.info(
                 .engine,
-                "Cache: mesma frase já traduzida por este motor — reusando resultado (\(cached.text.count) caracteres, sem chamar a API)"
+                "Cache: mesma frase já traduzida por este motor — reusando resultado (\(cached.outcome.text.count) caracteres, sem chamar a API)"
             )
-            if from == nil, cached.detectedSourceLanguage == nil,
+            if from == nil, cached.outcome.detectedSourceLanguage == nil,
                let detected = LanguageDetector.detect(in: text)
             {
                 let enriched = TranslationOutcome(
-                    text: cached.text,
+                    text: cached.outcome.text,
                     detectedSourceLanguage: detected
                 )
                 storeCache(key, value: enriched)
@@ -72,8 +88,9 @@ final class TranslationEngine {
                 )
                 return enriched
             }
-            return cached
+            return cached.outcome
         }
+        cacheValues.removeValue(forKey: key)
 
         let provider = makeProvider()
         AppLog.info(
@@ -118,6 +135,18 @@ final class TranslationEngine {
         cacheValues.removeAll(keepingCapacity: true)
     }
 
+    private func isExpired(_ entry: CacheEntry) -> Bool {
+        Date().timeIntervalSince(entry.storedAt) > Self.cacheTTL
+    }
+
+    private func purgeExpiredCacheEntries() {
+        let expired = cacheValues.filter { isExpired($0.value) }.map(\.key)
+        for key in expired {
+            cacheValues.removeValue(forKey: key)
+            cacheOrder.removeAll { $0 == key }
+        }
+    }
+
     private func touchCache(_ key: CacheKey) {
         if let index = cacheOrder.firstIndex(of: key) {
             cacheOrder.remove(at: index)
@@ -126,12 +155,15 @@ final class TranslationEngine {
     }
 
     private func storeCache(_ key: CacheKey, value: TranslationOutcome) {
+        guard settings.cacheTranslations else { return }
+        guard key.text.count <= Self.maxCacheableCharacters else { return }
+
         if cacheValues[key] == nil {
             cacheOrder.append(key)
         } else {
             touchCache(key)
         }
-        cacheValues[key] = value
+        cacheValues[key] = CacheEntry(outcome: value, storedAt: Date())
         while cacheOrder.count > Self.maxCacheEntries {
             let evicted = cacheOrder.removeFirst()
             cacheValues.removeValue(forKey: evicted)
@@ -155,19 +187,19 @@ final class TranslationEngine {
             )
         case .deepl:
             return DeepLProvider(
-                apiKey: KeychainStore.string(for: .deeplAPIKey) ?? "",
+                apiKey: SensitiveData(keychain: .deeplAPIKey) ?? SensitiveData(""),
                 useFreeAPI: settings.deeplUseFreeAPI
             )
         case .google:
             return GoogleTranslateProvider(
-                apiKey: KeychainStore.string(for: .googleAPIKey) ?? ""
+                apiKey: SensitiveData(keychain: .googleAPIKey) ?? SensitiveData("")
             )
         case .openAICompatible:
             return OpenAICompatibleProvider(
                 kind: .openAICompatible,
                 baseURL: settings.openAIBaseURL,
                 model: settings.openAIModel,
-                apiKey: KeychainStore.string(for: .openAIAPIKey) ?? "",
+                apiKey: SensitiveData(keychain: .openAIAPIKey) ?? SensitiveData(""),
                 requiresAPIKey: false
             )
         case .customHTTP:

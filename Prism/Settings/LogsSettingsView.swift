@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Preferências › Logs — visualização ao vivo do pipeline de tradução.
 struct LogsSettingsView: View {
+    @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = AppLogStore.shared
 
     @State private var minimumLevel: AppLogLevel = .debug
@@ -28,6 +29,12 @@ struct LogsSettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            privacyToolbar
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+            Divider()
+
             toolbar
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -67,6 +74,25 @@ struct LogsSettingsView: View {
             footer
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+        }
+    }
+
+    private var privacyToolbar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Privacy")
+                .font(.headline)
+            Toggle(
+                "Include text previews in logs",
+                isOn: appState.settingsBinding(\.logTextPreviews)
+            )
+            .toggleStyle(.checkbox)
+            .help("When off, logs only record character counts — safer for support exports.")
+            Toggle(
+                "Cache recent translations in memory",
+                isOn: appState.settingsBinding(\.cacheTranslations)
+            )
+            .toggleStyle(.checkbox)
+            .help("When off, translated phrases are not kept in RAM between requests.")
         }
     }
 

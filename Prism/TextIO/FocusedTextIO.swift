@@ -91,6 +91,9 @@ final class FocusedTextIO {
     /// `finishPasteboardSession()` runs — never restored on a timer during translation
     /// (that raced with paste and could inject the user's old clipboard into the field).
     private var pendingUserPasteboard: PasteboardBackup?
+    private var pasteboardSessionStartedAt: Date?
+    private var pasteboardSessionTimeoutTask: Task<Void, Never>?
+    private static let pasteboardSessionTimeout: TimeInterval = 60
 
     /// Roles that are always treated as editable text contexts.
     private static let editableTextRoles: Set<String> = [
@@ -192,6 +195,9 @@ final class FocusedTextIO {
     /// Restores any borrowed user clipboard (e.g. translate failed after a clipboard read).
     /// When `onlyIfUnchanged` is true, skip restore if the user copied something else (panel Copiar).
     func finishPasteboardSession(onlyIfUnchanged: Bool = false) {
+        pasteboardSessionTimeoutTask?.cancel()
+        pasteboardSessionTimeoutTask = nil
+        pasteboardSessionStartedAt = nil
         let changeCount = onlyIfUnchanged ? NSPasteboard.general.changeCount : nil
         restorePendingUserPasteboard(after: 0.35, onlyIfChangeCount: changeCount)
     }
@@ -706,6 +712,7 @@ final class FocusedTextIO {
         // schedule a timed restore here; it raced with paste and could paste stale data.
         if pendingUserPasteboard == nil {
             pendingUserPasteboard = PasteboardBackup.capture(pasteboard)
+            beginPasteboardSessionTimeout()
         }
 
         // Clear so we do not confuse stale clipboard with a failed copy.
@@ -734,8 +741,11 @@ final class FocusedTextIO {
     private func writeViaClipboard(_ text: String, selectAllFirst: Bool) async throws {
         let pasteboard = NSPasteboard.general
         // Prefer the pre-read user clipboard so we don't "restore" the copied draft.
-        let backup = pendingUserPasteboard ?? PasteboardBackup.capture(pasteboard)
+        var backup = pendingUserPasteboard ?? PasteboardBackup.capture(pasteboard)
         pendingUserPasteboard = nil
+        pasteboardSessionTimeoutTask?.cancel()
+        pasteboardSessionTimeoutTask = nil
+        pasteboardSessionStartedAt = nil
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
@@ -761,10 +771,24 @@ final class FocusedTextIO {
         backup.restore(after: 0.45, onlyIfChangeCount: changeCountAtPaste)
     }
 
+    private func beginPasteboardSessionTimeout() {
+        pasteboardSessionStartedAt = Date()
+        pasteboardSessionTimeoutTask?.cancel()
+        pasteboardSessionTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.pasteboardSessionTimeout * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.pendingUserPasteboard != nil else { return }
+                AppLog.warning(.textIO, "Sessão de clipboard expirou — restaurando clipboard do usuário")
+                self.finishPasteboardSession()
+            }
+        }
+    }
+
     private func restorePendingUserPasteboard(
         after delay: TimeInterval, onlyIfChangeCount: Int? = nil
     ) {
-        guard let backup = pendingUserPasteboard else { return }
+        guard var backup = pendingUserPasteboard else { return }
         pendingUserPasteboard = nil
         AppLog.debug(.textIO, "📋 restaurando clipboard do usuário (pending session)")
         backup.restore(after: delay, onlyIfChangeCount: onlyIfChangeCount)
@@ -772,31 +796,37 @@ final class FocusedTextIO {
 }
 
 private struct PasteboardBackup {
-    let items: [[String: Data]]
+    private var items: [[String: Data]]
+
+    private static let textTypes: [NSPasteboard.PasteboardType] = [
+        .string,
+        NSPasteboard.PasteboardType("public.utf8-plain-text"),
+    ]
 
     static func capture(_ pasteboard: NSPasteboard) -> PasteboardBackup {
         var archived: [[String: Data]] = []
         for item in pasteboard.pasteboardItems ?? [] {
             var dict: [String: Data] = [:]
-            for type in item.types {
+            for type in Self.textTypes where item.types.contains(type) {
                 if let data = item.data(forType: type) {
                     dict[type.rawValue] = data
                 }
             }
-            archived.append(dict)
+            if !dict.isEmpty {
+                archived.append(dict)
+            }
         }
         return PasteboardBackup(items: archived)
     }
 
     /// Restores only if the pasteboard was not modified since `onlyIfChangeCount`.
     /// When `onlyIfChangeCount` is nil, always restores.
-    func restore(after delay: TimeInterval, onlyIfChangeCount: Int? = nil) {
+    mutating func restore(after delay: TimeInterval, onlyIfChangeCount: Int? = nil) {
         let snapshot = items
         let expectedCount = onlyIfChangeCount
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             let pasteboard = NSPasteboard.general
             if let expectedCount, pasteboard.changeCount != expectedCount {
-                // Another writer took ownership (or user copied something) — leave it alone.
                 return
             }
             pasteboard.clearContents()
@@ -808,5 +838,17 @@ private struct PasteboardBackup {
                 pasteboard.writeObjects([item])
             }
         }
+        wipe()
+    }
+
+    mutating func wipe() {
+        for index in items.indices {
+            for key in items[index].keys {
+                items[index][key]?.withUnsafeMutableBytes { raw in
+                    raw.resetBytes(in: 0..<raw.count)
+                }
+            }
+        }
+        items.removeAll(keepingCapacity: false)
     }
 }

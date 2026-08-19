@@ -60,4 +60,20 @@ final class CustomHTTPParsingTests: XCTestCase {
         let payload = try json(#"{"0": "zero"}"#)
         XCTAssertEqual(CustomHTTPProvider.extract(path: "0", from: payload), "zero")
     }
+
+    func testJsonEscapeHandlesControlCharacters() {
+        XCTAssertEqual(CustomHTTPProvider.jsonEscape("a\tb"), "a\\tb")
+        XCTAssertEqual(CustomHTTPProvider.jsonEscape("a\rb"), "a\\rb")
+        XCTAssertEqual(CustomHTTPProvider.jsonEscape("say \"hi\""), "say \\\"hi\\\"")
+        XCTAssertEqual(CustomHTTPProvider.jsonEscape("line\nbreak"), "line\\nbreak")
+    }
+
+    func testJsonEscapeStripsNUL() {
+        XCTAssertEqual(CustomHTTPProvider.jsonEscape("a\u{0000}b"), "ab")
+    }
+
+    func testHeadersContainCredentialsDetectsAuthorization() {
+        let json = #"{"Authorization":"Bearer secret","Content-Type":"application/json"}"#
+        XCTAssertTrue(CustomHTTPProvider.headersContainCredentials(json))
+    }
 }

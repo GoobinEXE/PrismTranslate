@@ -33,6 +33,11 @@ struct AppSettings: Equatable {
     /// Toast perto do ponteiro (Traduzindo / concluído / erro) ao usar o atalho.
     var showStatusHUD: Bool = true
 
+    /// When false (default), logs record character counts only — no text previews.
+    var logTextPreviews: Bool = false
+    /// When false, the translation LRU cache is disabled.
+    var cacheTranslations: Bool = true
+
     // DeepL
     var deeplUseFreeAPI: Bool = true
 
@@ -97,6 +102,7 @@ struct AppSettings: Equatable {
     private static let defaultsKey = "AppSettings"
     private static let migratedSourceToSystemKey = "didMigrateSourceLanguageToSystem"
     private static let migratedDualLanguageKey = "didMigrateDualLanguagePairs"
+    private static let migratedCustomHTTPHeadersKey = "didMigrateCustomHTTPHeadersToKeychain"
 
     mutating func resetHotkeysToDefaults() {
         translateOnlyHotkey = .translateOnlyDefault
@@ -105,6 +111,7 @@ struct AppSettings: Equatable {
     }
 
     func save() {
+        KeychainStore.set(customHTTPHeadersJSON, for: .customHTTPHeadersJSON)
         if let data = try? JSONEncoder().encode(CodableSettings(self)) {
             UserDefaults.standard.set(data, forKey: Self.defaultsKey)
         }
@@ -122,7 +129,26 @@ struct AppSettings: Equatable {
         } else {
             settings = AppSettings()
         }
-        return migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
+        return migrateCustomHTTPHeadersIfNeeded(
+            migrateDualLanguageIfNeeded(migrateSourceLanguageIfNeeded(settings))
+        )
+    }
+
+    /// One-time: move Custom HTTP headers from UserDefaults plist to Keychain.
+    private static func migrateCustomHTTPHeadersIfNeeded(_ settings: AppSettings) -> AppSettings {
+        var migrated = settings
+        if !UserDefaults.standard.bool(forKey: migratedCustomHTTPHeadersKey) {
+            if KeychainStore.string(for: .customHTTPHeadersJSON) == nil,
+               !migrated.customHTTPHeadersJSON.isEmpty
+            {
+                KeychainStore.set(migrated.customHTTPHeadersJSON, for: .customHTTPHeadersJSON)
+            }
+            UserDefaults.standard.set(true, forKey: migratedCustomHTTPHeadersKey)
+        }
+        if let fromKeychain = KeychainStore.string(for: .customHTTPHeadersJSON) {
+            migrated.customHTTPHeadersJSON = fromKeychain
+        }
+        return migrated
     }
 
     /// One-time: old default was `nil` (auto). Switch outgoing source to the system language once.
@@ -196,6 +222,8 @@ private struct CodableSettings: Codable {
     var popupModeEnabled: Bool?
     var popupHotkey: HotkeyChord?
     var showStatusHUD: Bool?
+    var logTextPreviews: Bool?
+    var cacheTranslations: Bool?
     var deeplUseFreeAPI: Bool
     var openAIBaseURL: String
     var openAIModel: String
@@ -222,12 +250,15 @@ private struct CodableSettings: Codable {
         popupModeEnabled = settings.popupModeEnabled
         popupHotkey = settings.popupHotkey
         showStatusHUD = settings.showStatusHUD
+        logTextPreviews = settings.logTextPreviews
+        cacheTranslations = settings.cacheTranslations
         deeplUseFreeAPI = settings.deeplUseFreeAPI
         openAIBaseURL = settings.openAIBaseURL
         openAIModel = settings.openAIModel
         customHTTPURL = settings.customHTTPURL
         customHTTPMethod = settings.customHTTPMethod
-        customHTTPHeadersJSON = settings.customHTTPHeadersJSON
+        // Headers live in Keychain — never persist secrets in UserDefaults.
+        customHTTPHeadersJSON = ""
         customHTTPBodyTemplate = settings.customHTTPBodyTemplate
         customHTTPResponsePath = settings.customHTTPResponsePath
     }
@@ -265,12 +296,18 @@ private struct CodableSettings: Codable {
         s.popupModeEnabled = popupModeEnabled ?? false
         s.popupHotkey = popupHotkey ?? .popupDefault
         s.showStatusHUD = showStatusHUD ?? true
+        s.logTextPreviews = logTextPreviews ?? false
+        s.cacheTranslations = cacheTranslations ?? true
         s.deeplUseFreeAPI = deeplUseFreeAPI
         s.openAIBaseURL = openAIBaseURL
         s.openAIModel = openAIModel
         s.customHTTPURL = customHTTPURL
         s.customHTTPMethod = customHTTPMethod
-        s.customHTTPHeadersJSON = customHTTPHeadersJSON
+        s.customHTTPHeadersJSON =
+            KeychainStore.string(for: .customHTTPHeadersJSON)
+            ?? (customHTTPHeadersJSON.isEmpty
+                ? #"{"Content-Type":"application/json"}"#
+                : customHTTPHeadersJSON)
         s.customHTTPBodyTemplate = customHTTPBodyTemplate
         s.customHTTPResponsePath = customHTTPResponsePath
         return s
