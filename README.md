@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Edição Community · uso pessoal e estudo. Uso comercial precisa de licença à parte.
+  Edição Community · uso pessoal e estudo. O uso comercial requer licença específica.
 </p>
 
 <p align="center">
