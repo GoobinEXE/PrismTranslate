@@ -104,10 +104,18 @@ final class LanguageMappingTests: XCTestCase {
     }
 
     func testAppleMakeLanguageOmitsLatnScript() {
+        let spec = AppleTranslationLanguageMap.spec(forAppCode: "en")
+        XCTAssertNil(spec.script)
+        XCTAssertEqual(spec.bcp47, "en-US")
+
         let english = AppleTranslationLanguageMap.makeLanguage(forAppCode: "en")
         XCTAssertEqual(english.languageCode?.identifier, "en")
         XCTAssertEqual(english.region?.identifier, "US")
-        XCTAssertNil(english.script)
+        // Spec must not request Latn. Foundation may still *report* Latn when
+        // reading `.script` (maximal form on newer macOS); that is OK.
+        if let script = english.script?.identifier {
+            XCTAssertEqual(script, "Latn")
+        }
     }
 
     func testApplePickPrefersMatchingRegionFromSupportedList() {

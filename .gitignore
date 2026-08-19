@@ -81,6 +81,11 @@ AGENTS.md
 buildServer.json
 VERSIONING.md
 
+# Maintainer-only — kept locally, not in Community source
+RELEASING.md
+scripts/release.sh
+scripts/gen_xcstrings.py
+scripts/gen_xcstrings.py
 # SourceKit / xcode-build-server
 .buildServer/
 compile_commands.json

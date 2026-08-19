@@ -20,6 +20,20 @@
                ReferencedContainer = "container:Prism.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B81F0A110001000100010060"
+               BuildableName = "PrismTests.xctest"
+               BlueprintName = "PrismTests"
+               ReferencedContainer = "container:Prism.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -27,10 +41,23 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      shouldAutocreateTestPlan = "NO">
+      <TestPlans>
+         <TestPlanReference
+            reference = "container:PrismTests.xctestplan"
+            default = "YES">
+         </TestPlanReference>
+      </TestPlans>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "IDEPreferLogStreaming"
+            value = "YES"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -46,10 +73,17 @@
             BlueprintIdentifier = "DF3EB81AEE0B40C2BAB6852F"
             BuildableName = "Prism.app"
             BlueprintName = "Prism"
-            ReferencedContainer = "container:Prism.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
-   </LaunchAction>
+               ReferencedContainer = "container:Prism.xcodeproj">
+            </BuildableReference>
+         </BuildableProductRunnable>
+         <EnvironmentVariables>
+            <EnvironmentVariable
+               key = "IDEPreferLogStreaming"
+               value = "YES"
+               isEnabled = "YES">
+            </EnvironmentVariable>
+         </EnvironmentVariables>
+      </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"

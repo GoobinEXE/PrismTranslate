@@ -1,27 +1,81 @@
 # Guia de Release — Prism
 
-Passo a passo para gerar, assinar, notarizar e publicar uma versão do Prism fora da Mac App Store (distribuição direta via Developer ID + GitHub Releases).
+Dois caminhos de distribuição:
 
-O artefato público é um **`.dmg`**. Quem baixa **não precisa do Xcode**: o disco contém o instalador `.pkg` (recomendado) e o `.app` para arrastar para Aplicativos. Compilar a partir do código continua possível e é opcional — veja [`BUILDING.md`](BUILDING.md).
+| Caminho | Quando | Artefato | Instalação |
+|---------|--------|----------|------------|
+| **Community (atual)** | Sem Apple Developer Program | `Prism-x.y.z.zip` + Homebrew Cask | `brew install --cask goobinexe/tap/prism-translate` |
+| **Oficial (futuro)** | Com Developer ID + notarização | `Prism-x.y.z.dmg` | Instalador `.pkg` no DMG |
 
-> **Atalho:** o script [`scripts/release.sh`](scripts/release.sh) automatiza tudo (archive → export → notarização → PKG → DMG). Este documento explica cada etapa manualmente e serve de referência quando algo der errado.
+Tutorial para usuários finais: [`INSTALL.md`](INSTALL.md).
 
 ---
 
-## 0. Tornar o repositório público (primeira vez)
+## 0. Distribuição Community (atual)
 
-Checklist **antes** do DMG / tag `v1.0.2`. Não rode isto no automático — é o passo seu, na hora de publicar.
+Não exige Apple Developer Program. O app **não é notarizado** — o macOS pode pedir **Abrir Mesmo Assim** na primeira execução (documentado no INSTALL.md).
+
+### 0.1 Checklist antes do primeiro release
+
+- [ ] Sem secrets no repo (`.env`, `Secrets.xcconfig`, chaves, `.p12`)
+- [ ] `LICENSE` PolyForm Noncommercial na raiz
+- [ ] Repo público `GoobinEXE/PrismTranslate` com topics `macos`, `translation`, `menubar`
+- [ ] Repo **`GoobinEXE/homebrew-tap`** criado com o cask (veja [`packaging/homebrew/README.md`](packaging/homebrew/README.md))
+
+### 0.2 Empacotar o zip
+
+```bash
+./scripts/package-community.sh
+```
+
+Saída: `build/Prism-x.y.z.zip` + SHA-256 no terminal.
+
+### 0.3 Publicar no GitHub Releases
+
+1. Confirme `CHANGELOG.md` e `MARKETING_VERSION` alinhados.
+2. Tag `vx.y.z` + anexe **só o zip** (não o projeto Xcode).
+3. Inclua o SHA-256 nas notas do release.
+
+### 0.4 Atualizar o Homebrew Cask
+
+1. Edite `version` e `sha256` em [`packaging/homebrew/Casks/prism-translate.rb`](packaging/homebrew/Casks/prism-translate.rb).
+2. Copie para `GoobinEXE/homebrew-tap` → `Casks/prism-translate.rb` → push.
+
+Comando do usuário (tap automático):
+
+```bash
+brew install --cask goobinexe/tap/prism-translate
+```
+
+**Futuro:** PR no [homebrew-cask](https://github.com/Homebrew/homebrew-cask) para permitir `brew install --cask prism-translate` (nome `prism-translate` — `prism` já é o GraphPad Prism).
+
+### 0.5 Checklist rápido Community
+
+- [ ] `./scripts/package-community.sh` OK
+- [ ] Zip testado (abrir app, atalhos, permissões)
+- [ ] GitHub Release com zip + checksum
+- [ ] Cask atualizado no `homebrew-tap`
+- [ ] `brew install --cask goobinexe/tap/prism-translate` testado
+
+---
+
+## A. Release oficial com Developer ID (futuro / opcional)
+
+Passo a passo para gerar, assinar, notarizar e publicar via DMG fora da Mac App Store.
+
+O artefato é um **`.dmg`** com instalador `.pkg` notarizado. Quem baixa **não precisa do Xcode**.
+
+> **Atalho:** [`scripts/release.sh`](scripts/release.sh) automatiza archive → export → notarização → PKG → DMG.
+
+### A.0 Tornar o repositório público (primeira vez)
+
+Checklist antes do DMG / tag. Passo manual na hora de publicar.
 
 - [ ] Confirme que não há secrets (`.env`, `Secrets.xcconfig`, chaves, `.p12`)
-- [ ] `LICENSE` na raiz é a PolyForm Noncommercial 1.0.0; GitHub deve detectar a licença
-- [ ] Remote: `GoobinEXE/PrismTranslate` (slug sem espaço; nome de exibição **Prism Translate**)
-  - No GitHub: Settings → General → Repository name → `PrismTranslate` (hoje ainda é `QuickTranslate`)
-  - Local: `git remote set-url origin https://github.com/GoobinEXE/PrismTranslate.git`
-- [ ] Description do repo: app de menu bar para traduzir o campo focado; Topics: `macos`, `translation`, `menubar`
+- [ ] `LICENSE` na raiz é a PolyForm Noncommercial 1.0.0
+- [ ] Remote: `GoobinEXE/PrismTranslate`
 - [ ] Tornar o repositório **público**
-- [ ] Tag anotada `v1.0.2` + GitHub Release com `Prism-1.0.2.dmg`
-
-Versão do primeiro artefato público: **1.0.2**.
+- [ ] Tag + GitHub Release com `Prism-x.y.z.dmg`
 
 ---
 

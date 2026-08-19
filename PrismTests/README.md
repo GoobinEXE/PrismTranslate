@@ -1,26 +1,29 @@
 # PrismTests
 
-Testes unitários do Prism. Esta pasta **ainda não faz parte do projeto Xcode** — os arquivos foram criados fora do `.pbxproj` de propósito. Para rodá-los, adicione um target de testes uma única vez:
+Testes unitários do Prism. O target **PrismTests** está no `Prism.xcodeproj`. O GitHub Actions corre o mesmo comando a cada push e pull request em `main`.
 
-## Como adicionar o target de testes no Xcode
+## Como correr
 
-1. Abra `Prism.xcodeproj` no Xcode
-2. **File → New → Target…** e escolha **Unit Testing Bundle**
-3. Nomeie como `PrismTests`, com **Target to be Tested: Prism**, e confirme
-4. O Xcode cria um grupo `PrismTests` com um arquivo de exemplo — pode apagar o arquivo de exemplo
-5. Arraste os arquivos `*.swift` desta pasta para o grupo `PrismTests` no navegador do Xcode
-   - Em "Add to targets", marque **apenas** `PrismTests` (não o app)
-6. Rode com **⌘U** (Product → Test)
+No Xcode: scheme **Prism**, **⌘U** (Product → Test). Se o Prism já estiver na barra de menus, encerre-o antes — o mesmo bundle não pode ser test host e app ao mesmo tempo.
+
+Na linha de comando, com o Xcode.app:
+
+```bash
+./scripts/test.sh
+```
+
+CI: [`.github/workflows/test.yml`](../.github/workflows/test.yml) — runner `macos-15`.
 
 ## O que está coberto
 
 | Arquivo | Cobre |
 |---------|-------|
 | `HotkeyChordTests.swift` | Defaults ⌃⌥T / ⌃⌥⏎, matching de teclas/modificadores, keypad Enter, criação a partir de eventos, `displayString` |
-| `LanguageMappingTests.swift` | `LanguageCode` (displayName, alvos comuns) e mapeamento de códigos para DeepL (ZH-HANS/ZH-HANT/PT-BR) e Google (zh-CN/zh-TW) |
-| `CustomHTTPParsingTests.swift` | Extração por JSON path (`data.translations.0.text`) do provedor Custom HTTP |
-| `OpenAICompatibleParsingTests.swift` | Parsing da resposta `chat/completions` (conteúdo, trimming, erros) |
+| `LanguageMappingTests.swift` | `LanguageCode` e mapeamento DeepL / Google / Apple Translation |
+| `CustomHTTPParsingTests.swift` | Extração por JSON path do provedor Custom HTTP |
+| `OpenAICompatibleParsingTests.swift` | Parsing da resposta `chat/completions` |
 | `TranslationErrorHTTPTests.swift` | Mensagens de HTTP 401/402/404/429 para a UI |
-| `AppReleaseTests.swift` | SemVer, resumo do CHANGELOG, licença e avaliação de GitHub Releases |
+| `AITranslationPromptTests.swift` | Prompt de tradução por IA (fronteira e filtro) |
+| `AppReleaseTests.swift` | SemVer, resumo do CHANGELOG, licença e GitHub Releases |
 
-Os testes usam `@testable import Prism`, então o target do app precisa estar com **Enable Testability** ativo em Debug (padrão do Xcode).
+Os testes usam `@testable import Prism`. O target do app tem **Enable Testability** em Debug.

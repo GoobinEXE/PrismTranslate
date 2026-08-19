@@ -51,6 +51,14 @@
 		BF81C55EE018603E00000011 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = DE81C55EE018603E00000010 /* LICENSE */; };
 		BF91D66FF019714F00000020 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = DE91D66FF019714F00000021 /* Localizable.xcstrings */; };
 		BF91D66FF019714F00000022 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = DE91D66FF019714F00000023 /* InfoPlist.xcstrings */; };
+
+		B81F0A110001000100010001 /* HotkeyChordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010011 /* HotkeyChordTests.swift */; };
+		B81F0A110001000100010002 /* LanguageMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010012 /* LanguageMappingTests.swift */; };
+		B81F0A110001000100010003 /* CustomHTTPParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010013 /* CustomHTTPParsingTests.swift */; };
+		B81F0A110001000100010004 /* OpenAICompatibleParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010014 /* OpenAICompatibleParsingTests.swift */; };
+		B81F0A110001000100010005 /* TranslationErrorHTTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */; };
+		B81F0A110001000100010006 /* AppReleaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010016 /* AppReleaseTests.swift */; };
+		B81F0A110001000100010007 /* AITranslationPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010017 /* AITranslationPromptTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,10 +109,28 @@
 		E62EB21B68D1445B8F465705 /* Prism.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Prism.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E920F3E2A86C46E3A4B58AF7 /* OpenAICompatibleProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleProvider.swift; sourceTree = "<group>"; };
 		EDC94BD2A4164FF6B5D956FC /* Prism.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Prism.entitlements; sourceTree = "<group>"; };
+
+		B81F0A110001000100010011 /* HotkeyChordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyChordTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010012 /* LanguageMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageMappingTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010013 /* CustomHTTPParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomHTTPParsingTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010014 /* OpenAICompatibleParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleParsingTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationErrorHTTPTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010016 /* AppReleaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReleaseTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010017 /* AITranslationPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITranslationPromptTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010020 /* PrismTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B81F0A110001000100010021 /* PrismTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text.xml.xctestplan; path = PrismTests.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		F930FC05F64A41A6B383B933 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		B81F0A110001000100010030 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -178,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				E62EB21B68D1445B8F465705 /* Prism.app */,
+				B81F0A110001000100010020 /* PrismTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -208,6 +235,8 @@
 			isa = PBXGroup;
 			children = (
 				106F9CC1534D427086492914 /* Prism */,
+				B81F0A110001000100010040 /* PrismTests */,
+				B81F0A110001000100010021 /* PrismTests.xctestplan */,
 				DE71B44DD0175F2D00000009 /* CHANGELOG.md */,
 				DE81C55EE018603E00000010 /* LICENSE */,
 				4A0787426AF646DDA5C594F2 /* Products */,
@@ -247,7 +276,33 @@
 			path = Providers;
 			sourceTree = "<group>";
 		};
+
+		B81F0A110001000100010040 /* PrismTests */ = {
+			isa = PBXGroup;
+			children = (
+				B81F0A110001000100010017 /* AITranslationPromptTests.swift */,
+				B81F0A110001000100010016 /* AppReleaseTests.swift */,
+				B81F0A110001000100010013 /* CustomHTTPParsingTests.swift */,
+				B81F0A110001000100010011 /* HotkeyChordTests.swift */,
+				B81F0A110001000100010012 /* LanguageMappingTests.swift */,
+				B81F0A110001000100010014 /* OpenAICompatibleParsingTests.swift */,
+				B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */,
+			);
+			path = PrismTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+
+/* Begin PBXContainerItemProxy section */
+		B81F0A110001000100010050 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E9A421260E4245C0BD3A03AC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF3EB81AEE0B40C2BAB6852F;
+			remoteInfo = Prism;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXNativeTarget section */
 		DF3EB81AEE0B40C2BAB6852F /* Prism */ = {
@@ -267,6 +322,25 @@
 			productReference = E62EB21B68D1445B8F465705 /* Prism.app */;
 			productType = "com.apple.product-type.application";
 		};
+
+		B81F0A110001000100010060 /* PrismTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B81F0A110001000100010090 /* Build configuration list for PBXNativeTarget "PrismTests" */;
+			buildPhases = (
+				B81F0A110001000100010070 /* Sources */,
+				B81F0A110001000100010030 /* Frameworks */,
+				B81F0A110001000100010080 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B81F0A110001000100010051 /* PBXTargetDependency */,
+			);
+			name = PrismTests;
+			productName = PrismTests;
+			productReference = B81F0A110001000100010020 /* PrismTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -279,6 +353,10 @@
 				TargetAttributes = {
 					DF3EB81AEE0B40C2BAB6852F = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					B81F0A110001000100010060 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = DF3EB81AEE0B40C2BAB6852F;
 					};
 				};
 			};
@@ -297,6 +375,7 @@
 			projectRoot = "";
 			targets = (
 				DF3EB81AEE0B40C2BAB6852F /* Prism */,
+				B81F0A110001000100010060 /* PrismTests */,
 			);
 		};
 /* End PBXProject section */
@@ -311,6 +390,14 @@
 				BF91D66FF019714F00000022 /* InfoPlist.xcstrings in Resources */,
 				BF71B44DD0175F2D0000000A /* CHANGELOG.md in Resources */,
 				BF81C55EE018603E00000011 /* LICENSE in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		B81F0A110001000100010080 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -363,7 +450,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+
+		B81F0A110001000100010070 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B81F0A110001000100010007 /* AITranslationPromptTests.swift in Sources */,
+				B81F0A110001000100010006 /* AppReleaseTests.swift in Sources */,
+				B81F0A110001000100010003 /* CustomHTTPParsingTests.swift in Sources */,
+				B81F0A110001000100010001 /* HotkeyChordTests.swift in Sources */,
+				B81F0A110001000100010002 /* LanguageMappingTests.swift in Sources */,
+				B81F0A110001000100010004 /* OpenAICompatibleParsingTests.swift in Sources */,
+				B81F0A110001000100010005 /* TranslationErrorHTTPTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+
+/* Begin PBXTargetDependency section */
+		B81F0A110001000100010051 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF3EB81AEE0B40C2BAB6852F /* Prism */;
+			targetProxy = B81F0A110001000100010050 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0808C2FD327A4C04B55387A0 /* Debug */ = {
@@ -467,7 +578,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = UXJP4APP32;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Prism/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -543,6 +654,53 @@
 			};
 			name = Release;
 		};
+
+		B81F0A110001000100010091 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = UXJP4APP32;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Prism.app/Contents/MacOS/Prism";
+			};
+			name = Debug;
+		};
+		B81F0A110001000100010092 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = UXJP4APP32;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Prism.app/Contents/MacOS/Prism";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -560,6 +718,16 @@
 			buildConfigurations = (
 				0808C2FD327A4C04B55387A0 /* Debug */,
 				FC47E5D1FB424FB3A4509CD6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		B81F0A110001000100010090 /* Build configuration list for PBXNativeTarget "PrismTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B81F0A110001000100010091 /* Debug */,
+				B81F0A110001000100010092 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

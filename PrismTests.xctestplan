@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "4B26B94A-B907-489D-A61E-2A58AC93A40E",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "IDEPreferLogStreaming",
+        "value" : "YES"
+      }
+    ],
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Prism.xcodeproj",
+      "identifier" : "DF3EB81AEE0B40C2BAB6852F",
+      "name" : "Prism"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Prism.xcodeproj",
+        "identifier" : "B81F0A110001000100010060",
+        "name" : "PrismTests"
+      }
+    }
+  ],
+  "version" : 1
+}

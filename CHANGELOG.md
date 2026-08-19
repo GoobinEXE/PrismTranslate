@@ -6,24 +6,30 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
-## [1.0.2] - 2026-08-18
+## [1.0.2] - 2026-08-19
 
-Ajustes de localização, acessibilidade e documentação antes do primeiro lançamento público. A `1.0.1` não foi publicada.
+Ajustes de localização, acessibilidade e documentação antes do primeiro lançamento público. A `1.0.1` não foi publicada. Pacote v1 completo: todos os provedores do aceite validados de ponta a ponta.
 
 ### Novidades
 
+- Instalação pelo Homebrew: `brew install --cask goobinexe/tap/prism-translate`. Tutorial passo a passo em `INSTALL.md`.
 - Onboarding e textos da interface seguem o idioma do sistema com mais consistência, inclusive para leitores de ecrã.
-- Instalação e compatibilidade mais claras no README (macOS 15+, sem Xcode para quem só usa o app).
+- **Google Cloud Translation** e **HTTP personalizado** validados no fluxo principal (atalho → traduzir → substituir), além de Apple, DeepL e LM Studio.
 
 ### Changed
 
 - Onboarding e componentes relacionados passam a usar `LocalizedStringKey`.
 - Instruções de instalação e SVGs de compatibilidade.
 
+### Adicionado
+
+- Target **PrismTests** no Xcode e workflow GitHub Actions que corre `xcodebuild test` em cada push/PR.
+- Empacotamento Community (`scripts/package-community.sh`) e cask Homebrew (`prism-translate`).
+
 ### Notas de maturidade
 
-- Validado E2E: **Apple Translation**, **DeepL** e **LM Studio / OpenAI local**.
-- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+- Validado E2E: **Apple Translation**, **DeepL**, **LM Studio / OpenAI local**, **Google Cloud Translation** e **Custom HTTP**.
+- Critérios de aceite da v1 em `BUILDING.md`: completos.
 
 ## [1.0.0] - 2026-08-18
 

@@ -2,14 +2,14 @@
 
 Este arquivo é **opcional**. Só precisa dele quem clona o repositório para estudar ou mudar o código.
 
-Quem só quer usar o Prism **não instala o Xcode**: baixa o `.dmg` em [GitHub Releases](../../releases), corre o instalador e pronto. O [README](README.md) descreve esse caminho. Publicar o DMG oficial (assinatura Apple, notarização, GitHub Release) está em [`RELEASING.md`](RELEASING.md), só para quem corta a build pública.
+Quem só quer **usar** o Prism instala pelo Homebrew ou pelo zip — veja [INSTALL.md](INSTALL.md). Não precisa do Xcode.
 
 Esta é a edição **Community**. O código é para uso não comercial. Trabalho comercial ou freemium não entra neste repo.
 
 ## O que você precisa
 
 - macOS 15.0+ (Sequoia) — a tradução da Apple depende disso
-- Xcode 16+ (só neste caminho de desenvolvimento; quem instala pelo DMG não precisa)
+- Xcode 16+ (só neste caminho de desenvolvimento)
 - Permissões de **Acessibilidade** e **Monitoramento de Entrada** (o onboarding pede na primeira execução)
 
 ## Abrir e rodar
@@ -46,21 +46,26 @@ Prism/
 
 Atalhos padrão (`⌃⌥T` / `⌃⌥⏎`): `Prism/Hotkeys/HotkeyChord.swift` e `Prism/Settings/AppSettings.swift`.
 
-Testes unitários: [`PrismTests/README.md`](PrismTests/README.md) (ainda precisam de um target de testes no Xcode; o README da pasta explica como criar).
+Testes unitários: scheme **Prism**, **⌘U**, ou `./scripts/test.sh`. Detalhes em [`PrismTests/README.md`](PrismTests/README.md). No GitHub, o workflow [Test](.github/workflows/test.yml) corre os mesmos testes a cada push e pull request.
 
 ## Critérios de aceite — v1.0
 
 A v1.0 está pronta quando todos os itens abaixo funcionam de ponta a ponta:
 
-- [ ] **Traduzir / substituir** — com o foco em um campo de texto, `⌃⌥T` lê o texto, traduz e substitui no lugar (sem enviar)
-- [ ] **Traduzir + enviar** — `⌃⌥⏎` traduz, substitui e simula Enter
-- [ ] **Onboarding de permissões** — na primeira execução, o tutorial guia Acessibilidade e Monitoramento de Entrada, com links para Ajustes do Sistema
-- [ ] **Provedores** — Apple Translation, DeepL, Google Cloud Translation, OpenAI-compatible / LM Studio e Custom HTTP selecionáveis em Preferências
-- [ ] **Atalhos configuráveis** — gravar novos atalhos e restaurar os padrões `⌃⌥T` / `⌃⌥⏎` em Preferências → Atalhos
-- [ ] **Abrir no login** — o toggle em Preferências registra/desregistra o login item
+- [x] **Traduzir / substituir** — com o foco em um campo de texto, `⌃⌥T` lê o texto, traduz e substitui no lugar (sem enviar)
+- [x] **Traduzir + enviar** — `⌃⌥⏎` traduz, substitui e simula Enter
+- [x] **Onboarding de permissões** — na primeira execução, o tutorial guia Acessibilidade e Monitoramento de Entrada, com links para Ajustes do Sistema
+- [x] **Provedores** — Apple Translation, DeepL, Google Cloud Translation, OpenAI-compatible / LM Studio e Custom HTTP selecionáveis em Preferências
+- [x] **Atalhos configuráveis** — gravar novos atalhos e restaurar os padrões `⌃⌥T` / `⌃⌥⏎` em Preferências → Atalhos
+- [x] **Abrir no login** — o toggle em Preferências registra/desregistra o login item
 
 ## Licença para quem modifica
 
 Prism Translate Community está sob a [PolyForm Noncommercial License 1.0.0](LICENSE).
 
 Você pode usar, estudar e modificar o código para fins **não comerciais** (uso pessoal, pesquisa, organizações listadas na licença). Uso comercial exige uma licença à parte, concedida pelo autor. O aviso obrigatório está em [`NOTICE`](NOTICE).
+
+## Distribuir uma build
+
+- **Community (atual):** `./scripts/package-community.sh` → zip + Homebrew Cask — veja [`packaging/homebrew/README.md`](packaging/homebrew/README.md) e [RELEASING.md](RELEASING.md)
+- **Futuro (Developer ID):** `./scripts/release.sh` → DMG notarizado — quando entrar no Apple Developer Program
