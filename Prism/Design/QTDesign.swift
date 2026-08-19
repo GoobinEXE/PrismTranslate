@@ -51,7 +51,7 @@ struct QTKeycap: View {
 /// Linha de dica com ícone à esquerda.
 struct QTTipRow: View {
     let icon: String
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {

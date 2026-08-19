@@ -582,9 +582,9 @@ struct PermissionsSettingsView: View {
 
     private func permissionRow(
         ok: Bool,
-        okText: String,
-        pendingText: String,
-        caption: String,
+        okText: LocalizedStringKey,
+        pendingText: LocalizedStringKey,
+        caption: LocalizedStringKey,
         open: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -603,7 +603,7 @@ struct PermissionsSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(ok ? okText : pendingText). \(caption)")
+        .accessibilityLabel(Text(ok ? okText : pendingText) + Text(verbatim: ". ") + Text(caption))
     }
 }
 
@@ -958,7 +958,7 @@ struct AboutSettingsView: View {
 
     // MARK: - Helpers
 
-    private func aboutRow(_ title: String, _ value: String) -> some View {
+    private func aboutRow(_ title: LocalizedStringKey, _ value: String) -> some View {
         LabeledContent(title) {
             Text(value)
                 .foregroundStyle(.secondary)

@@ -30,49 +30,49 @@ struct OnboardingView: View {
     private let steps: [OnboardingStep] = [
         OnboardingStep(
             id: 0,
-            title: "Translate without leaving the field",
-            subtitle:
-                "Prism translates and replaces the focused field in any app — no extra windows, no copy and paste.",
+            title: String(localized: "Translate without leaving the field"),
+            subtitle: String(localized:
+                "Prism translates and replaces the focused field in any app — no extra windows, no copy and paste."),
             symbolName: "prism",
             symbolColor: .accentColor
         ),
         OnboardingStep(
             id: 1,
-            title: "Accessibility permission",
-            subtitle:
-                "This is what lets Prism read and replace the text you type. Without it, translation cannot run.",
+            title: String(localized: "Accessibility permission"),
+            subtitle: String(localized:
+                "This is what lets Prism read and replace the text you type. Without it, translation cannot run."),
             symbolName: "accessibility",
             symbolColor: .blue
         ),
         OnboardingStep(
             id: 2,
-            title: "Input Monitoring",
-            subtitle:
-                "Delivers global shortcuts even when another app is frontmost. Without it, ⌃⌥T looks like it “does nothing”.",
+            title: String(localized: "Input Monitoring"),
+            subtitle: String(localized:
+                "Delivers global shortcuts even when another app is frontmost. Without it, ⌃⌥T looks like it “does nothing”."),
             symbolName: "keyboard",
             symbolColor: .orange
         ),
         OnboardingStep(
             id: 3,
-            title: "Language and translation",
-            subtitle:
-                "Choose the target language. With Apple Translation, packs download now and translation runs on this Mac.",
+            title: String(localized: "Language and translation"),
+            subtitle: String(localized:
+                "Choose the target language. With Apple Translation, packs download now and translation runs on this Mac."),
             symbolName: "character.bubble",
             symbolColor: .green
         ),
         OnboardingStep(
             id: 4,
-            title: "Shortcuts in practice",
-            subtitle:
-                "These are your current shortcuts. You can change them in Settings → Shortcuts.",
+            title: String(localized: "Shortcuts in practice"),
+            subtitle: String(localized:
+                "These are your current shortcuts. You can change them in Settings → Shortcuts."),
             symbolName: "command",
             symbolColor: .purple
         ),
         OnboardingStep(
             id: 5,
-            title: "You’re all set",
-            subtitle:
-                "Check the list — the prism icon stays in the menu bar to turn Prism on or off, change language, and open Settings.",
+            title: String(localized: "You’re all set"),
+            subtitle: String(localized:
+                "Check the list — the prism icon stays in the menu bar to turn Prism on or off, change language, and open Settings."),
             symbolName: "checkmark.circle.fill",
             symbolColor: .green
         ),
@@ -375,8 +375,8 @@ struct OnboardingView: View {
 
     private func permissionCard(
         ok: Bool,
-        okTitle: String,
-        pendingTitle: String,
+        okTitle: LocalizedStringKey,
+        pendingTitle: LocalizedStringKey,
         openAction: @escaping () -> Void
     ) -> some View {
         GlassSurface {
@@ -400,7 +400,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func pendingBadge(_ text: String) -> some View {
+    private func pendingBadge(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "clock.badge.exclamationmark")
                 .font(.caption.weight(.semibold))
@@ -414,7 +414,7 @@ struct OnboardingView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func shortcutRow(keys: String, label: String) -> some View {
+    private func shortcutRow(keys: String, label: LocalizedStringKey) -> some View {
         GlassSurface(cornerRadius: QTDesign.Radius.small) {
             HStack {
                 QTKeycap(keys: keys)
@@ -438,10 +438,10 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
             GlassSurface {
                 VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-                    checklistRow(ok: accessibilityOK, text: "Accessibility") {
+                    checklistRow(ok: accessibilityOK, text: String(localized: "Accessibility")) {
                         Permissions.openAccessibilitySettings()
                     }
-                    checklistRow(ok: inputMonitoringOK, text: "Input Monitoring") {
+                    checklistRow(ok: inputMonitoringOK, text: String(localized: "Input Monitoring")) {
                         Permissions.openInputMonitoringSettings()
                     }
                     checklistRow(
@@ -450,7 +450,7 @@ struct OnboardingView: View {
                             String(format: String(localized: "Translation languages (%@)"), LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)),
                         settingsSection: .general
                     )
-                    checklistRow(ok: true, text: "Prism icon in the menu bar", fix: nil)
+                    checklistRow(ok: true, text: String(localized: "Prism icon in the menu bar"), fix: nil)
                 }
                 .padding(14)
             }
