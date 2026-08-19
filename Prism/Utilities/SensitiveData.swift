@@ -1,7 +1,7 @@
 import Foundation
 
 /// Best-effort wrapper for credentials — minimizes lifetime and wipes bytes on deinit.
-struct SensitiveData {
+final class SensitiveData {
     private var bytes: Data
 
     init(_ string: String) {
