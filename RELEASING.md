@@ -4,7 +4,7 @@ Dois caminhos de distribuição:
 
 | Caminho | Quando | Artefato | Instalação |
 |---------|--------|----------|------------|
-| **Community (atual)** | Sem Apple Developer Program | `Prism-x.y.z.zip` + Homebrew Cask | `brew install --cask goobinexe/tap/prism-translate` |
+| **Community (atual)** | Sem Apple Developer Program | `Prism-x.y.z.zip` + Homebrew Cask | `brew tap` + `brew trust` + `brew install --cask prism-translate` |
 | **Oficial (futuro)** | Com Developer ID + notarização | `Prism-x.y.z.dmg` | Instalador `.pkg` no DMG |
 
 Tutorial para usuários finais: [`INSTALL.md`](INSTALL.md).
@@ -41,10 +41,12 @@ Saída: `build/Prism-x.y.z.zip` + SHA-256 no terminal.
 1. Edite `version` e `sha256` em [`packaging/homebrew/Casks/prism-translate.rb`](packaging/homebrew/Casks/prism-translate.rb).
 2. Copie para `GoobinEXE/homebrew-tap` → `Casks/prism-translate.rb` → push.
 
-Comando do usuário (tap automático):
+Comando do usuário:
 
 ```bash
-brew install --cask goobinexe/tap/prism-translate
+brew tap goobinexe/tap
+brew trust --tap goobinexe/tap
+brew install --cask prism-translate
 ```
 
 **Futuro:** PR no [homebrew-cask](https://github.com/Homebrew/homebrew-cask) para permitir `brew install --cask prism-translate` (nome `prism-translate` — `prism` já é o GraphPad Prism).
@@ -55,7 +57,7 @@ brew install --cask goobinexe/tap/prism-translate
 - [ ] Zip testado (abrir app, atalhos, permissões)
 - [ ] GitHub Release com zip + checksum
 - [ ] Cask atualizado no `homebrew-tap`
-- [ ] `brew install --cask goobinexe/tap/prism-translate` testado
+- [ ] `brew tap goobinexe/tap && brew trust --tap goobinexe/tap && brew install --cask prism-translate` testado
 
 ---
 

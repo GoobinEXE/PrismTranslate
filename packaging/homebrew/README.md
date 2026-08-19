@@ -4,10 +4,12 @@ Distribuição Community via **Homebrew Cask** (sem Apple Developer Program).
 
 ## Instalação (usuário final)
 
-Um comando (o Homebrew adiciona o tap automaticamente):
+Um bloco (o Homebrew 6 exige `tap` + `trust` em repositórios não oficiais):
 
 ```bash
-brew install --cask goobinexe/tap/prism-translate
+brew tap goobinexe/tap
+brew trust --tap goobinexe/tap
+brew install --cask prism-translate
 ```
 
 Quando o cask entrar no [homebrew-cask](https://github.com/Homebrew/homebrew-cask) oficial, o comando ficará:

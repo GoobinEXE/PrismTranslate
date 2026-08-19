@@ -1,6 +1,6 @@
 # Cask do Prism Translate (Community).
 # Publicar em https://github.com/GoobinEXE/homebrew-tap (Casks/prism-translate.rb).
-# Instalação: brew install --cask goobinexe/tap/prism-translate
+# Instalação: brew tap goobinexe/tap && brew trust --tap goobinexe/tap && brew install --cask prism-translate
 # Futuro (homebrew-cask oficial): brew install --cask prism-translate
 
 cask "prism-translate" do
@@ -12,7 +12,7 @@ cask "prism-translate" do
   desc "Traduz o texto do campo focado na barra de menus do Mac"
   homepage "https://github.com/GoobinEXE/PrismTranslate"
 
-  depends_on macos: ">= :sequoia"
+  depends_on macos: :sequoia
 
   app "Prism.app"
 

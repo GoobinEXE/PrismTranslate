@@ -4,13 +4,15 @@ Tutorial para quem nunca usou o Terminal ou o Homebrew. O Prism funciona no **ma
 
 ## Resumo rápido
 
-Se você **já tem o Homebrew**:
+Se você **já tem o Homebrew**, cole estes três comandos:
 
 ```bash
-brew install --cask goobinexe/tap/prism-translate
+brew tap goobinexe/tap
+brew trust --tap goobinexe/tap
+brew install --cask prism-translate
 ```
 
-Depois abra **Prism** em Aplicativos e autorize as permissões (seção 4).
+O `trust` é necessário porque o Prism ainda não está no catálogo oficial do Homebrew. Depois abra **Prism** em Aplicativos e autorize as permissões (seção 4).
 
 ---
 
@@ -34,17 +36,19 @@ Site oficial: [brew.sh](https://brew.sh)
 
 ## 2. Instalar o Prism
 
-No Terminal, cole e pressione Enter:
+No Terminal, cole estes três comandos (um de cada vez, Enter após cada um):
 
 ```bash
-brew install --cask goobinexe/tap/prism-translate
+brew tap goobinexe/tap
+brew trust --tap goobinexe/tap
+brew install --cask prism-translate
 ```
 
 O Homebrew baixa o Prism, copia para **Aplicativos** e remove o aviso de quarentena do download.
 
 **Por que `--cask`?** Programas com janela ou ícone na barra de menus (como o Prism) são instalados como *cask*. O comando `brew install` sozinho é para ferramentas de linha de comando.
 
-**Por que `goobinexe/tap/`?** Enquanto o Prism não entra no catálogo oficial do Homebrew, o app fica num *tap* (repositório extra) do autor. É um prefixo temporário — no futuro bastará `brew install --cask prism-translate`.
+**Por que `tap` e `trust`?** Enquanto o Prism não entra no catálogo oficial, ele vive num repositório extra do autor. O Homebrew 6 só instala desse repositório depois que você o marca como confiável. No futuro bastará `brew install --cask prism-translate`.
 
 ---
 
@@ -107,12 +111,6 @@ Dá para mudar os atalhos em **Preferências → Atalhos**.
 brew upgrade --cask prism-translate
 ```
 
-Se instalou pelo tap `goobinexe/tap`:
-
-```bash
-brew upgrade --cask goobinexe/tap/prism-translate
-```
-
 ---
 
 ## Desinstalar
@@ -129,6 +127,9 @@ Remova também as entradas de **Prism** em Acessibilidade e Monitoramento de Ent
 
 **“command not found: brew”**  
 O Homebrew não foi instalado ou o Terminal não carregou o PATH. Repita a seção 1 e o comando `eval` que o instalador mostra no fim.
+
+**“Refusing to load cask … from untrusted tap”**  
+Rode `brew trust --tap goobinexe/tap` e depois `brew install --cask prism-translate` de novo.
 
 **Atalhos não funcionam**  
 Confira Monitoramento de Entrada e Acessibilidade. Reinicie o Prism.

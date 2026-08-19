@@ -12,7 +12,7 @@ Ajustes de localização, acessibilidade e documentação antes do primeiro lan�
 
 ### Novidades
 
-- Instalação pelo Homebrew: `brew install --cask goobinexe/tap/prism-translate`. Tutorial passo a passo em `INSTALL.md`.
+- Instalação pelo Homebrew (`brew tap goobinexe/tap`, `brew trust --tap goobinexe/tap`, `brew install --cask prism-translate`). Tutorial passo a passo em `INSTALL.md`.
 - Onboarding e textos da interface seguem o idioma do sistema com mais consistência, inclusive para leitores de ecrã.
 - **Google Cloud Translation** e **HTTP personalizado** validados no fluxo principal (atalho → traduzir → substituir), além de Apple, DeepL e LM Studio.
 

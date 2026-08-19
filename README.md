@@ -19,13 +19,15 @@
 
 ## Instalar
 
-A forma mais simples é pelo **Homebrew** — um comando no Terminal:
+A forma mais simples é pelo **Homebrew**. Cole estes três comandos no Terminal:
 
 ```bash
-brew install --cask goobinexe/tap/prism-translate
+brew tap goobinexe/tap
+brew trust --tap goobinexe/tap
+brew install --cask prism-translate
 ```
 
-Apps de menu bar no Mac usam `brew install --cask` (não `brew install` sozinho). O Homebrew baixa o Prism e coloca em **Aplicativos** por você.
+O segundo comando (`trust`) é obrigatório enquanto o Prism não estiver no catálogo oficial do Homebrew — você está dizendo que confia no repositório do autor. Apps de menu bar usam `brew install --cask` (não `brew install` sozinho).
 
 **Primeira vez no Mac?** Siga o [tutorial de instalação](INSTALL.md) passo a passo (instalar o Homebrew, abrir o app, permissões e aviso do macOS).
 
