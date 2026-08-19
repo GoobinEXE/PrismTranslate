@@ -4,8 +4,8 @@
 # Futuro (homebrew-cask oficial): brew install --cask prism-translate
 
 cask "prism-translate" do
-  version "1.0.2"
-  sha256 "c4c2a7818b76aa4977b3bdcad0f4f280e40e3b495575ad53c6514289f93d2cbd"
+  version "1.0.3"
+  sha256 "d2502dbbfce6fc512353fc898a34d7eb5364b5708663f31098db18ddbcb058de"
 
   url "https://github.com/GoobinEXE/PrismTranslate/releases/download/v#{version}/Prism-#{version}.zip"
   name "Prism Translate"

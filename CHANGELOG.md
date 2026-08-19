@@ -6,6 +6,19 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.3] - 2026-08-19
+
+Higiene de repositório e empacotamento — sem mudança de funcionalidade para quem já usa o app.
+
+### Novidades
+
+- Versão e build do app passam a vir só do Xcode (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`), evitando drift com o `Info.plist`.
+
+### Fixed
+
+- `DEVELOPMENT_TEAM` removido do projeto versionado; cada mantenedor usa `Secrets.xcconfig` local (modelo em `Secrets.xcconfig.example`).
+- `RELEASING.md` e `scripts/release.sh` deixam de ser rastreados no git (mantidos só localmente).
+
 ## [1.0.2] - 2026-08-19
 
 Ajustes de localização, acessibilidade e documentação antes do primeiro lançamento público. A `1.0.1` não foi publicada. Pacote v1 completo: todos os provedores do aceite validados de ponta a ponta.

@@ -14,10 +14,11 @@ Esta é a edição **Community**. O código é para uso não comercial. Trabalho
 
 ## Abrir e rodar
 
-1. Abra `Prism.xcodeproj` no Xcode
-2. Selecione o target **Prism** e rode (⌘R)
-3. Autorize Acessibilidade (e Monitoramento de Entrada, se o sistema pedir)
-4. O ícone do prisma aparece na barra de menus
+1. Copie `Secrets.xcconfig.example` para `Secrets.xcconfig` e defina o seu `DEVELOPMENT_TEAM` (só necessário para assinatura automática no Xcode; CI e `./scripts/package-community.sh` não precisam).
+2. Abra `Prism.xcodeproj` no Xcode
+3. Selecione o target **Prism** e rode (⌘R)
+4. Autorize Acessibilidade (e Monitoramento de Entrada, se o sistema pedir)
+5. O ícone do prisma aparece na barra de menus
 
 Build pela linha de comando, com o Xcode.app (não use o `xcodebuild` de `/usr/bin` se der conflito de arquitetura):
 

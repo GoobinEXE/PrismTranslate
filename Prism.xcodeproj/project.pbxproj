@@ -119,6 +119,8 @@
 		B81F0A110001000100010017 /* AITranslationPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITranslationPromptTests.swift; sourceTree = "<group>"; };
 		B81F0A110001000100010020 /* PrismTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B81F0A110001000100010021 /* PrismTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text.xml.xctestplan; path = PrismTests.xctestplan; sourceTree = "<group>"; };
+		CE01CONFIG00000000000001 /* Project.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.xcconfig; sourceTree = "<group>"; };
+		CE01CONFIG00000000000002 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -234,13 +236,23 @@
 		7C0EDA3F3D5542CBBC0E6787 = {
 			isa = PBXGroup;
 			children = (
+				CE01CONFIG00000000000003 /* Config */,
 				106F9CC1534D427086492914 /* Prism */,
 				B81F0A110001000100010040 /* PrismTests */,
 				B81F0A110001000100010021 /* PrismTests.xctestplan */,
 				DE71B44DD0175F2D00000009 /* CHANGELOG.md */,
 				DE81C55EE018603E00000010 /* LICENSE */,
+				CE01CONFIG00000000000002 /* Secrets.xcconfig.example */,
 				4A0787426AF646DDA5C594F2 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		CE01CONFIG00000000000003 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				CE01CONFIG00000000000001 /* Project.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		AB51A11AA0143D0C00000001 /* Design */ = {
@@ -479,6 +491,7 @@
 /* Begin XCBuildConfiguration section */
 		0808C2FD327A4C04B55387A0 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -543,13 +556,13 @@
 		};
 		A94C0EAF93E5488B8824BF80 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = UXJP4APP32;
+				CURRENT_PROJECT_VERSION = 10;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Prism/Info.plist;
@@ -558,7 +571,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -571,13 +584,13 @@
 		};
 		ECF02D5E162248A1AFAFF3BC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = UXJP4APP32;
+				CURRENT_PROJECT_VERSION = 10;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Prism/Info.plist;
@@ -586,7 +599,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -599,6 +612,7 @@
 		};
 		FC47E5D1FB424FB3A4509CD6 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -657,11 +671,11 @@
 
 		B81F0A110001000100010091 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = UXJP4APP32;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -669,7 +683,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -680,11 +694,11 @@
 		};
 		B81F0A110001000100010092 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = UXJP4APP32;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -692,7 +706,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

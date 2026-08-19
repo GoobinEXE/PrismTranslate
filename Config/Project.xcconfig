@@ -1,0 +1,2 @@
+// Shared Xcode settings. Optional local overrides (Team ID) via Secrets.xcconfig at repo root.
+#include? "../Secrets.xcconfig"
