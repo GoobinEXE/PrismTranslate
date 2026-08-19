@@ -6,6 +6,54 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.10] - 2026-08-19
+
+Correções de tradução em apps Electron (Discord) e select-all nos atalhos Traduzir e Painel.
+
+### Fixed
+
+- ⌃⌥T no compose Discord (e similares) substitui in-place em vez de abrir painel só Copiar — heurística de banda inferior do compose + par de escrita.
+- ⌃⌥T e ⌃⌥Y em campo editável sem seleção fazem ⌘A+⌘C automático (TextEdit, compose Discord, Mail WebArea).
+- ⌃⌥Y partilha select-all com Traduzir (`allowSelectAllWhenEditable`) sem activar colagem directa no chat.
+- Substituição abortada se a tradução vier vazia (evita apagar o campo).
+
+## [1.0.9] - 2026-08-19
+
+Revert das janelas SwiftUI `Window` — incompatíveis com painel flutuante de menu bar.
+
+### Fixed
+
+- Popup/HUD voltam a `NSPanel` + `GlassPanelChrome` (Liquid Glass ou `NSVisualEffectView`) — corrige bolha invisível e janelas vazias na Dock.
+- ⌃⌥T em campo editável com ⌘A implícito (`didSelectAll`) substitui directo em vez de abrir popup.
+- Removido experimento `FloatingWindows` / cenas `Window`.
+
+## [1.0.8] - 2026-08-19
+
+Toda a UI flutuante passa a ser SwiftUI (`Window` scenes) — sem `NSPanel` / `NSHostingView`.
+
+### Changed
+
+- Popup de tradução, HUD, onboarding e host Apple Translation migrados para cenas `Window` com `.glassEffect()` via `GlassSurface`.
+- Removidos `TranslationResultPanelController`, `StatusHUDController`, `OnboardingWindowController` e `TranslationHostPanelController`.
+- Novo `FloatingWindows` centraliza estado e `openWindow` / `dismissWindow`.
+
+## [1.0.7] - 2026-08-19
+
+Painéis flutuantes passam a usar só SwiftUI para o visual (Liquid Glass / material).
+
+### Changed
+
+- Popup de tradução, HUD de status e onboarding deixam de usar `NSGlassEffectView` / `NSVisualEffectView` no AppKit; o chrome vem de `GlassSurface` (`.glassEffect()` no Tahoe, material nos demais casos).
+- Removidos `GlassPanelChrome` e a flag `preferMaterialOverGlass`.
+
+## [1.0.6] - 2026-08-19
+
+Correção visual do painel de tradução em builds Homebrew / CI (sem SDK macOS 26).
+
+### Fixed
+
+- Popup de resultado (e HUD de status / onboarding) voltam a exibir a «bolha» de fundo quando o binário é compilado sem `PRISM_MACOS26_SDK`: fallback com `NSVisualEffectView` em vez de janela borderless transparente só com texto.
+
 ## [1.0.5] - 2026-08-19
 
 Correção ao traduzir texto selecionado em apps Electron (Discord, etc.).

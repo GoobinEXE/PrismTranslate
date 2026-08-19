@@ -23,6 +23,10 @@ struct TranslationResultPanelView: View {
     }
 
     var body: some View {
+        panelContent
+    }
+
+    private var panelContent: some View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
             HStack(alignment: .center, spacing: QTDesign.Spacing.s) {
                 VStack(alignment: .leading, spacing: 2) {

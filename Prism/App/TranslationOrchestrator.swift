@@ -144,7 +144,20 @@ final class TranslationOrchestrator {
 
         do {
             AppLog.step(.orchestrator, 2, of: 4, "Capturando o texto focado em \(appName)…")
-            let capture = try await textIO.selectAndReadFocusedText()
+            let preferReplaceInPlace: Bool
+            let allowSelectAllWhenEditable: Bool
+            switch presentation {
+            case .replaceInPlace:
+                preferReplaceInPlace = true
+                allowSelectAllWhenEditable = true
+            case .popup:
+                preferReplaceInPlace = false
+                allowSelectAllWhenEditable = true
+            }
+            let capture = try await textIO.selectAndReadFocusedText(
+                preferReplaceInPlace: preferReplaceInPlace,
+                allowSelectAllWhenEditable: allowSelectAllWhenEditable
+            )
             let trimmed = capture.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
                 AppLog.warning(
@@ -228,14 +241,22 @@ final class TranslationOrchestrator {
             let showPanel: Bool
             let canReplace: Bool
             let sendAfter: Bool
+            // Discord/Electron compose: AX read-only + outgoing heuristic, or clipboard read
+            // with selection in the bottom compose band (chat highlight stays mid-window).
+            let inComposeBand = FocusedTextIO.selectionLikelyInComposeBand(capture.selectionScreenRect)
+            let composeLikeWrite = preferReplaceInPlace
+                && !capture.isEditable
+                && usedOutgoingPair
+                && (!capture.usedClipboardForRead || inComposeBand)
+            let replaceInField = capture.isEditable || composeLikeWrite
             switch presentation {
             case .replaceInPlace(let send):
-                showPanel = !capture.isEditable
+                showPanel = !replaceInField
                 canReplace = false
                 sendAfter = send
             case .popup:
                 showPanel = true
-                canReplace = capture.isEditable
+                canReplace = replaceInField
                 sendAfter = false
             }
 
@@ -368,6 +389,10 @@ final class TranslationOrchestrator {
         text: String,
         targetApp: NSRunningApplication?
     ) async throws {
+        let trimmedOutput = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedOutput.isEmpty else {
+            throw TranslationError.emptyResponse
+        }
         if let targetApp, !targetApp.isActive {
             AppLog.info(
                 .orchestrator,

@@ -1,33 +1,13 @@
 import SwiftUI
-#if canImport(AppKit)
-import AppKit
-#endif
-
-/// Quando `true`, `GlassSurface` / `QTGlassGroup` usam material em vez de
-/// `.glassEffect` — obrigatório sob `NSGlassEffectView` (evitar nesting que
-/// dispara `layoutSubtreeIfNeeded` recursion no AppKit).
-private struct PreferMaterialOverGlassKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    var preferMaterialOverGlass: Bool {
-        get { self[PreferMaterialOverGlassKey.self] }
-        set { self[PreferMaterialOverGlassKey.self] = newValue }
-    }
-}
 
 /// Superfície de controle que adota Liquid Glass no macOS 26 (Tahoe) e cai para
 /// um preenchimento de material nos sistemas anteriores ou com transparência reduzida.
-/// Use apenas na camada de controles/navegação — nunca em listas densas nem aninhado
-/// sob outro glass AppKit (`preferMaterialOverGlass`).
 struct GlassSurface<Content: View>: View {
     var cornerRadius: CGFloat
     var prominent: Bool
     private let content: Content
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.preferMaterialOverGlass) private var preferMaterialOverGlass
 
     init(
         cornerRadius: CGFloat = QTDesign.Radius.medium,
@@ -41,7 +21,7 @@ struct GlassSurface<Content: View>: View {
 
     var body: some View {
 #if PRISM_MACOS26_SDK
-        if #available(macOS 26.0, *), !reduceTransparency, !preferMaterialOverGlass {
+        if #available(macOS 26.0, *), !reduceTransparency {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
@@ -57,39 +37,15 @@ struct GlassSurface<Content: View>: View {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.quaternary.opacity(prominent ? 0.55 : 0.4))
+                    .fill(.ultraThinMaterial)
             )
     }
 }
 
-/// Agrupa superfícies glass irmãs para amostragem visual consistente (Tahoe).
-/// Em sistemas anteriores (ou com `preferMaterialOverGlass`) é transparente ao layout.
-struct QTGlassGroup<Content: View>: View {
-    private let content: Content
-
-    @Environment(\.preferMaterialOverGlass) private var preferMaterialOverGlass
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-#if PRISM_MACOS26_SDK
-        if #available(macOS 26.0, *), !preferMaterialOverGlass {
-            GlassEffectContainer {
-                content
-            }
-        } else {
-            content
-        }
-#else
-        content
-#endif
-    }
-}
-
 #if canImport(AppKit)
-/// Instala `NSGlassEffectView` como content view quando o SDK e o runtime suportam Tahoe.
+import AppKit
+
+/// Fallback AppKit vibrancy quando o painel é `NSPanel` borderless (builds sem SDK 26).
 enum GlassPanelChrome {
     static func install(
         contentView: NSView,
@@ -107,7 +63,41 @@ enum GlassPanelChrome {
             return
         }
 #endif
-        window.contentView = contentView
+        let effect = NSVisualEffectView(frame: frame)
+        effect.material = .hudWindow
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = cornerRadius
+        effect.layer?.cornerCurve = .continuous
+        effect.layer?.masksToBounds = true
+        contentView.autoresizingMask = [.width, .height]
+        effect.addSubview(contentView)
+        window.contentView = effect
     }
 }
 #endif
+
+/// Agrupa superfícies glass irmãs para amostragem visual consistente (Tahoe).
+/// Em sistemas anteriores é transparente ao layout.
+struct QTGlassGroup<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+#if PRISM_MACOS26_SDK
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer {
+                content
+            }
+        } else {
+            content
+        }
+#else
+        content
+#endif
+    }
+}

@@ -112,7 +112,7 @@ O padrão é a tradução da Apple. Se quiser outra, abra **Preferências**:
 - **LM Studio** (ou qualquer servidor no estilo OpenAI) — no seu computador
 - **HTTP personalizado** — se você já tem um endpoint próprio
 
-As chaves ficam no chaveiro do Mac, não no código.
+As chaves ficam no chaveiro do Mac.
 
 ## Licença
 

@@ -180,7 +180,13 @@ final class FocusedTextIO {
 
     /// Selects text if needed, then returns the selection for translation.
     /// Prefer existing selection; otherwise select-all (AX range or ⌘A) like DeepL on editable fields.
-    func selectAndReadFocusedText() async throws -> FocusedTextCapture {
+    /// When `preferReplaceInPlace` is true (⌃⌥T / ⌃⌥⏎ / Enter), infer editability for AX-opaque
+    /// compose hosts so partial clipboard selections replace in-field instead of opening the panel.
+    /// `allowSelectAllWhenEditable` is also true for ⌃⌥Y — select-all without compose replace heuristics.
+    func selectAndReadFocusedText(
+        preferReplaceInPlace: Bool = false,
+        allowSelectAllWhenEditable: Bool = false
+    ) async throws -> FocusedTextCapture {
         AppLog.debug(.textIO, "Leitura: tentando Acessibilidade no campo focado")
         let isEditable = Self.isFocusedTextEditable()
         let axError: FocusedTextIOError
@@ -212,28 +218,42 @@ final class FocusedTextIO {
         //    compose with no highlight — never ⌘A when the user already highlighted text).
         // Past bug: treating noFocusedElement as editable and ⌘A'ing first grabbed the whole
         // Discord conversation and pasted it into the compose box.
-        let maySelectAllIfNoSelection = isEditable || (axError == .noFocusedElement)
+        let composeAnchor = Self.mouseAnchorRect()
+        let inComposeBand = Self.selectionLikelyInComposeBand(composeAnchor)
+        let maySelectAllIfNoSelection = isEditable
+            || (axError == .noFocusedElement && (!allowSelectAllWhenEditable || inComposeBand))
+            || (allowSelectAllWhenEditable && axError != .noFocusedElement && (isEditable || inComposeBand))
+        // AX confirmed no selection — skip ⌘C-only (step 1) and go straight to ⌘A+⌘C.
+        let goDirectlyToSelectAll = allowSelectAllWhenEditable && maySelectAllIfNoSelection && (
+            (isEditable && axError == .readFallbackFailed)
+                || (axError == .noFocusedElement && inComposeBand)
+                || (axError == .noSelectionInReadOnly && inComposeBand)
+        )
 
         // Step 1: copy existing selection only (never ⌘A).
-        do {
-            let text = try await readViaClipboard(selectAllFirst: false)
-            // Selection existed without AX focus (typical Discord chat highlight). Treat as
-            // read-only so Translate opens the panel instead of pasting into compose.
-            // Compose without a highlight still reaches step 2 (⌘A+⌘C) below.
-            let treatAsEditable = isEditable
-            AppLog.info(
-                .textIO,
-                "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
-            )
-            return FocusedTextCapture(
-                text: text,
-                didSelectAll: false,
-                usedClipboardForRead: true,
-                isEditable: treatAsEditable,
-                selectionScreenRect: Self.mouseAnchorRect()
-            )
-        } catch {
-            AppLog.debug(.textIO, "Clipboard sem seleção existente — \(error.localizedDescription)")
+        if !goDirectlyToSelectAll {
+            do {
+                let text = try await readViaClipboard(selectAllFirst: false)
+                let treatAsEditable = Self.editableFlagForClipboardCapture(
+                    preferReplaceInPlace: preferReplaceInPlace,
+                    axError: axError,
+                    isEditable: isEditable,
+                    selectionAnchor: composeAnchor
+                )
+                AppLog.info(
+                    .textIO,
+                    "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
+                )
+                return FocusedTextCapture(
+                    text: text,
+                    didSelectAll: false,
+                    usedClipboardForRead: true,
+                    isEditable: treatAsEditable,
+                    selectionScreenRect: composeAnchor
+                )
+            } catch {
+                AppLog.debug(.textIO, "Clipboard sem seleção existente — \(error.localizedDescription)")
+            }
         }
 
         // Step 2: no selection — select-all only for editable / AX-blind compose.
@@ -250,7 +270,7 @@ final class FocusedTextIO {
                 didSelectAll: true,
                 usedClipboardForRead: true,
                 isEditable: true,
-                selectionScreenRect: Self.mouseAnchorRect()
+                selectionScreenRect: composeAnchor
             )
         } catch {
             AppLog.error(.textIO, "Clipboard também falhou: \(error.localizedDescription)")
@@ -310,6 +330,53 @@ final class FocusedTextIO {
             restorePendingUserPasteboard(after: 0.2)
             throw FocusedTextIOError.writeFallbackFailed
         }
+    }
+
+    /// Whether a clipboard read should be treated as an editable field for replace-in-place.
+    private static func editableFlagForClipboardCapture(
+        preferReplaceInPlace: Bool,
+        axError: FocusedTextIOError,
+        isEditable: Bool,
+        selectionAnchor: CGRect
+    ) -> Bool {
+        guard preferReplaceInPlace else { return isEditable }
+        switch axError {
+        case .noFocusedElement:
+            // Discord chat highlight — mid-window, no AX focus. Compose — bottom band.
+            return selectionLikelyInComposeBand(selectionAnchor)
+        case .readFallbackFailed:
+            // AX-blind compose (Mail WebArea, Electron) — replace in field.
+            return true
+        case .noSelectionInReadOnly:
+            // Partial selection AX can't see but ⌘C captured — focused host exists (compose).
+            return focusedElement() != nil
+        default:
+            return isEditable
+        }
+    }
+
+    /// Electron apps (Discord): compose sits in the bottom ~30% of the window; chat above.
+    static func selectionLikelyInComposeBand(_ selection: CGRect?) -> Bool {
+        guard let selection, !selection.isNull, selection.width >= 0, selection.height >= 0 else {
+            return false
+        }
+        guard let window = frontmostWindowFrame(), window.height > 80 else { return false }
+        let relativeFromBottom = (selection.midY - window.minY) / window.height
+        return relativeFromBottom < 0.30
+    }
+
+    static func frontmostWindowFrame() -> CGRect? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        var windowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedWindowAttribute as CFString,
+            &windowRef
+        ) == .success, let windowRef else {
+            return nil
+        }
+        return elementScreenRect(of: windowRef as! AXUIElement)
     }
 
     // MARK: - Accessibility

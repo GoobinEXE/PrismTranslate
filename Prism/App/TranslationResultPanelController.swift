@@ -99,14 +99,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
             }
         )
 
-        let hostingView: NSView
-        if #available(macOS 26.0, *) {
-            hostingView = NSHostingView(
-                rootView: root.environment(\.preferMaterialOverGlass, true)
-            )
-        } else {
-            hostingView = NSHostingView(rootView: root)
-        }
+        let hostingView = NSHostingView(rootView: root)
 
         hostingView.frame = NSRect(x: 0, y: 0, width: width, height: 10)
         let fittedHeight = max(hostingView.fittingSize.height, 100)

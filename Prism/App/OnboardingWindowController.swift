@@ -38,16 +38,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         let root = OnboardingView { [weak self] in
             self?.close()
         }
-        // No Tahoe o chrome já é NSGlassEffectView; o conteúdo SwiftUI precisa
-        // cair para material (preferMaterialOverGlass) para não aninhar glass.
-        let hostingView: NSView
-        if #available(macOS 26.0, *) {
-            hostingView = NSHostingView(
-                rootView: root.environment(\.preferMaterialOverGlass, true)
-            )
-        } else {
-            hostingView = NSHostingView(rootView: root)
-        }
+        let hostingView = NSHostingView(rootView: root)
         hostingView.frame = contentRect
         self.hosting = hostingView
 
