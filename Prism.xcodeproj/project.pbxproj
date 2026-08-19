@@ -134,6 +134,7 @@
 		SEC0000000000000000000011 /* AppLogRedactionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogRedactionTests.swift; sourceTree = "<group>"; };
 		SEC0000000000000000000013 /* SensitiveDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensitiveDataTests.swift; sourceTree = "<group>"; };
 		SEC0000000000000000000015 /* GoogleTranslateProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateProviderTests.swift; sourceTree = "<group>"; };
+		SEC0000000000000000000017 /* TranslationEngineCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationEngineCacheTests.swift; sourceTree = "<group>"; };
 		B81F0A110001000100010020 /* PrismTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B81F0A110001000100010021 /* PrismTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text.xml.xctestplan; path = PrismTests.xctestplan; sourceTree = "<group>"; };
 		CE01CONFIG00000000000001 /* Project.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.xcconfig; sourceTree = "<group>"; };
@@ -324,6 +325,7 @@
 				SEC0000000000000000000011 /* AppLogRedactionTests.swift */,
 				SEC0000000000000000000013 /* SensitiveDataTests.swift */,
 				SEC0000000000000000000015 /* GoogleTranslateProviderTests.swift */,
+				SEC0000000000000000000017 /* TranslationEngineCacheTests.swift */,
 			);
 			path = PrismTests;
 			sourceTree = "<group>";
@@ -507,6 +509,7 @@
 				SEC0000000000000000000010 /* AppLogRedactionTests.swift in Sources */,
 				SEC0000000000000000000012 /* SensitiveDataTests.swift in Sources */,
 				SEC0000000000000000000014 /* GoogleTranslateProviderTests.swift in Sources */,
+				SEC0000000000000000000016 /* TranslationEngineCacheTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

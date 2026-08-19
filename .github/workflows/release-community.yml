@@ -1,0 +1,66 @@
+name: Release Community
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Marketing version (e.g. 1.0.14)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-community
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: Build zip and publish release
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            TAG="${GITHUB_REF_NAME#v}"
+            echo "version=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Build Community zip
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}" ./scripts/package-community.sh
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          ZIP="build/Prism-${VERSION}.zip"
+          SHA256="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+          echo "SHA256=$SHA256" >> "$GITHUB_ENV"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" \
+              --title "Prism ${VERSION}" \
+              --notes-file CHANGELOG.md \
+              --latest
+          fi
+
+      - name: Print cask update values
+        run: |
+          echo "version: ${{ steps.ver.outputs.version }}"
+          echo "sha256: $SHA256"
