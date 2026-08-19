@@ -1,0 +1,52 @@
+---
+description: Convenções Swift/SwiftUI/AppKit e fluxo Xcode para o Prism no Cursor
+globs: "**/*.{swift,plist,entitlements,pbxproj}"
+alwaysApply: false
+---
+
+# Swift + Xcode (Prism)
+
+## Ambiente
+
+- Target: **macOS 15+**, Swift 5, app de menu bar (`LSUIElement`)
+- Bundle ID: `com.marcelopessoa.prism`
+- Sempre preferir o toolchain do **Xcode.app**, não Command Line Tools:
+  - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+  - Build: `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild`
+- DerivedData compartilhado com o Xcode (`~/Library/Developer/Xcode/DerivedData/Prism-*`) — não force `-derivedDataPath` local ao indexar/debugar no Cursor
+
+## Build / LSP
+
+- Compilar com a task **xcodebuild: Prism (Debug)** (⌘⇧B) ou o comando em `AGENTS.md`
+- Após mudanças no `.xcodeproj` / novos arquivos Swift, regenerar o índice do SourceKit:
+  `xcode-build-server config -project Prism.xcodeproj -scheme Prism`
+- Não editar `project.pbxproj` à mão se der para evitar; ao adicionar arquivos, garantir que entram no target Sources
+
+## Arquitetura
+
+| Pasta | Papel |
+|-------|--------|
+| `App/` | Menu bar, estado, orquestração, onboarding, host Apple Translation |
+| `Hotkeys/` | CGEvent tap, chords, recorder |
+| `TextIO/` | Accessibility + fallback clipboard |
+| `Translation/` | Protocolo + engine |
+| `Providers/` | Apple, DeepL, Google, OpenAI, Custom HTTP |
+| `Settings/` | Preferências + UserDefaults |
+| `Design/` | Tokens visuais e glifo Prism |
+| `Utilities/` | Teclado, Keychain, permissões |
+
+## Regras de código
+
+- UI: SwiftUI; APIs de sistema (AX, event tap, painéis): AppKit
+- Estado global: `AppState.shared` (`@MainActor`)
+- Segredos de API **só** no Keychain (`KeychainStore`), nunca em UserDefaults / git
+- Sandbox permanece **desligado** (necessário para AX + event tap) — não reativar sem redesign
+- Preferências: usar `@Environment(\.openSettings)` / `SettingsLink`, não selectors privados sozinhos
+- SF Symbols: só nomes que existem (evitar inventar `*.slash` sem validar)
+- Não bloquear a main thread com `Thread.sleep`; usar `Task.sleep` em fluxos async
+- Injeções de teclado sintéticas passam por `HotkeyMonitor.withInjection`
+
+## Permissões
+
+- Acessibilidade + Input Monitoring são obrigatórias
+- Se o event tap falhar, o monitor já faz retry — não “consertar” abrindo Settings em loop

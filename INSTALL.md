@@ -115,11 +115,35 @@ brew upgrade --cask prism-translate
 
 ## Desinstalar
 
+### Instalado pelo Homebrew
+
 ```bash
 brew uninstall --cask prism-translate
 ```
 
-Remova também as entradas de **Prism** em Acessibilidade e Monitoramento de Entrada se quiser limpar tudo.
+Para remover também preferências e dados locais:
+
+```bash
+brew uninstall --cask --zap prism-translate
+```
+
+O `--zap` apaga `~/Library/Preferences/com.marcelopessoa.prism.plist` e `~/Library/Application Support/Prism`.
+
+### Instalado manualmente (zip)
+
+1. Desligue o Prism no menu da barra de menus (**Ligado** → desmarcado).
+2. Arraste **Prism** de **Aplicativos** para o Lixo.
+3. Esvazie o Lixo.
+
+### Limpar permissões e chaves (opcional)
+
+- **Ajustes do Sistema → Privacidade e Segurança:** remova **Prism** de **Acessibilidade** e **Monitoramento de Entrada**.
+- **Chaveiro:** abra o app **Acesso às Chaves**, busque por `com.marcelopessoa.prism` e apague entradas de API se não for reinstalar.
+
+Se não usou `--zap`, pode apagar manualmente (Finder → **Ir → Ir para a pasta…**, ⌘⇧G):
+
+- `~/Library/Preferences/com.marcelopessoa.prism.plist`
+- `~/Library/Application Support/Prism`
 
 ---
 

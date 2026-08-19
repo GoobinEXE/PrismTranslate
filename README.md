@@ -57,6 +57,33 @@ Quando terminar de autorizar, o prisma aparece no canto direito do topo da tela:
   <img src="docs/readme/barra-de-menus.svg" width="840" alt="Depois de abrir, o ícone do Prism fica à direita da barra de menus, no topo da tela.">
 </p>
 
+## Desinstalar
+
+**Instalou pelo Homebrew?** No Terminal:
+
+```bash
+brew uninstall --cask prism-translate
+```
+
+Para apagar também preferências e dados locais (logs, ajustes salvos):
+
+```bash
+brew uninstall --cask --zap prism-translate
+```
+
+**Baixou o zip manualmente?** Saia do Prism (menu do prisma → **Ligado**, desligado), arraste **Prism** de **Aplicativos** para o Lixo e esvazie o Lixo.
+
+**Limpar permissões (opcional):** em **Ajustes do Sistema → Privacidade e Segurança**, remova **Prism** de **Acessibilidade** e **Monitoramento de Entrada**.
+
+Se quiser apagar tudo à mão (sem `--zap`), apague estas pastas no Finder (**Ir → Ir para a pasta…**, ⌘⇧G):
+
+- `~/Library/Preferences/com.marcelopessoa.prism.plist`
+- `~/Library/Application Support/Prism`
+
+Chaves de API ficam no **Chaveiro** do Mac (serviço `com.marcelopessoa.prism`); remova-as lá se não for reinstalar.
+
+Mais detalhes no [tutorial de instalação](INSTALL.md#desinstalar).
+
 ## Usar
 
 Sem configurar nada, a tradução é a da Apple, no próprio Mac.

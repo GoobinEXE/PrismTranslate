@@ -1,0 +1,12 @@
+---
+description: Paleta canónica da logo e identidades futuras — não migrar artes existentes
+alwaysApply: true
+---
+
+# Identidade visual Prism
+
+Fonte de verdade: [`docs/brand/PALETTE.md`](docs/brand/PALETTE.md).
+
+- **Padrão novo** (logo, posters, stories, site, empacotamento **ainda por fazer**): só `ink` `#0A0D16`, `paper` `#F3EDE0`, `magenta` `#E83A9B`, `ochre` `#E0B84A`, `violet` `#6A4A9A`, `indigo` `#2A3F8F`. Espectro de marca em 4 faixas (ochre → magenta → violet → indigo). Prisma geométrico 2D, não vidro 3D. Slogan: «Um prisma. Vários idiomas.»
+- **Não aplicar** até pedido explícito: App Icon, AccentColor, `PrismGlyph`, `QTDesign`, SVGs/ícone em `docs/readme/`.
+- Não misturar com o arco-íris óptico do ícone actual. Sem ciano, verde-lima ou branco puro em peças novas.

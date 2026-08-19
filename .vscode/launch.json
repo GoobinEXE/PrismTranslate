@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb-dap",
+      "request": "launch",
+      "name": "Prism",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/Prism-hldybfnpldplucduuopmbsvuemob/Build/Products/Debug/Prism.app/Contents/MacOS/Prism",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "xcodebuild: Prism (Debug)",
+      "env": {
+        "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+      }
+    },
+    {
+      "type": "lldb-dap",
+      "request": "attach",
+      "name": "Attach Prism",
+      "program": "${userHome}/Library/Developer/Xcode/DerivedData/Prism-hldybfnpldplucduuopmbsvuemob/Build/Products/Debug/Prism.app/Contents/MacOS/Prism"
+    }
+  ]
+}

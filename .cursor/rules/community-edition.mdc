@@ -1,0 +1,24 @@
+---
+description: Repositório privado Prisma Tradutor — fonte da verdade; Community via publish script
+alwaysApply: true
+---
+
+# Prisma Tradutor (privado)
+
+Este checkout é o repositório **privado** `GoobinEXE/Prisma-Tradutor` — fonte da verdade do desenvolvimento.
+
+## Publicação Community
+
+- **Nunca** `git push community main` directamente a partir do branch privado.
+- Publicar no público: `./scripts/publish-community.sh` (ver [`docs/REPOS.md`](../docs/REPOS.md)).
+- O repo público `GoobinEXE/PrismTranslate` mantém licença PolyForm Noncommercial e sem IAP/paywall.
+
+## Escopo Pro (só privado)
+
+- IAP, paywall, StoreKit, prompt editável e motores de IA na nuvem (Groq, Gemini, Mistral, DeepSeek, OpenRouter) podem existir **neste** repo.
+- Código Pro futuro: pasta `PrismPro/` — incluir em `scripts/community-excludes.txt` antes de publicar.
+
+## Community (público)
+
+O export filtrado **não** inclui documentação de mantenedor, scripts internos nem código Pro.
+Respeitar as exclusões em `scripts/community-excludes.txt`.
