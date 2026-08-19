@@ -95,4 +95,4 @@ O texto completo está em [`LICENSE`](LICENSE) (PolyForm Noncommercial 1.0.0).
 
 ---
 
-Quer abrir o projeto no Xcode, estudar ou modificar o código? Isso é **opcional** — só para quem clona o repositório. Veja o [guia de compilação](BUILDING.md).
+Quer abrir o projeto no Xcode? Clone o repositório, abra `Prism.xcodeproj` (macOS 15+, Xcode 16+) e rode o target **Prism**.

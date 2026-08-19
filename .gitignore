@@ -76,21 +76,23 @@ swiftly.pkg
 
 # Agent / IDE — not part of the Community launch
 .cursor/
-AGENTS.md
 .vscode/
 buildServer.json
-VERSIONING.md
-
-# Maintainer-only — kept locally, not in Community source
-RELEASING.md
-scripts/release.sh
-scripts/gen_xcstrings.py
-scripts/gen_xcstrings.py
 # SourceKit / xcode-build-server
 .buildServer/
 compile_commands.json
 *.xcindex
 *.xcuserdatad/
+
+# Maintainer-only scripts — kept locally, not in Community source
+scripts/release.sh
+scripts/gen_xcstrings.py
+
+# Markdown — só documentação pública obrigatória na raiz (README, changelog no bundle, instalação)
+*.md
+!/README.md
+!/CHANGELOG.md
+!/INSTALL.md
 
 # IDE
 .idea/

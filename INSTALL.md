@@ -138,12 +138,4 @@ Confira Monitoramento de Entrada e Acessibilidade. Reinicie o Prism.
 Confirme macOS 15+, permissões ok e idioma de destino no menu do prisma.
 
 **Quero compilar o código**  
-Opcional — só para desenvolvedores. Veja [BUILDING.md](BUILDING.md).
-
----
-
-## Para mantenedores
-
-- Empacotar zip: `./scripts/package-community.sh`
-- Cask: [`packaging/homebrew/`](packaging/homebrew/)
-- Release oficial futuro (DMG + Developer ID): [RELEASING.md](RELEASING.md)
+Opcional — clone o repositório, abra `Prism.xcodeproj` no Xcode 16+ (macOS 15+) e rode o target **Prism**.
