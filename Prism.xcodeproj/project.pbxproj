@@ -15,6 +15,7 @@
 		18127F93A9E44DBAAFC1E9CB /* AppleTranslationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F387A855B7F45F69660F842 /* AppleTranslationProvider.swift */; };
 		1B1E43DAAA864618B6A9AD24 /* CustomHTTPProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B025127A0DD84CD09F963C78 /* CustomHTTPProvider.swift */; };
 		324FB0F3FA2545FABA74289A /* TranslationOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */; };
+		C5D6E7F8A9B04123E4F5A6B7 /* TranslationActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D5E6F7A8B94012D3E4F5A6 /* TranslationActionPolicy.swift */; };
 		36AE3AC7FC1740C7918BB1FE /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 713B1DD7A24C4F3998C32D9C /* AppState.swift */; };
 		49CD8DB2ECEE44CEBF3123C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 98927778C51E428FAB4E7BCB /* Assets.xcassets */; };
 		4D465CCFCEC5457F91797461 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B5B826F0CD4AD39FE94DDA /* AppSettings.swift */; };
@@ -59,10 +60,12 @@
 		B81F0A110001000100010005 /* TranslationErrorHTTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */; };
 		B81F0A110001000100010006 /* AppReleaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010016 /* AppReleaseTests.swift */; };
 		B81F0A110001000100010007 /* AITranslationPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010017 /* AITranslationPromptTests.swift */; };
+		B81F0A110001000100010008 /* TranslationActionPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81F0A110001000100010018 /* TranslationActionPolicyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationOrchestrator.swift; sourceTree = "<group>"; };
+		C4D5E6F7A8B94012D3E4F5A6 /* TranslationActionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationActionPolicy.swift; sourceTree = "<group>"; };
 		0B073410CE644FE5BAC60C27 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		1AA84A93777549D0BE52514B /* HotkeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyMonitor.swift; sourceTree = "<group>"; };
 		2276258A2DAB44F99FF9BADC /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
@@ -117,6 +120,7 @@
 		B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationErrorHTTPTests.swift; sourceTree = "<group>"; };
 		B81F0A110001000100010016 /* AppReleaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReleaseTests.swift; sourceTree = "<group>"; };
 		B81F0A110001000100010017 /* AITranslationPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITranslationPromptTests.swift; sourceTree = "<group>"; };
+		B81F0A110001000100010018 /* TranslationActionPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationActionPolicyTests.swift; sourceTree = "<group>"; };
 		B81F0A110001000100010020 /* PrismTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B81F0A110001000100010021 /* PrismTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text.xml.xctestplan; path = PrismTests.xctestplan; sourceTree = "<group>"; };
 		CE01CONFIG00000000000001 /* Project.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.xcconfig; sourceTree = "<group>"; };
@@ -157,6 +161,7 @@
 				B8C9D0E1F2A34416B7C8D9E0 /* TranslationResultPanelController.swift */,
 				A7B8C9D0E1F24315A6B7C8D9 /* TranslationResultPanelView.swift */,
 				03D1460EAF104879B247E33E /* TranslationOrchestrator.swift */,
+				C4D5E6F7A8B94012D3E4F5A6 /* TranslationActionPolicy.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -299,6 +304,7 @@
 				B81F0A110001000100010012 /* LanguageMappingTests.swift */,
 				B81F0A110001000100010014 /* OpenAICompatibleParsingTests.swift */,
 				B81F0A110001000100010015 /* TranslationErrorHTTPTests.swift */,
+				B81F0A110001000100010018 /* TranslationActionPolicyTests.swift */,
 			);
 			path = PrismTests;
 			sourceTree = "<group>";
@@ -430,6 +436,7 @@
 				D0E1F2A3B4C54618D9E0F1A2 /* TranslationResultPanelController.swift in Sources */,
 				C9D0E1F2A3B44517C8D9E0F1 /* TranslationResultPanelView.swift in Sources */,
 				324FB0F3FA2545FABA74289A /* TranslationOrchestrator.swift in Sources */,
+				C5D6E7F8A9B04123E4F5A6B7 /* TranslationActionPolicy.swift in Sources */,
 				900C80CD3E5A4A5FA922542A /* HotkeyMonitor.swift in Sources */,
 				A4B5C6D7E8F94011A2B3C4D5 /* HotkeyChord.swift in Sources */,
 				C6D7E8F9A0B14213C4D5E6F7 /* HotkeyRecorderButton.swift in Sources */,
@@ -474,6 +481,7 @@
 				B81F0A110001000100010002 /* LanguageMappingTests.swift in Sources */,
 				B81F0A110001000100010004 /* OpenAICompatibleParsingTests.swift in Sources */,
 				B81F0A110001000100010005 /* TranslationErrorHTTPTests.swift in Sources */,
+				B81F0A110001000100010008 /* TranslationActionPolicyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,11 +566,12 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
+				APP_DISPLAY_NAME = Prism;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Prism/Info.plist;
@@ -571,7 +580,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.0.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -586,11 +595,12 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CE01CONFIG00000000000001 /* Project.xcconfig */;
 			buildSettings = {
+				APP_DISPLAY_NAME = "Diamante TL";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Prism/Prism.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Prism/Info.plist;
@@ -599,8 +609,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.10;
-				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism;
+				MARKETING_VERSION = 1.0.13;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.debug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -675,7 +685,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -683,7 +693,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.0.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -698,7 +708,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -706,7 +716,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.0.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelopessoa.prism.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

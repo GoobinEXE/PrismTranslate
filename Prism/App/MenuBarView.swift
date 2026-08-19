@@ -43,7 +43,7 @@ struct MenuBarView: View {
                 .frame(width: 16, height: 16)
                 .foregroundStyle(Color.accentColor)
                 .accessibilityHidden(true)
-            Text("Prism")
+            Text(AppRelease.displayName)
                 .font(QTDesign.Fonts.heading)
             Spacer()
             QTStatusChip(status: appState.status, isEnabled: appState.settings.isEnabled)

@@ -1,6 +1,9 @@
 // Shared Xcode settings. Optional local overrides (Team ID) via Secrets.xcconfig at repo root.
 #include? "../Secrets.xcconfig"
 
+// Nome visível no Release; Debug sobrescreve para "Diamante TL" no target Prism.
+APP_DISPLAY_NAME = Prism
+
 // Liquid Glass / TranslationSession.isReady — só compila com SDK macOS 26+ (Xcode 26).
 // CI com Xcode 16 fica sem a flag e usa fallbacks de material.
 SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=macos26*] = $(inherited) PRISM_MACOS26_SDK

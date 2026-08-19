@@ -6,6 +6,38 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.13] - 2026-08-19
+
+Correção: ⌃⌥T no Discord — chat no painel, compose in-place, sem depender do cursor.
+
+### Fixed
+
+- Painel vs colar segue só `capture.isEditable` (foco AX + contexto do erro na captura) — removida heurística de banda inferior / posição do rato.
+- Sempre tenta ⌘C na seleção existente antes de ⌘A+⌘C; highlight no chat abre painel Copiar only.
+- Compose Electron (`noFocusedElement`): ⌘A+⌘C automático quando não há seleção visível — traduz e substitui in-place.
+- `TranslationActionPolicy` centralizado; testes unitários actualizados.
+
+## [1.0.12] - 2026-08-19
+
+Correção: ⌃⌥T numa mensagem Discord só-leitura já não cola no compose.
+
+### Fixed
+
+- Highlight de mensagem no chat Discord (meio da janela) com ⌃⌥T abre painel Copiar only — o compose deixa de ser alterado.
+- Decisão painel vs colar centralizada em `TranslationActionPolicy`; par de idiomas (`usedOutgoingPair`) deixa de influenciar onde colar.
+- Captura editável sem seleção AX tenta ⌘C na seleção existente antes de ⌘A+⌘C (evita select-all no compose quando o highlight está no chat).
+- Clipboard `.noSelectionInReadOnly` usa banda inferior da janela em vez de “elemento focado existe”.
+
+## [1.0.11] - 2026-08-19
+
+Correções no tutorial de primeira abertura e menos prompts assustadores de permissão.
+
+### Fixed
+
+- Tutorial (onboarding) abre de forma fiável na 1.ª execução e pelo botão **Ajuda** no menu bar — o painel passa a ser apresentado antes de fechar o MenuBarExtra.
+- Removidos prompts automáticos duplicados no arranque (Acessibilidade + Monitoramento de Entrada + interceptor de teclado).
+- No tutorial, cada permissão regista-se uma vez ao chegar ao passo; **Abrir Ajustes do Sistema** só abre Ajustes (sem segundo diálogo em cima).
+
 ## [1.0.10] - 2026-08-19
 
 Correções de tradução em apps Electron (Discord) e select-all nos atalhos Traduzir e Painel.

@@ -20,7 +20,7 @@ struct PrismApp: App {
         } label: {
             Image(nsImage: menuBarNSImage)
                 .renderingMode(.template)
-                .accessibilityLabel("Prism")
+                .accessibilityLabel(AppRelease.displayName)
         }
         .menuBarExtraStyle(.window)
 

@@ -45,6 +45,10 @@ enum AppRelease {
         return components.url ?? newIssueURL
     }
 
+    static var displayName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Prism"
+    }
+
     static var marketingVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
     }

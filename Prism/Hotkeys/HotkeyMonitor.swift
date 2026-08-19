@@ -164,14 +164,16 @@ final class HotkeyMonitor {
         }
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(mask),
-            callback: callback,
-            userInfo: refcon
-        ) else {
+        guard
+            let tap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: .defaultTap,
+                eventsOfInterest: CGEventMask(mask),
+                callback: callback,
+                userInfo: refcon
+            )
+        else {
             AppLog.error(
                 .hotkey,
                 "Não foi possível instalar o interceptor de teclado — conceda Monitoramento de Entrada em Ajustes › Privacidade"
@@ -179,8 +181,8 @@ final class HotkeyMonitor {
             if !didPromptInputMonitoring {
                 didPromptInputMonitoring = true
                 DispatchQueue.main.async {
-                    _ = Permissions.requestInputMonitoring()
-                    Permissions.openInputMonitoringSettings()
+                    guard !Permissions.shouldDeferAutomaticPrompts else { return }
+                    Permissions.registerInputMonitoringIfNeeded()
                 }
             }
             DispatchQueue.main.async { self.onTapStatusChange?(false) }
@@ -259,10 +261,10 @@ final class HotkeyMonitor {
 
         // Enter mode: plain Return/Enter translates and sends (text fields only)
         if enterMode,
-           (keyCode == Int64(kVK_Return) || keyCode == Int64(kVK_ANSI_KeypadEnter)),
-           !flags.contains(.maskCommand),
-           !flags.contains(.maskAlternate),
-           !flags.contains(.maskControl)
+            keyCode == Int64(kVK_Return) || keyCode == Int64(kVK_ANSI_KeypadEnter),
+            !flags.contains(.maskCommand),
+            !flags.contains(.maskAlternate),
+            !flags.contains(.maskControl)
         {
             let editable = FocusedTextIO.isFocusedTextEditable()
             if editable {

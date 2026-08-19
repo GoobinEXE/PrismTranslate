@@ -1,5 +1,5 @@
-import Foundation
 import AppKit
+import Foundation
 
 enum TranslationPresentation: Equatable {
     /// Translate and replace in place when editable; otherwise show popup (copy only).
@@ -183,9 +183,9 @@ final class TranslationOrchestrator {
             // está no idioma de leitura, o par auto→pt é recusado pela Apple — usa o de escrita.
             var usedOutgoingPair = capture.isEditable
             if !capture.isEditable,
-               let detected,
-               LanguageCode.normalize(detected) == LanguageCode.normalize(incomingTo),
-               LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(incomingTo)
+                let detected,
+                LanguageCode.normalize(detected) == LanguageCode.normalize(incomingTo),
+                LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(incomingTo)
             {
                 usedOutgoingPair = true
                 AppLog.info(
@@ -210,7 +210,8 @@ final class TranslationOrchestrator {
                     to: to
                 )
             } catch {
-                let canRetryOutgoing = !usedOutgoingPair
+                let canRetryOutgoing =
+                    !usedOutgoingPair
                     && LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(incomingTo)
                     && (error as? TranslationError)?.isUnsupportedLanguagePair == true
                 guard canRetryOutgoing else { throw error }
@@ -236,29 +237,16 @@ final class TranslationOrchestrator {
             )
             AppLog.info(.orchestrator, "Prévia traduzida: \"\(AppLog.preview(outcome.text))\"")
 
-            let output = preserveSurroundingWhitespace(original: capture.text, translated: outcome.text)
+            let output = preserveSurroundingWhitespace(
+                original: capture.text, translated: outcome.text)
 
-            let showPanel: Bool
-            let canReplace: Bool
-            let sendAfter: Bool
-            // Discord/Electron compose: AX read-only + outgoing heuristic, or clipboard read
-            // with selection in the bottom compose band (chat highlight stays mid-window).
-            let inComposeBand = FocusedTextIO.selectionLikelyInComposeBand(capture.selectionScreenRect)
-            let composeLikeWrite = preferReplaceInPlace
-                && !capture.isEditable
-                && usedOutgoingPair
-                && (!capture.usedClipboardForRead || inComposeBand)
-            let replaceInField = capture.isEditable || composeLikeWrite
-            switch presentation {
-            case .replaceInPlace(let send):
-                showPanel = !replaceInField
-                canReplace = false
-                sendAfter = send
-            case .popup:
-                showPanel = true
-                canReplace = replaceInField
-                sendAfter = false
-            }
+            let action = TranslationActionPolicy.resolve(
+                presentation: presentation,
+                capture: capture
+            )
+            let showPanel = action.showPanel
+            let canReplace = action.canReplace
+            let sendAfter = action.sendAfter
 
             if showPanel {
                 let sourceLabel: String
@@ -270,7 +258,8 @@ final class TranslationOrchestrator {
                     sourceLabel = LanguageCode.displayName(for: LanguageCode.systemLanguage)
                 }
                 let targetLabel = LanguageCode.displayName(for: to)
-                let replaceHint = canReplace
+                let replaceHint =
+                    canReplace
                     ? "botão Substituir habilitado (⏎)"
                     : "só Copiar (⌘C) — campo não é editável"
                 AppLog.step(
@@ -379,7 +368,8 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Não deu para substituir o texto: \(error.localizedDescription)"
             )
-            AppLog.debug(.orchestrator, "Erro técnico na substituição: \(String(describing: error))")
+            AppLog.debug(
+                .orchestrator, "Erro técnico na substituição: \(String(describing: error))")
             onStatusChange?(.error(error.localizedDescription))
         }
     }
@@ -417,6 +407,7 @@ final class TranslationOrchestrator {
     private func preserveSurroundingWhitespace(original: String, translated: String) -> String {
         let leading = original.prefix(while: { $0.isWhitespace })
         let trailing = original.reversed().prefix(while: { $0.isWhitespace }).reversed()
-        return String(leading) + translated.trimmingCharacters(in: .whitespacesAndNewlines) + String(trailing)
+        return String(leading) + translated.trimmingCharacters(in: .whitespacesAndNewlines)
+            + String(trailing)
     }
 }

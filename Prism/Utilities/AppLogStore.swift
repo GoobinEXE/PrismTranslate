@@ -85,7 +85,7 @@ enum AppLogCategory: String, Codable, CaseIterable, Identifiable {
     }
 
     fileprivate var osLogger: Logger {
-        Logger(subsystem: "com.marcelopessoa.prism", category: title)
+        Logger(subsystem: AppRelease.bundleIdentifier, category: title)
     }
 }
 
@@ -142,10 +142,12 @@ final class AppLogStore: ObservableObject {
     private var buffer: [AppLogEntry] = []
     private var currentRunID: String?
     private let fileURL: URL
-    private let fileQueue = DispatchQueue(label: "com.marcelopessoa.prism.applog.file", qos: .utility)
+    private let fileQueue = DispatchQueue(
+        label: "com.marcelopessoa.prism.applog.file", qos: .utility)
 
     private init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let support =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         let dir = support.appendingPathComponent("Prism", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -202,7 +204,8 @@ final class AppLogStore: ObservableObject {
         lock.lock()
         let snapshot = buffer
         lock.unlock()
-        return snapshot
+        return
+            snapshot
             .filter { $0.level >= minimumLevel }
             .map(\.exportLine)
             .joined(separator: "\n")
@@ -312,7 +315,7 @@ final class AppLogStore: ObservableObject {
 
     private func loadTailFromDisk() {
         guard let data = try? Data(contentsOf: fileURL), !data.isEmpty,
-              let text = String(data: data, encoding: .utf8)
+            let text = String(data: data, encoding: .utf8)
         else { return }
 
         let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
@@ -425,8 +428,8 @@ enum AppLogExport {
     }
 }
 
-private extension UTType {
-    static var log: UTType {
+extension UTType {
+    fileprivate static var log: UTType {
         UTType(filenameExtension: "log") ?? .plainText
     }
 }
@@ -485,7 +488,8 @@ enum AppLog {
 
     /// Prévia curta de texto (quebras viram ⏎) para o log ficar legível.
     static func preview(_ text: String, max: Int = 80) -> String {
-        let flat = text
+        let flat =
+            text
             .replacingOccurrences(of: "\n", with: "⏎")
             .replacingOccurrences(of: "\t", with: "⇥")
         if flat.count <= max { return flat }
@@ -507,7 +511,8 @@ enum AppLog {
 
     /// Corpo HTTP enxuto — sem quebras, limitado, para caber numa linha.
     static func httpBodyPreview(_ body: String, max: Int = 240) -> String {
-        let flat = body
+        let flat =
+            body
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !flat.isEmpty else { return "(vazio)" }
@@ -638,7 +643,8 @@ enum ProviderLog {
         }
         guard (200..<300).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            failed(category, engine: engine, status: http.statusCode, since: started, body: bodyText)
+            failed(
+                category, engine: engine, status: http.statusCode, since: started, body: bodyText)
             throw TranslationError.httpStatus(http.statusCode, bodyText)
         }
         return (http, data)

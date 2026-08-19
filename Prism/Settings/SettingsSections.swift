@@ -545,6 +545,7 @@ struct ShortcutsSettingsView: View {
 struct PermissionsSettingsView: View {
     @State private var accessibilityOK = Permissions.isAccessibilityTrusted()
     @State private var inputMonitoringOK = Permissions.isInputMonitoringGranted()
+    @State private var didRegisterPrompts = false
 
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
@@ -557,7 +558,6 @@ struct PermissionsSettingsView: View {
                     pendingText: "Accessibility required",
                     caption: "Read and replace text in the focused field.",
                     open: {
-                        _ = Permissions.isAccessibilityTrusted(prompt: true)
                         Permissions.openAccessibilitySettings()
                     }
                 )
@@ -567,17 +567,24 @@ struct PermissionsSettingsView: View {
                     pendingText: "Input Monitoring required",
                     caption: "Captures global shortcuts (⌃⌥T, ⌃⌥⏎) in any app.",
                     open: {
-                        _ = Permissions.requestInputMonitoring()
                         Permissions.openInputMonitoringSettings()
                     }
                 )
             }
         }
         .formStyle(.grouped)
+        .onAppear(perform: registerPrivacyPromptsOnce)
         .onReceive(timer) { _ in
             accessibilityOK = Permissions.isAccessibilityTrusted()
             inputMonitoringOK = Permissions.isInputMonitoringGranted()
         }
+    }
+
+    private func registerPrivacyPromptsOnce() {
+        guard !didRegisterPrompts else { return }
+        didRegisterPrompts = true
+        Permissions.registerAccessibilityPromptIfNeeded()
+        Permissions.registerInputMonitoringIfNeeded()
     }
 
     private func permissionRow(

@@ -8,7 +8,7 @@ enum KeychainStore {
         case openAIAPIKey = "openAIAPIKey"
     }
 
-    private static let service = "com.marcelopessoa.prism"
+    private static var service: String { AppRelease.bundleIdentifier }
 
     static func string(for key: Key) -> String? {
         let query: [String: Any] = [

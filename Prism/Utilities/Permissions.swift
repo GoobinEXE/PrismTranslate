@@ -50,15 +50,20 @@ enum Permissions {
         }
     }
 
-    static func promptIfNeeded() {
-        let defaults = UserDefaults.standard
-        let key = "didPromptPermissions"
-        guard !defaults.bool(forKey: key) else {
-            _ = isAccessibilityTrusted(prompt: false)
-            return
-        }
-        defaults.set(true, forKey: key)
+    /// Evita prompts automáticos enquanto o onboarding ainda não concluiu.
+    static var shouldDeferAutomaticPrompts: Bool {
+        !OnboardingController.hasCompleted
+    }
+
+    /// Registra o app nas listas de privacidade (sem abrir Ajustes).
+    /// Chame no máximo uma vez por tipo, quando o utilizador chega ao passo correspondente.
+    static func registerAccessibilityPromptIfNeeded() {
+        guard !isAccessibilityTrusted() else { return }
         _ = isAccessibilityTrusted(prompt: true)
+    }
+
+    static func registerInputMonitoringIfNeeded() {
+        guard !isInputMonitoringGranted() else { return }
         _ = requestInputMonitoring()
     }
 }

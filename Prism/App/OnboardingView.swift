@@ -20,6 +20,8 @@ struct OnboardingView: View {
     @State private var stepIndex = 0
     @State private var accessibilityOK = Permissions.isAccessibilityTrusted()
     @State private var inputMonitoringOK = Permissions.isInputMonitoringGranted()
+    @State private var didRegisterAccessibilityPrompt = false
+    @State private var didRegisterInputMonitoringPrompt = false
     @State private var packState: LanguagePackState = .checking
     @State private var didAutoAttemptDownload = false
 
@@ -89,7 +91,13 @@ struct OnboardingView: View {
         }
         .frame(width: 480, height: 520)
         .background(windowBackground)
-        .onAppear(perform: refreshPermissions)
+        .onAppear {
+            refreshPermissions()
+            registerPrivacyPromptIfNeeded(for: stepIndex)
+        }
+        .onChange(of: stepIndex) { _, newIndex in
+            registerPrivacyPromptIfNeeded(for: newIndex)
+        }
         .onReceive(timer) { _ in
             refreshPermissions()
         }
@@ -199,7 +207,6 @@ struct OnboardingView: View {
                     okTitle: "Accessibility granted",
                     pendingTitle: "Accessibility required"
                 ) {
-                    _ = Permissions.isAccessibilityTrusted(prompt: true)
                     Permissions.openAccessibilitySettings()
                     refreshPermissions()
                 }
@@ -216,7 +223,6 @@ struct OnboardingView: View {
                     okTitle: "Input Monitoring granted",
                     pendingTitle: "Input Monitoring required"
                 ) {
-                    _ = Permissions.requestInputMonitoring()
                     Permissions.openInputMonitoringSettings()
                     refreshPermissions()
                 }
@@ -618,6 +624,21 @@ struct OnboardingView: View {
                 )
                 packState = current == .installed ? .installed : .failed(error.localizedDescription)
             }
+        }
+    }
+
+    private func registerPrivacyPromptIfNeeded(for index: Int) {
+        switch index {
+        case 1:
+            guard !accessibilityOK, !didRegisterAccessibilityPrompt else { return }
+            didRegisterAccessibilityPrompt = true
+            Permissions.registerAccessibilityPromptIfNeeded()
+        case 2:
+            guard !inputMonitoringOK, !didRegisterInputMonitoringPrompt else { return }
+            didRegisterInputMonitoringPrompt = true
+            Permissions.registerInputMonitoringIfNeeded()
+        default:
+            break
         }
     }
 

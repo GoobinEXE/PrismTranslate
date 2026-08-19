@@ -164,14 +164,17 @@ final class AppState: ObservableObject {
                 self.appleBridge.prewarm(from: pair.source, to: pair.target)
             }
             if OnboardingController.hasCompleted {
-                Permissions.promptIfNeeded()
-                if !Permissions.isInputMonitoringGranted() {
-                    AppLog.warning(.permissions, "Monitoramento de Entrada ausente — solicitando permissão")
-                    _ = Permissions.requestInputMonitoring()
+                if !Permissions.isAccessibilityTrusted() || !Permissions.isInputMonitoringGranted() {
+                    AppLog.info(
+                        .permissions,
+                        "Permissões pendentes — use o menu ou Configurações › Permissões (sem prompt automático no arranque)"
+                    )
                 }
             } else {
                 AppLog.info(.app, "Onboarding pendente — abrindo o tutorial")
-                OnboardingController.shared.showIfNeeded()
+                DispatchQueue.main.async {
+                    OnboardingController.shared.showIfNeeded()
+                }
             }
         }
     }
@@ -200,8 +203,9 @@ final class AppState: ObservableObject {
     }
 
     func showOnboarding() {
-        SettingsNavigation.closeMenuBarExtra()
-        OnboardingController.shared.show()
+        DispatchQueue.main.async {
+            OnboardingController.shared.show(closeMenuBarAfterPresent: true)
+        }
     }
 
     func rememberSettingsSection(_ section: SettingsSection) {

@@ -10,12 +10,16 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private var hosting: NSView?
 
-    static var hasCompleted: Bool {
+    nonisolated static var hasCompleted: Bool {
         UserDefaults.standard.bool(forKey: completedKey)
     }
 
-    static func markCompleted() {
+    nonisolated static func markCompleted() {
         UserDefaults.standard.set(true, forKey: completedKey)
+    }
+
+    var isVisible: Bool {
+        panel?.isVisible == true
     }
 
     func showIfNeeded() {
@@ -23,13 +27,17 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         show()
     }
 
-    func show() {
-        SettingsNavigation.closeMenuBarExtra()
+    /// - Parameter closeMenuBarAfterPresent: fecha o painel do MenuBarExtra **depois** de
+    ///   apresentar o tutorial (evita perder foco num app só menu bar).
+    func show(closeMenuBarAfterPresent: Bool = false) {
         DockIconController.shared.retain(.onboarding)
 
         if let panel, panel.isVisible {
             NSApp.activate(ignoringOtherApps: true)
             panel.makeKeyAndOrderFront(nil)
+            if closeMenuBarAfterPresent {
+                SettingsNavigation.closeMenuBarExtra()
+            }
             return
         }
 
@@ -74,6 +82,10 @@ final class OnboardingController: NSObject, NSWindowDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
         self.panel = panel
+
+        if closeMenuBarAfterPresent {
+            SettingsNavigation.closeMenuBarExtra()
+        }
     }
 
     func close() {

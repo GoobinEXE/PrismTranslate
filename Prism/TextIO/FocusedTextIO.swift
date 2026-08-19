@@ -14,7 +14,10 @@ enum FocusedTextIOError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .accessibilityDenied:
-            return String(localized: "Accessibility permission required — open System Settings › Privacy › Accessibility")
+            return String(
+                localized:
+                    "Accessibility permission required — open System Settings › Privacy › Accessibility"
+            )
         case .noFocusedElement:
             return String(localized: "No focused text field")
         case .noSelectionInReadOnly:
@@ -24,9 +27,13 @@ enum FocusedTextIOError: LocalizedError, Equatable {
         case .writeFailed:
             return String(localized: "Couldn’t replace the text")
         case .readFallbackFailed:
-            return String(localized: "Failed to read the field (Accessibility and clipboard fallback both failed)")
+            return String(
+                localized:
+                    "Failed to read the field (Accessibility and clipboard fallback both failed)")
         case .writeFallbackFailed:
-            return String(localized: "Failed to replace the text (Accessibility and clipboard fallback both failed)")
+            return String(
+                localized:
+                    "Failed to replace the text (Accessibility and clipboard fallback both failed)")
         }
     }
 }
@@ -90,7 +97,7 @@ final class FocusedTextIO {
         kAXTextFieldRole as String,
         kAXTextAreaRole as String,
         kAXComboBoxRole as String,
-        "AXSearchField"
+        "AXSearchField",
     ]
 
     /// True when the focused UI element looks like an editable text field/area.
@@ -128,11 +135,15 @@ final class FocusedTextIO {
         }
 
         var settable = DarwinBoolean(false)
-        if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success,
-           settable.boolValue {
+        if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable)
+            == .success,
+            settable.boolValue
+        {
             var valueRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success,
-               valueRef is String {
+            if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef)
+                == .success,
+                valueRef is String
+            {
                 return true
             }
         }
@@ -142,7 +153,10 @@ final class FocusedTextIO {
 
     private static func roleString(of element: AXUIElement) -> String? {
         var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success else {
+        guard
+            AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
+                == .success
+        else {
             return nil
         }
         return roleRef as? String
@@ -150,7 +164,8 @@ final class FocusedTextIO {
 
     private static func boolAttribute(_ element: AXUIElement, _ name: String) -> Bool? {
         var ref: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, name as CFString, &ref) == .success, let ref else {
+        guard AXUIElementCopyAttributeValue(element, name as CFString, &ref) == .success, let ref
+        else {
             return nil
         }
         if let number = ref as? NSNumber {
@@ -164,8 +179,11 @@ final class FocusedTextIO {
 
     private static func parentElement(of element: AXUIElement) -> AXUIElement? {
         var parentRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success,
-              let parentRef else {
+        guard
+            AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef)
+                == .success,
+            let parentRef
+        else {
             return nil
         }
         return (parentRef as! AXUIElement)
@@ -200,10 +218,14 @@ final class FocusedTextIO {
             // Mail/WebKit AXWebArea often omits AXSelectedText even when the user highlighted
             // text — still try ⌘C on the existing selection before asking them to select.
             if error == .noSelectionInReadOnly {
-                AppLog.warning(.textIO, "Acessibilidade sem seleção — tentando copiar a seleção existente (⌘C)")
+                AppLog.warning(
+                    .textIO, "Acessibilidade sem seleção — tentando copiar a seleção existente (⌘C)"
+                )
             } else if error == .readFallbackFailed {
                 // Editable host without AXValue — expected path into ⌘A+⌘C.
-                AppLog.debug(.textIO, "Acessibilidade sem AXValue no campo editável — tentando clipboard (⌘A+⌘C)")
+                AppLog.debug(
+                    .textIO,
+                    "Acessibilidade sem AXValue no campo editável — tentando clipboard (⌘A+⌘C)")
             } else {
                 AppLog.warning(
                     .textIO,
@@ -214,46 +236,33 @@ final class FocusedTextIO {
 
         // Clipboard fallback strategy:
         // 1) Always prefer ⌘C of the *existing* selection first (Discord chat highlight, PDF, etc.).
-        // 2) Only ⌘A+⌘C when there is no selection AND the host looks editable (or AX-blind
-        //    compose with no highlight — never ⌘A when the user already highlighted text).
-        // Past bug: treating noFocusedElement as editable and ⌘A'ing first grabbed the whole
-        // Discord conversation and pasted it into the compose box.
-        let composeAnchor = Self.mouseAnchorRect()
-        let inComposeBand = Self.selectionLikelyInComposeBand(composeAnchor)
-        let maySelectAllIfNoSelection = isEditable
-            || (axError == .noFocusedElement && (!allowSelectAllWhenEditable || inComposeBand))
-            || (allowSelectAllWhenEditable && axError != .noFocusedElement && (isEditable || inComposeBand))
-        // AX confirmed no selection — skip ⌘C-only (step 1) and go straight to ⌘A+⌘C.
-        let goDirectlyToSelectAll = allowSelectAllWhenEditable && maySelectAllIfNoSelection && (
-            (isEditable && axError == .readFallbackFailed)
-                || (axError == .noFocusedElement && inComposeBand)
-                || (axError == .noSelectionInReadOnly && inComposeBand)
-        )
+        // 2) ⌘A+⌘C when step 1 found no selection — editable AX host OR Electron (noFocusedElement).
+        // Step 2 only runs after step 1 throws; never skips ⌘C when chat is still highlighted.
+        let maySelectAllIfNoSelection =
+            isEditable
+            || (allowSelectAllWhenEditable
+                && (axError == .readFallbackFailed || axError == .noFocusedElement))
 
         // Step 1: copy existing selection only (never ⌘A).
-        if !goDirectlyToSelectAll {
-            do {
-                let text = try await readViaClipboard(selectAllFirst: false)
-                let treatAsEditable = Self.editableFlagForClipboardCapture(
-                    preferReplaceInPlace: preferReplaceInPlace,
-                    axError: axError,
-                    isEditable: isEditable,
-                    selectionAnchor: composeAnchor
-                )
-                AppLog.info(
-                    .textIO,
-                    "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
-                )
-                return FocusedTextCapture(
-                    text: text,
-                    didSelectAll: false,
-                    usedClipboardForRead: true,
-                    isEditable: treatAsEditable,
-                    selectionScreenRect: composeAnchor
-                )
-            } catch {
-                AppLog.debug(.textIO, "Clipboard sem seleção existente — \(error.localizedDescription)")
-            }
+        do {
+            let text = try await readViaClipboard(selectAllFirst: false)
+            let treatAsEditable = Self.editableFlagForClipboardCapture(
+                preferReplaceInPlace: preferReplaceInPlace,
+                axError: axError,
+                isEditable: isEditable
+            )
+            AppLog.info(
+                .textIO,
+                "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
+            )
+            return FocusedTextCapture(
+                text: text,
+                didSelectAll: false,
+                usedClipboardForRead: true,
+                isEditable: treatAsEditable
+            )
+        } catch {
+            AppLog.debug(.textIO, "Clipboard sem seleção existente — \(error.localizedDescription)")
         }
 
         // Step 2: no selection — select-all only for editable / AX-blind compose.
@@ -264,13 +273,15 @@ final class FocusedTextIO {
 
         do {
             let text = try await readViaClipboard(selectAllFirst: true)
-            AppLog.info(.textIO, "Leitura via clipboard (⌘A + ⌘C no campo inteiro): \(text.count) caracteres")
+            let treatAsEditable = isEditable || axError == .readFallbackFailed || axError == .noFocusedElement
+            AppLog.info(
+                .textIO,
+                "Leitura via clipboard (⌘A + ⌘C no campo inteiro): \(text.count) caracteres")
             return FocusedTextCapture(
                 text: text,
                 didSelectAll: true,
                 usedClipboardForRead: true,
-                isEditable: true,
-                selectionScreenRect: composeAnchor
+                isEditable: treatAsEditable
             )
         } catch {
             AppLog.error(.textIO, "Clipboard também falhou: \(error.localizedDescription)")
@@ -286,11 +297,16 @@ final class FocusedTextIO {
     /// Re-selects the whole field when the capture used select-all (selection often drops during async translate).
     func replaceSelection(_ capture: FocusedTextCapture, with text: String) async throws {
         if capture.usedClipboardForRead {
-            AppLog.debug(.textIO, "Substituição: pulando Acessibilidade (leitura foi via clipboard); colando direto")
+            AppLog.debug(
+                .textIO,
+                "Substituição: pulando Acessibilidade (leitura foi via clipboard); colando direto")
         } else {
-            AppLog.debug(.textIO, "Substituição: tentando Acessibilidade (campo inteiro=\(capture.didSelectAll))")
+            AppLog.debug(
+                .textIO,
+                "Substituição: tentando Acessibilidade (campo inteiro=\(capture.didSelectAll))")
             do {
-                try writeViaAccessibility(text, preferSelectionOnly: true, previousText: capture.text)
+                try writeViaAccessibility(
+                    text, preferSelectionOnly: true, previousText: capture.text)
                 AppLog.info(.textIO, "Escrita via Acessibilidade confirmada")
                 // AX path may still hold a pending borrow from a prior attempt; flush it.
                 restorePendingUserPasteboard(after: 0.35)
@@ -309,7 +325,8 @@ final class FocusedTextIO {
         // After a bogus AX "success", selection may still be intact — paste into it.
         // AX-blind clipboard reads copied an existing highlight: never ⌘A (Discord would
         // select the whole conversation). Only ⌘A when the capture itself was select-all.
-        let hasSelection = Self.focusedElement().flatMap { selectedText(of: $0) }.map { !$0.isEmpty } ?? false
+        let hasSelection =
+            Self.focusedElement().flatMap { selectedText(of: $0) }.map { !$0.isEmpty } ?? false
         let selectAllFirst: Bool
         if capture.didSelectAll {
             selectAllFirst = true
@@ -333,50 +350,23 @@ final class FocusedTextIO {
     }
 
     /// Whether a clipboard read should be treated as an editable field for replace-in-place.
-    private static func editableFlagForClipboardCapture(
+    /// Uses AX focus context at capture time — never mouse position.
+    static func editableFlagForClipboardCapture(
         preferReplaceInPlace: Bool,
         axError: FocusedTextIOError,
-        isEditable: Bool,
-        selectionAnchor: CGRect
+        isEditable: Bool
     ) -> Bool {
         guard preferReplaceInPlace else { return isEditable }
         switch axError {
-        case .noFocusedElement:
-            // Discord chat highlight — mid-window, no AX focus. Compose — bottom band.
-            return selectionLikelyInComposeBand(selectionAnchor)
+        case .noFocusedElement, .noSelectionInReadOnly:
+            // Step 1: existing highlight while AX-blind — panel (chat/PDF safety).
+            // Compose without selection uses step 2 (⌘A+⌘C) via maySelectAllIfNoSelection.
+            return false
         case .readFallbackFailed:
-            // AX-blind compose (Mail WebArea, Electron) — replace in field.
             return true
-        case .noSelectionInReadOnly:
-            // Partial selection AX can't see but ⌘C captured — focused host exists (compose).
-            return focusedElement() != nil
         default:
             return isEditable
         }
-    }
-
-    /// Electron apps (Discord): compose sits in the bottom ~30% of the window; chat above.
-    static func selectionLikelyInComposeBand(_ selection: CGRect?) -> Bool {
-        guard let selection, !selection.isNull, selection.width >= 0, selection.height >= 0 else {
-            return false
-        }
-        guard let window = frontmostWindowFrame(), window.height > 80 else { return false }
-        let relativeFromBottom = (selection.midY - window.minY) / window.height
-        return relativeFromBottom < 0.30
-    }
-
-    static func frontmostWindowFrame() -> CGRect? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        var windowRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            appElement,
-            kAXFocusedWindowAttribute as CFString,
-            &windowRef
-        ) == .success, let windowRef else {
-            return nil
-        }
-        return elementScreenRect(of: windowRef as! AXUIElement)
     }
 
     // MARK: - Accessibility
@@ -384,11 +374,13 @@ final class FocusedTextIO {
     private static func focusedElement() -> AXUIElement? {
         let systemWide = AXUIElementCreateSystemWide()
         var focusedRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedRef
-        ) == .success, let focused = focusedRef else {
+        guard
+            AXUIElementCopyAttributeValue(
+                systemWide,
+                kAXFocusedUIElementAttribute as CFString,
+                &focusedRef
+            ) == .success, let focused = focusedRef
+        else {
             return nil
         }
         return (focused as! AXUIElement)
@@ -405,8 +397,10 @@ final class FocusedTextIO {
 
         // Log element role / AXEditable for diagnostics (Mail WebArea, Electron, etc.).
         let role = Self.roleString(of: element) ?? "desconhecido"
-        let axEditable = Self.boolAttribute(element, "AXEditable").map { $0 ? "true" : "false" } ?? "nil"
-        AppLog.debug(.textIO, 
+        let axEditable =
+            Self.boolAttribute(element, "AXEditable").map { $0 ? "true" : "false" } ?? "nil"
+        AppLog.debug(
+            .textIO,
             "📖 AX elemento focado: role=\(role), AXEditable=\(axEditable), editable=\(isEditable)"
         )
 
@@ -414,7 +408,8 @@ final class FocusedTextIO {
         if let selected = selectedText(of: element) {
             AppLog.debug(.textIO, "📖 AX selectedText: \(selected.count) chars")
             if !selected.isEmpty {
-                let rect = Self.selectionScreenRect(of: element) ?? Self.elementScreenRect(of: element)
+                let rect =
+                    Self.selectionScreenRect(of: element) ?? Self.elementScreenRect(of: element)
                 return FocusedTextCapture(
                     text: selected,
                     didSelectAll: false,
@@ -432,38 +427,22 @@ final class FocusedTextIO {
             throw FocusedTextIOError.noSelectionInReadOnly
         }
 
-        // 2) No selection — auto-select entire field contents (editable only).
-        if let value = stringValue(of: element) {
-            AppLog.debug(.textIO, "📖 AX stringValue: \(value.count) chars")
-            guard !value.isEmpty else {
-                AppLog.debug(.textIO, "📖 AX stringValue vazio — nenhum texto para traduzir")
-                throw FocusedTextIOError.noFocusedElement
-            }
-            // Best-effort AX select-all. Electron often ignores the range; replace still does ⌘A+⌘V.
-            let selectResult = selectAll(in: element, length: value.utf16.count)
-            AppLog.debug(.textIO, "📖 AX selectAll: \(selectResult ? "OK" : "falhou")")
-            let rect = Self.selectionScreenRect(of: element) ?? Self.elementScreenRect(of: element)
-            return FocusedTextCapture(
-                text: value,
-                didSelectAll: true,
-                isEditable: true,
-                selectionScreenRect: rect
-            )
-        }
-
-        // Editable but no AXValue (typical Mail/WebKit AXWebArea) — caller falls back to ⌘A+⌘C.
-        AppLog.debug(.textIO, "📖 AX stringValue: nil — editável sem AXValue, deferindo para clipboard")
+        // Editable but no AX selection — defer to clipboard (⌘C on existing highlight first, then ⌘A+⌘C).
+        AppLog.debug(
+            .textIO, "📖 AX editável sem seleção — deferindo para clipboard (⌘C antes de ⌘A)")
         throw FocusedTextIOError.readFallbackFailed
     }
 
     /// Cocoa-screen rect for the current selected text range, if AX exposes it.
     private static func selectionScreenRect(of element: AXUIElement) -> CGRect? {
         var rangeRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextRangeAttribute as CFString,
-            &rangeRef
-        ) == .success, let rangeRef else {
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                &rangeRef
+            ) == .success, let rangeRef
+        else {
             return nil
         }
 
@@ -477,7 +456,9 @@ final class FocusedTextIO {
         guard status == .success, let boundsRef else { return nil }
 
         var axRect = CGRect.zero
-        guard AXValueGetValue(boundsRef as! AXValue, .cgRect, &axRect), !axRect.isNull, !axRect.isEmpty else {
+        guard AXValueGetValue(boundsRef as! AXValue, .cgRect, &axRect), !axRect.isNull,
+            !axRect.isEmpty
+        else {
             return nil
         }
         return cocoaScreenRect(fromAX: axRect)
@@ -486,16 +467,19 @@ final class FocusedTextIO {
     private static func elementScreenRect(of element: AXUIElement) -> CGRect? {
         var posRef: CFTypeRef?
         var sizeRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &posRef) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success,
-              let posRef, let sizeRef
+        guard
+            AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &posRef)
+                == .success,
+            AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef)
+                == .success,
+            let posRef, let sizeRef
         else {
             return nil
         }
         var point = CGPoint.zero
         var size = CGSize.zero
         guard AXValueGetValue(posRef as! AXValue, .cgPoint, &point),
-              AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+            AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
         else {
             return nil
         }
@@ -506,7 +490,8 @@ final class FocusedTextIO {
 
     /// AX uses top-left origin on the primary display; Cocoa uses bottom-left.
     private static func cocoaScreenRect(fromAX axRect: CGRect) -> CGRect {
-        let primaryHeight = NSScreen.screens.first?.frame.height
+        let primaryHeight =
+            NSScreen.screens.first?.frame.height
             ?? NSScreen.main?.frame.height
             ?? 0
         return CGRect(
@@ -515,11 +500,6 @@ final class FocusedTextIO {
             width: axRect.width,
             height: axRect.height
         )
-    }
-
-    private static func mouseAnchorRect() -> CGRect {
-        let p = NSEvent.mouseLocation
-        return CGRect(x: p.x - 1, y: p.y - 1, width: 2, height: 2)
     }
 
     private func writeViaAccessibility(
@@ -543,14 +523,21 @@ final class FocusedTextIO {
                     text as CFTypeRef
                 )
                 if status == .success {
-                    if axWriteTookEffect(on: element, expected: text, previous: previousText, viaSelection: true) {
+                    if axWriteTookEffect(
+                        on: element, expected: text, previous: previousText, viaSelection: true)
+                    {
                         return
                     }
-                    AppLog.warning(.textIO, "Acessibilidade disse sucesso mas o texto não mudou (falso positivo) — tentando outro caminho")
+                    AppLog.warning(
+                        .textIO,
+                        "Acessibilidade disse sucesso mas o texto não mudou (falso positivo) — tentando outro caminho"
+                    )
                     // Confirmed no-op: skip setValue — Chromium often mirrors AXValue after Set without
                     // updating the real editor, which would look like a verified setValue success.
                     if text != previousText,
-                       selectedText(of: element) == previousText || stringValue(of: element) == previousText {
+                        selectedText(of: element) == previousText
+                            || stringValue(of: element) == previousText
+                    {
                         throw FocusedTextIOError.writeFailed
                     }
                 } else {
@@ -568,10 +555,14 @@ final class FocusedTextIO {
             text as CFTypeRef
         )
         if setValue == .success {
-            if axWriteTookEffect(on: element, expected: text, previous: previousText, viaSelection: false) {
+            if axWriteTookEffect(
+                on: element, expected: text, previous: previousText, viaSelection: false)
+            {
                 return
             }
-            AppLog.warning(.textIO, "Acessibilidade disse sucesso ao setValue mas o texto não mudou (falso positivo)")
+            AppLog.warning(
+                .textIO,
+                "Acessibilidade disse sucesso ao setValue mas o texto não mudou (falso positivo)")
         } else {
             AppLog.debug(.textIO, "✏️ AX setValue falhou: status=\(setValue.rawValue)")
         }
@@ -596,7 +587,8 @@ final class FocusedTextIO {
                 return true
             }
             if expected != previous,
-               selectedText(of: element) == previous || stringValue(of: element) == previous {
+                selectedText(of: element) == previous || stringValue(of: element) == previous
+            {
                 AppLog.debug(.textIO, "✏️ AX verify: conteúdo ainda é o original")
             }
             return false
@@ -617,11 +609,13 @@ final class FocusedTextIO {
 
         // Mail/WebKit often omits AXSelectedText but still exposes range + stringForRange.
         var rangeRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextRangeAttribute as CFString,
-            &rangeRef
-        ) == .success, let rangeRef else {
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                &rangeRef
+            ) == .success, let rangeRef
+        else {
             return nil
         }
 
@@ -638,11 +632,13 @@ final class FocusedTextIO {
 
     private func stringValue(of element: AXUIElement) -> String? {
         var valueRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXValueAttribute as CFString,
-            &valueRef
-        ) == .success else {
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXValueAttribute as CFString,
+                &valueRef
+            ) == .success
+        else {
             return nil
         }
         return valueRef as? String
@@ -682,16 +678,18 @@ final class FocusedTextIO {
         var waited: UInt64 = 0
         while waited < timeoutNanoseconds {
             if pasteboard.changeCount != afterChangeCount,
-               let text = pasteboard.string(forType: .string),
-               !text.isEmpty {
+                let text = pasteboard.string(forType: .string),
+                !text.isEmpty
+            {
                 return text
             }
             try await Task.sleep(nanoseconds: pollNs)
             waited += pollNs
         }
         if pasteboard.changeCount != afterChangeCount,
-           let text = pasteboard.string(forType: .string),
-           !text.isEmpty {
+            let text = pasteboard.string(forType: .string),
+            !text.isEmpty
+        {
             return text
         }
         throw FocusedTextIOError.emptyClipboard
@@ -763,7 +761,9 @@ final class FocusedTextIO {
         backup.restore(after: 0.45, onlyIfChangeCount: changeCountAtPaste)
     }
 
-    private func restorePendingUserPasteboard(after delay: TimeInterval, onlyIfChangeCount: Int? = nil) {
+    private func restorePendingUserPasteboard(
+        after delay: TimeInterval, onlyIfChangeCount: Int? = nil
+    ) {
         guard let backup = pendingUserPasteboard else { return }
         pendingUserPasteboard = nil
         AppLog.debug(.textIO, "📋 restaurando clipboard do usuário (pending session)")
