@@ -31,6 +31,19 @@ final class TranslationErrorHTTPTests: XCTestCase {
         XCTAssertTrue(message.contains("API key"))
     }
 
+    func testGoogleAPIKeyNotValidMapsToUnauthorized() {
+        let body = #"{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT"}}"#
+        XCTAssertEqual(
+            TranslationError.classifyHTTPFailure(statusCode: 400, body: body),
+            .unauthorized
+        )
+        let message = TranslationError.userFacingHTTPMessage(statusCode: 400, body: body)
+        XCTAssertTrue(
+            message.localizedCaseInsensitiveContains("API key")
+                || message.localizedCaseInsensitiveContains("chave")
+        )
+    }
+
     func testExtractsOpenAIStyleMessageForOtherErrors() {
         let body = #"{"error":{"message":"Model not found"}}"#
         let message = TranslationError.userFacingHTTPMessage(statusCode: 404, body: body)

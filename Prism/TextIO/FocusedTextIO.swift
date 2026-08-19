@@ -217,9 +217,10 @@ final class FocusedTextIO {
         // Step 1: copy existing selection only (never ⌘A).
         do {
             let text = try await readViaClipboard(selectAllFirst: false)
-            // Selection existed. AX-blind hosts cannot prove the selection lives in a text field;
-            // treat as read-only so we show the panel instead of pasting into Discord compose.
-            let treatAsEditable = isEditable && axError != .noFocusedElement
+            // Selection existed. AX-blind hosts (Discord/Electron) still keep that highlight;
+            // treat as editable so Translate replaces it. Replace must NOT ⌘A — that would
+            // expand a Discord highlight into the whole conversation.
+            let treatAsEditable = isEditable || axError == .noFocusedElement
             AppLog.info(
                 .textIO,
                 "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"
@@ -286,12 +287,17 @@ final class FocusedTextIO {
         }
 
         // After a bogus AX "success", selection may still be intact — paste into it.
-        // If selection is gone, force ⌘A only when the capture was a whole-field read
-        // (didSelectAll) or there is nothing left to target. Do NOT force ⌘A merely because
-        // the read used the clipboard — that would expand a Discord chat highlight into
-        // the entire conversation before paste.
+        // AX-blind clipboard reads copied an existing highlight: never ⌘A (Discord would
+        // select the whole conversation). Only ⌘A when the capture itself was select-all.
         let hasSelection = Self.focusedElement().flatMap { selectedText(of: $0) }.map { !$0.isEmpty } ?? false
-        let selectAllFirst = capture.didSelectAll || !hasSelection
+        let selectAllFirst: Bool
+        if capture.didSelectAll {
+            selectAllFirst = true
+        } else if capture.usedClipboardForRead {
+            selectAllFirst = false
+        } else {
+            selectAllFirst = !hasSelection
+        }
         if selectAllFirst && !capture.didSelectAll {
             AppLog.debug(.textIO, "Clipboard: forçando ⌘A (a seleção sumiu depois da captura)")
         }

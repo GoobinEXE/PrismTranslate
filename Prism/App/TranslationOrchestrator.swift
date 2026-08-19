@@ -161,20 +161,59 @@ final class TranslationOrchestrator {
             AppLog.info(.orchestrator, "Captura: \(capture.logSummary)")
             AppLog.info(.orchestrator, "Prévia original: \"\(AppLog.preview(trimmed))\"")
 
-            let useOutgoing = capture.isEditable
-            let from = settings.resolvedSourceLanguage(outgoing: useOutgoing)
-            let to = settings.targetLanguage(outgoing: useOutgoing)
-            let pairKind = useOutgoing ? "texto que você escreve" : "texto que você lê"
+            let incomingFrom = settings.resolvedSourceLanguage(outgoing: false)
+            let incomingTo = settings.incomingTargetLanguage
+            let outgoingFrom = settings.resolvedOutgoingSourceLanguage
+            let outgoingTo = settings.outgoingTargetLanguage
+            let detected = LanguageDetector.detect(in: trimmed)
+            // Discord/Electron: seleção no compose chega como só-leitura. Se o texto já
+            // está no idioma de leitura, o par auto→pt é recusado pela Apple — usa o de escrita.
+            var usedOutgoingPair = capture.isEditable
+            if !capture.isEditable,
+               let detected,
+               LanguageCode.normalize(detected) == LanguageCode.normalize(incomingTo),
+               LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(incomingTo)
+            {
+                usedOutgoingPair = true
+                AppLog.info(
+                    .orchestrator,
+                    "Texto já em \(LanguageCode.displayName(for: detected)) (idioma de leitura) — usando o par de escrita \(LanguageCode.pairLabel(from: outgoingFrom, to: outgoingTo))"
+                )
+            }
+
+            var from = usedOutgoingPair ? outgoingFrom : incomingFrom
+            var to = usedOutgoingPair ? outgoingTo : incomingTo
+            let pairKind = usedOutgoingPair ? "texto que você escreve" : "texto que você lê"
             AppLog.step(
                 .orchestrator, 3, of: 4,
                 "Traduzindo \(LanguageCode.pairLabel(from: from, to: to)) via \(settings.engineLogDescription) (par: \(pairKind))"
             )
             let translateStarted = Date()
-            let outcome = try await engine.translate(
-                trimmed,
-                from: from,
-                to: to
-            )
+            let outcome: TranslationOutcome
+            do {
+                outcome = try await engine.translate(
+                    trimmed,
+                    from: from,
+                    to: to
+                )
+            } catch {
+                let canRetryOutgoing = !usedOutgoingPair
+                    && LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(incomingTo)
+                    && (error as? TranslationError)?.isUnsupportedLanguagePair == true
+                guard canRetryOutgoing else { throw error }
+                AppLog.info(
+                    .orchestrator,
+                    "Par de leitura recusado — tentando o par de escrita \(LanguageCode.pairLabel(from: outgoingFrom, to: outgoingTo))"
+                )
+                from = outgoingFrom
+                to = outgoingTo
+                usedOutgoingPair = true
+                outcome = try await engine.translate(
+                    trimmed,
+                    from: from,
+                    to: to
+                )
+            }
             AppLog.info(
                 .orchestrator,
                 "Tradução pronta em \(AppLog.duration(since: translateStarted)) — \(outcome.text.count) caracteres"
@@ -226,7 +265,7 @@ final class TranslationOrchestrator {
                         showOriginal: canReplace,
                         sourceLanguageLabel: sourceLabel,
                         targetLanguageLabel: targetLabel,
-                        pairContextLabel: useOutgoing
+                        pairContextLabel: usedOutgoingPair
                             ? String(localized: "Text I write")
                             : String(localized: "Text I read"),
                         capture: capture,

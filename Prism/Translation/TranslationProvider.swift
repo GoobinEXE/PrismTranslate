@@ -40,6 +40,13 @@ enum TranslationError: LocalizedError {
         }
     }
 
+    /// True when Apple Translation rejected the pair (often source == target).
+    var isUnsupportedLanguagePair: Bool {
+        guard case .appleTranslationFailed(let message) = self else { return false }
+        let lower = message.lowercased()
+        return lower.contains("not supported") || lower.contains("não suportado")
+    }
+
     /// Maps provider HTTP failures to short user-facing copy.
     static func userFacingHTTPMessage(statusCode: Int, body: String) -> String {
         switch classifyHTTPFailure(statusCode: statusCode, body: body) {
@@ -106,6 +113,9 @@ enum TranslationError: LocalizedError {
             || lower.contains("invalid api key")
             || lower.contains("incorrect api key")
             || lower.contains("invalid_api_key")
+            || lower.contains("api key not valid")
+            || lower.contains("api key is not valid")
+            || lower.contains("pass a valid api key")
             || lower.contains("authentication")
             || lower.contains("unauthorized")
             || lower.contains("permission denied")
