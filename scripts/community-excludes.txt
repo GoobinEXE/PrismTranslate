@@ -8,6 +8,7 @@ docs/REPOS.md
 scripts/release.sh
 scripts/gen_xcstrings.py
 scripts/publish-community.sh
+scripts/bootstrap-private-repo.sh
 scripts/community-excludes.txt
 scripts/community-gitignore
 docs/brand/

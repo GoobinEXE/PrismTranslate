@@ -10,6 +10,24 @@ exportações Community filtradas.
 | [GoobinEXE/Prisma-Tradutor](https://github.com/GoobinEXE/Prisma-Tradutor) | **Privado** | `origin` | Desenvolvimento diário, push normal |
 | [GoobinEXE/PrismTranslate](https://github.com/GoobinEXE/PrismTranslate) | Público (Community) | `community` | Só via `./scripts/publish-community.sh` |
 
+## Primeira vez (criar repo privado)
+
+Se `git push origin main` falhar com *Repository not found*:
+
+```bash
+gh auth login
+./scripts/bootstrap-private-repo.sh
+```
+
+Ou manualmente:
+
+```bash
+gh repo create GoobinEXE/Prisma-Tradutor --private \
+  --description "Prisma Tradutor — fonte completa (mantenedor)"
+git push -u origin main
+git push origin --tags
+```
+
 ## Fluxo diário
 
 ```bash
