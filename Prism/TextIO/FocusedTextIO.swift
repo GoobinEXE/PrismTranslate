@@ -217,10 +217,10 @@ final class FocusedTextIO {
         // Step 1: copy existing selection only (never ⌘A).
         do {
             let text = try await readViaClipboard(selectAllFirst: false)
-            // Selection existed. AX-blind hosts (Discord/Electron) still keep that highlight;
-            // treat as editable so Translate replaces it. Replace must NOT ⌘A — that would
-            // expand a Discord highlight into the whole conversation.
-            let treatAsEditable = isEditable || axError == .noFocusedElement
+            // Selection existed without AX focus (typical Discord chat highlight). Treat as
+            // read-only so Translate opens the panel instead of pasting into compose.
+            // Compose without a highlight still reaches step 2 (⌘A+⌘C) below.
+            let treatAsEditable = isEditable
             AppLog.info(
                 .textIO,
                 "Leitura via clipboard (seleção existente): \(text.count) caracteres, tratado como \(treatAsEditable ? "editável" : "só leitura")"

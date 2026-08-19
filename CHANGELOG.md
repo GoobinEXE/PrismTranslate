@@ -6,6 +6,14 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.5] - 2026-08-19
+
+Correção ao traduzir texto selecionado em apps Electron (Discord, etc.).
+
+### Fixed
+
+- Seleção em mensagens de chat deixava de ser tratada como só leitura quando a Acessibilidade não expõe o elemento focado: o atalho Traduzir colava no campo de composição em vez de abrir o painel com o par «texto que você lê».
+
 ## [1.0.4] - 2026-08-19
 
 Correção de build no CI — sem mudança visível para quem já usa o app no macOS 26.
