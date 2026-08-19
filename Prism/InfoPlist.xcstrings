@@ -1,0 +1,23 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSAccessibilityUsageDescription" : {
+      "comment" : "Shown by macOS when granting Accessibility.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prism needs Accessibility to read and replace text in the focused field."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Prism precisa de Acessibilidade para ler e substituir o texto no campo focado."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

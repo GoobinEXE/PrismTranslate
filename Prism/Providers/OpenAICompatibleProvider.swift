@@ -36,18 +36,18 @@ struct OpenAICompatibleProvider: TranslationProvider {
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedBase.isEmpty, !trimmedModel.isEmpty else {
             throw TranslationError.invalidConfiguration(
-                "Configure base URL e modelo para \(displayName)"
+                String(format: String(localized: "Set base URL and model for %@"), displayName)
             )
         }
         if requiresAPIKey, apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             AppLog.error(logCategory, "\(displayName): API key não configurada — abra Configurações › Provedor")
             throw TranslationError.invalidConfiguration(
-                "Configure a API key de \(displayName) nas Configurações"
+                String(format: String(localized: "Set the API key for %@ in Settings"), displayName)
             )
         }
 
         guard let url = URL(string: "\(trimmedBase)/chat/completions") else {
-            throw TranslationError.invalidConfiguration("Base URL inválida")
+            throw TranslationError.invalidConfiguration(String(localized: "Invalid base URL"))
         }
 
         ProviderLog.sending(

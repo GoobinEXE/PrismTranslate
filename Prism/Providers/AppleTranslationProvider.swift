@@ -254,7 +254,7 @@ final class AppleTranslationBridge: ObservableObject {
         return try await withCheckedThrowingContinuation { continuation in
             if let previous = pending {
                 previous.continuation.resume(
-                    throwing: TranslationError.appleTranslationFailed("Tradução anterior cancelada")
+                    throwing: TranslationError.appleTranslationFailed(String(localized: "Previous translation canceled"))
                 )
                 pending = nil
             }
@@ -379,7 +379,7 @@ final class AppleTranslationBridge: ObservableObject {
     ) async throws {
         if request.source == nil {
             throw TranslationError.appleTranslationFailed(
-                "Defina o idioma de origem ou baixe os pacotes em Ajustes › Geral › Idioma e Região › Idiomas de Tradução"
+                String(localized: "Set a source language or download packs in Settings › General › Language & Region › Translation Languages")
             )
         }
         try await session.prepareTranslation()
@@ -401,7 +401,7 @@ final class AppleTranslationBridge: ObservableObject {
         // Always attach recovery hints for the opaque system failure.
         if packsLikelyMissing || isMissingLanguagePack(error)
             || raw.localizedCaseInsensitiveContains("unable to translate") {
-            return "\(raw). Com “Modo no dispositivo” ligado, baixe os idiomas (origem e destino) em Ajustes do Sistema › Geral › Idioma e Região › Idiomas de Tradução — ou desligue o modo para traduzir online."
+            return "\(raw). \(String(localized: "With On-Device Mode on, download source and target languages in System Settings › General › Language & Region › Translation Languages — or turn the mode off to translate online."))"
         }
         return raw
     }
@@ -584,7 +584,7 @@ final class AppleTranslationBridge: ObservableObject {
         case .unsupported:
             availabilityCache.removeValue(forKey: key)
             throw TranslationError.appleTranslationFailed(
-                "Par de idiomas não suportado — escolha outro idioma ou provedor"
+                String(localized: "Language pair not supported — choose another language or provider")
             )
         case .supported:
             cacheAvailability(source: source, target: target, packsLikelyMissing: true)
@@ -648,7 +648,7 @@ final class AppleTranslationBridge: ObservableObject {
             }
 
             self.failPending(TranslationError.appleTranslationFailed(
-                "Tempo esgotado — com “Modo no dispositivo” ligado, baixe os idiomas em Ajustes › Geral › Idioma e Região › Idiomas de Tradução"
+                String(localized: "Timed out — with On-Device Mode on, download languages in Settings › General › Language & Region › Translation Languages")
             ))
         }
     }

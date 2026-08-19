@@ -28,36 +28,40 @@ enum TranslationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .providerUnavailable(let name):
-            return "Provedor indisponível: \(name)"
+            return String(format: String(localized: "Provider unavailable: %@"), name)
         case .invalidConfiguration(let message):
             return message
         case .emptyResponse:
-            return "Resposta vazia do provedor"
+            return String(localized: "Empty response from provider")
         case .httpStatus(let code, let body):
             return Self.userFacingHTTPMessage(statusCode: code, body: body)
         case .appleTranslationFailed(let message):
-            return "Apple Translation: \(message)"
+            return String(format: String(localized: "Apple Translation: %@"), message)
         }
     }
 
-    /// Maps provider HTTP failures (DeepSeek 402, OpenAI quota, 401/429, etc.) to short PT copy.
+    /// Maps provider HTTP failures to short user-facing copy.
     static func userFacingHTTPMessage(statusCode: Int, body: String) -> String {
         switch classifyHTTPFailure(statusCode: statusCode, body: body) {
         case .billingOrQuota:
-            return "Saldo ou cota da API esgotados. Recarregue créditos no provedor ou troque o motor nas Configurações."
+            return String(localized: "API balance or quota exhausted. Top up credits with the provider or switch engines in Settings.")
         case .unauthorized:
-            return "API key inválida ou sem permissão. Verifique a chave nas Configurações."
+            return String(localized: "Invalid API key or missing permission. Check the key in Settings.")
         case .rateLimited:
-            return "Limite de requisições atingido. Aguarde um momento e tente de novo."
+            return String(localized: "Request limit reached. Wait a moment and try again.")
         case .modelUnavailable:
-            return "Modelo da API indisponível ou descontinuado. Atualize o modelo nas Configurações."
+            return String(localized: "API model unavailable or discontinued. Update the model in Settings.")
         case .serverError:
-            return "O provedor está indisponível (HTTP \(statusCode)). Tente novamente em instantes."
+            return String(format: String(localized: "The provider is unavailable (HTTP %lld). Try again in a moment."), Int64(statusCode))
         case .other:
             if let apiMessage = extractAPIErrorMessage(from: body), !apiMessage.isEmpty {
-                return "Erro do provedor (HTTP \(statusCode)): \(Self.truncateForUI(apiMessage))"
+                return String(
+                    format: String(localized: "Provider error (HTTP %lld): %@"),
+                    Int64(statusCode),
+                    Self.truncateForUI(apiMessage)
+                )
             }
-            return "Erro do provedor (HTTP \(statusCode))."
+            return String(format: String(localized: "Provider error (HTTP %lld)."), Int64(statusCode))
         }
     }
 
@@ -170,7 +174,7 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable {
         case .deepl: return "DeepL"
         case .google: return "Google Translate"
         case .openAICompatible: return "LM Studio / OpenAI"
-        case .customHTTP: return "HTTP personalizado"
+        case .customHTTP: return String(localized: "Custom HTTP")
         }
     }
 
@@ -209,9 +213,9 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable {
     var setupHint: String? {
         switch self {
         case .apple:
-            return "Tradução on-device da Apple — sem API key."
+            return String(localized: "Apple on-device translation — no API key.")
         case .openAICompatible:
-            return "Servidor local OpenAI-compatible (LM Studio, Ollama, etc.)."
+            return String(localized: "Local OpenAI-compatible server (LM Studio, Ollama, etc.).")
         default:
             return nil
         }
@@ -245,9 +249,9 @@ enum EnginePickerGroup: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .onDevice: return "No dispositivo"
-        case .classic: return "Tradução clássica"
-        case .advanced: return "Avançado"
+        case .onDevice: return String(localized: "On this device")
+        case .classic: return String(localized: "Classic translation")
+        case .advanced: return String(localized: "Advanced")
         }
     }
 
@@ -258,11 +262,23 @@ enum EnginePickerGroup: String, CaseIterable, Identifiable {
 
 /// Chip curto ao lado do nome do motor (substitui “(IA gratuita)” etc.).
 enum EngineBadge: String, Hashable {
-    case ai = "IA"
-    case local = "Local"
-    case classic = "Tradução"
-    case freeTier = "Grátis"
-    case paid = "Pago"
-    case `default` = "Padrão"
-    case advanced = "Avançado"
+    case ai
+    case local
+    case classic
+    case freeTier
+    case paid
+    case `default`
+    case advanced
+
+    var title: String {
+        switch self {
+        case .ai: String(localized: "AI")
+        case .local: String(localized: "Local")
+        case .classic: String(localized: "Translation")
+        case .freeTier: String(localized: "Free")
+        case .paid: String(localized: "Paid")
+        case .default: String(localized: "Default")
+        case .advanced: String(localized: "Advanced")
+        }
+    }
 }

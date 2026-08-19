@@ -32,7 +32,7 @@ struct LanguageCode: Identifiable, Hashable {
 
     /// Ex.: "detecção automática → English" ou "Português → English".
     static func pairLabel(from: String?, to: String) -> String {
-        let source = from.map { displayName(for: $0) } ?? "detecção automática"
+        let source = from.map { displayName(for: $0) } ?? String(localized: "automatic detection")
         return "\(source) → \(displayName(for: to))"
     }
 

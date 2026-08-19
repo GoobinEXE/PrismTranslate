@@ -23,7 +23,7 @@ struct QTStatusChip: View {
         .padding(.vertical, 3)
         .background(Capsule().fill(tint.opacity(0.14)))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Status: \(label)")
+        .accessibilityLabel(String(format: String(localized: "Status: %@"), label))
     }
 
     private var isTranslating: Bool {
@@ -32,10 +32,10 @@ struct QTStatusChip: View {
 
     var label: String {
         switch status {
-        case .idle: return isEnabled ? "Ativo" : "Pausado"
-        case .translating: return "Traduzindo…"
-        case .success: return "Concluído"
-        case .error: return "Erro"
+        case .idle: return isEnabled ? String(localized: "Active") : String(localized: "Paused")
+        case .translating: return String(localized: "Translating…")
+        case .success: return String(localized: "Done")
+        case .error: return String(localized: "Error")
         }
     }
 

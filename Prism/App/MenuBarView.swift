@@ -56,19 +56,19 @@ struct MenuBarView: View {
         GlassSurface {
             VStack(spacing: 10) {
                 Toggle(isOn: appState.settingsBinding(\.isEnabled)) {
-                    Label("Ligado", systemImage: "power")
+                    Label("On", systemImage: "power")
                 }
                 Divider()
                 Toggle(isOn: appState.settingsBinding(\.enterTranslatesAndSends)) {
-                    Label("Enter traduz e envia", systemImage: "return")
+                    Label("Enter translates and sends", systemImage: "return")
                 }
                 Divider()
                 Toggle(isOn: appState.settingsBinding(\.showStatusHUD)) {
-                    Label("Aviso perto do ponteiro", systemImage: "cursorarrow.click")
+                    Label("Hint near pointer", systemImage: "cursorarrow.click")
                 }
                 Divider()
                 Toggle(isOn: appState.settingsBinding(\.popupModeEnabled)) {
-                    Label("Modo popup", systemImage: "menubar.arrow.up.rectangle")
+                    Label("Popup mode", systemImage: "menubar.arrow.up.rectangle")
                 }
             }
             .toggleStyle(.switch)
@@ -78,8 +78,15 @@ struct MenuBarView: View {
         }
         .help(
             appState.settings.popupModeEnabled
-                ? "Atalho do painel: \(appState.settings.popupHotkey.displayString). Traduzir: \(appState.settings.translateOnlyHotkey.displayString)."
-                : "Atalho Traduzir: \(appState.settings.translateOnlyHotkey.displayString). Ative o modo popup para o atalho do painel."
+                ? String(
+                    format: String(localized: "Panel shortcut: %@. Translate: %@."),
+                    appState.settings.popupHotkey.displayString,
+                    appState.settings.translateOnlyHotkey.displayString
+                )
+                : String(
+                    format: String(localized: "Translate shortcut: %@. Turn on popup mode for the panel shortcut."),
+                    appState.settings.translateOnlyHotkey.displayString
+                )
         )
     }
 
@@ -96,10 +103,10 @@ struct MenuBarView: View {
                         Text(language.displayName).tag(language.id)
                     }
                 } label: {
-                    Label("Texto que leio →", systemImage: "arrow.down.left")
+                    Label("Text I read →", systemImage: "arrow.down.left")
                         .font(QTDesign.Fonts.body)
                 }
-                .help("Idioma destino ao traduzir texto só leitura (conversas, painel).")
+                .help("Target language when translating read-only text (chats, panel).")
 
                 Divider()
 
@@ -113,10 +120,10 @@ struct MenuBarView: View {
                         Text(language.displayName).tag(language.id)
                     }
                 } label: {
-                    Label("Texto que escrevo →", systemImage: "arrow.up.right")
+                    Label("Text I write →", systemImage: "arrow.up.right")
                         .font(QTDesign.Fonts.body)
                 }
-                .help("Idioma destino ao substituir texto em campos editáveis.")
+                .help("Target language when replacing text in editable fields.")
 
                 Text(hotkeyCaption)
                     .font(QTDesign.Fonts.caption)
@@ -134,21 +141,24 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .accessibilityLabel(
-                        "Motor de tradução: \(appState.settings.providerKind.displayName)")
+                        String(
+                            format: String(localized: "Translation engine: %@"),
+                            appState.settings.providerKind.displayName
+                        ))
                     ForEach(appState.settings.providerKind.badges.prefix(2), id: \.self) { badge in
-                        Text(badge.rawValue)
+                        Text(badge.title)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
                     Spacer(minLength: 0)
                     QTOpenSettingsButton(section: .provider) {
-                        Text("Configurar…")
+                        Text("Configure…")
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
                     .font(QTDesign.Fonts.caption)
-                    .accessibilityLabel("Abrir Configurações, seção Provedor")
-                    .accessibilityHint("Abre a janela de Configurações na seção Provedor")
+                    .accessibilityLabel("Open Settings, Provider section")
+                    .accessibilityHint("Opens the Settings window on the Provider section")
                 }
             }
             .padding(12)
@@ -158,9 +168,13 @@ struct MenuBarView: View {
     private var hotkeyCaption: String {
         let translate = appState.settings.translateOnlyHotkey.displayString
         if appState.settings.popupModeEnabled {
-            return "Traduzir \(translate) · Painel \(appState.settings.popupHotkey.displayString)"
+            return String(
+                format: String(localized: "Translate %@ · Panel %@"),
+                translate,
+                appState.settings.popupHotkey.displayString
+            )
         }
-        return "Traduzir \(translate) · Painel desligado"
+        return String(format: String(localized: "Translate %@ · Panel off"), translate)
     }
 
     // MARK: - Alertas
@@ -169,16 +183,16 @@ struct MenuBarView: View {
         QTBanner(
             icon: "keyboard",
             tint: .orange,
-            text: "Atalhos inativos. Ative o Monitoramento de Entrada.",
+            text: String(localized: "Shortcuts inactive. Turn on Input Monitoring."),
             lineLimit: 2
         ) {
             QTOpenSettingsButton(section: .permissions) {
-                Text("Corrigir…")
+                Text("Fix…")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .accessibilityLabel("Abrir Configurações, seção Permissões")
-            .accessibilityHint("Abre Configurações para conceder Monitoramento de Entrada")
+            .accessibilityLabel("Open Settings, Permissions section")
+            .accessibilityHint("Opens Settings so you can grant Input Monitoring")
         }
     }
 
@@ -191,13 +205,13 @@ struct MenuBarView: View {
             lineLimit: showFullError ? nil : 2
         ) {
             if isLong {
-                Button(showFullError ? "Menos" : "Detalhes") {
+                Button(showFullError ? "Less" : "Details") {
                     showFullError.toggle()
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
             }
-            Button("Limpar") {
+            Button("Clear") {
                 showFullError = false
                 appState.clearLastError()
             }
@@ -206,12 +220,12 @@ struct MenuBarView: View {
             QTOpenSettingsButton(section: .logs, beforeOpen: {
                 showFullError = false
             }) {
-                Text("Ver logs")
+                Text("View logs")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .accessibilityLabel("Abrir Configurações, seção Logs")
-            .accessibilityHint("Abre os logs para diagnosticar a falha")
+            .accessibilityLabel("Open Settings, Logs section")
+            .accessibilityHint("Opens the logs to diagnose the failure")
         }
     }
 
@@ -220,18 +234,18 @@ struct MenuBarView: View {
     private var footer: some View {
         HStack(spacing: QTDesign.Spacing.m) {
             QTOpenSettingsButton {
-                Label("Configurações", systemImage: "gearshape")
+                Label("Settings", systemImage: "gearshape")
             }
             .keyboardShortcut(",", modifiers: .command)
-            .accessibilityLabel("Abrir Configurações")
+            .accessibilityLabel("Open Settings")
 
             Button {
                 AppLog.info(.app, "Botão «Ajuda» no menu — abrindo tutorial")
                 appState.showOnboarding()
             } label: {
-                Label("Ajuda", systemImage: "questionmark.circle")
+                Label("Help", systemImage: "questionmark.circle")
             }
-            .accessibilityLabel("Abrir tutorial de configuração")
+            .accessibilityLabel("Open setup tutorial")
 
             Spacer()
 
@@ -239,7 +253,7 @@ struct MenuBarView: View {
                 AppLog.info(.app, "Botão «Sair» no menu")
                 NSApplication.shared.terminate(nil)
             } label: {
-                Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
+                Label("Quit", systemImage: "rectangle.portrait.and.arrow.right")
             }
             .keyboardShortcut("q", modifiers: .command)
             .foregroundStyle(.tertiary)

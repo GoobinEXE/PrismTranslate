@@ -15,13 +15,13 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "Geral"
-        case .provider: return "Provedor"
-        case .shortcuts: return "Atalhos"
-        case .permissions: return "Permissões"
-        case .test: return "Teste"
-        case .logs: return "Logs"
-        case .about: return "Sobre"
+        case .general: return String(localized: "General")
+        case .provider: return String(localized: "Provider")
+        case .shortcuts: return String(localized: "Shortcuts")
+        case .permissions: return String(localized: "Permissions")
+        case .test: return String(localized: "Test")
+        case .logs: return String(localized: "Logs")
+        case .about: return String(localized: "About")
         }
     }
 
@@ -48,10 +48,10 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
         var title: String {
             switch self {
-            case .daily: return "Uso diário"
-            case .translation: return "Tradução"
-            case .system: return "Sistema"
-            case .help: return "Ajuda"
+            case .daily: return String(localized: "Daily use")
+            case .translation: return String(localized: "Translation")
+            case .system: return String(localized: "System")
+            case .help: return String(localized: "Help")
             }
         }
 
@@ -112,7 +112,7 @@ struct SettingsView: View {
             appState.rememberSettingsSection(newValue)
             _ = appState.consumePendingSettingsSection()
         }
-        .accessibilityLabel("Configurações do Prism")
+        .accessibilityLabel("Prism Settings")
     }
 
     @ViewBuilder

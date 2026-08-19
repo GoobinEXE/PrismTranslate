@@ -9,12 +9,12 @@ struct DeepLProvider: TranslationProvider {
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
             AppLog.error(.deepl, "DeepL: API key não configurada — abra Configurações › Provedor")
-            throw TranslationError.invalidConfiguration("Configure a API key do DeepL nas Configurações")
+            throw TranslationError.invalidConfiguration(String(localized: "Set the DeepL API key in Settings"))
         }
 
         let host = useFreeAPI ? "api-free.deepl.com" : "api.deepl.com"
         guard let url = URL(string: "https://\(host)/v2/translate") else {
-            throw TranslationError.invalidConfiguration("URL DeepL inválida")
+            throw TranslationError.invalidConfiguration(String(localized: "Invalid DeepL URL"))
         }
 
         ProviderLog.sending(

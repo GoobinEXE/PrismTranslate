@@ -79,11 +79,11 @@ enum AppRelease {
 /// Créditos do time — texto da aba Sobre.
 enum AppCredits {
     static let developerName = "Marcelo Pessoa"
-    static let developerRole = "Criador e desenvolvedor"
+    static let developerRole = String(localized: "Creator and developer")
     static let location = "Curitiba, PR — Brasil"
     static let githubHandle = "@GoobinEXE"
     static let bio =
-        "Projeto solo: da ideia ao design, do código ao release. Feito com cuidado artesanal para traduzir sem atrapalhar quem escreve o dia inteiro."
+        String(localized: "Solo project: from idea to design, from code to release. Crafted so translation never gets in the way of people who write all day.")
 }
 
 // MARK: - SemVer

@@ -36,9 +36,9 @@ struct LogsSettingsView: View {
 
             if filtered.isEmpty {
                 ContentUnavailableView(
-                    "Sem entradas",
+                    "No entries",
                     systemImage: "text.alignleft",
-                    description: Text("Traduza algo ou ajuste os filtros para ver o log.")
+                    description: Text("Translate something or adjust the filters to see the log.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -73,7 +73,7 @@ struct LogsSettingsView: View {
     private var toolbar: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Picker("Nível", selection: $minimumLevel) {
+                Picker("Level", selection: $minimumLevel) {
                     ForEach(AppLogLevel.allCases) { level in
                         Text(level.title).tag(level)
                     }
@@ -82,8 +82,8 @@ struct LogsSettingsView: View {
                 .labelsHidden()
                 .frame(maxWidth: 320)
 
-                Picker("Categoria", selection: $categoryFilter) {
-                    Text("Todas").tag(AppLogCategory?.none)
+                Picker("Category", selection: $categoryFilter) {
+                    Text("All").tag(AppLogCategory?.none)
                     ForEach(AppLogCategory.allCases) { category in
                         Text(category.title).tag(AppLogCategory?.some(category))
                     }
@@ -96,27 +96,27 @@ struct LogsSettingsView: View {
                     copyAll()
                 } label: {
                     Label(
-                        copyFeedback ?? "Copiar tudo",
+                        copyFeedback ?? String(localized: "Copy all"),
                         systemImage: copyFeedback == nil ? "doc.on.doc" : "checkmark"
                     )
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .disabled(store.entries.isEmpty)
-                .help("Copia o log completo para a área de transferência (para colar no chat, e-mail, etc.)")
+                .help("Copies the full log to the clipboard (to paste in chat, email, etc.)")
                 .keyboardShortcut("c", modifiers: [.command, .shift])
 
                 Toggle("Auto-scroll", isOn: $autoScroll)
                     .toggleStyle(.checkbox)
-                Toggle("Fonte", isOn: $showSource)
+                Toggle("Source", isOn: $showSource)
                     .toggleStyle(.checkbox)
-                    .help("Mostra arquivo e linha de cada entrada")
+                    .help("Shows file and line for each entry")
             }
 
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Buscar no log…", text: $searchText)
+                TextField("Search the log…", text: $searchText)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {
                     Button {
@@ -172,15 +172,15 @@ struct LogsSettingsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .contextMenu {
-            Button("Copiar linha") {
+            Button("Copy line") {
                 copyToPasteboard(entry.exportLine, feedback: nil)
             }
             if let runID = entry.runID {
-                Button("Filtrar este run") {
+                Button("Filter this run") {
                     searchText = runID
                 }
             }
-            Button("Copiar tudo") {
+            Button("Copy all") {
                 copyAll()
             }
         }
@@ -189,7 +189,7 @@ struct LogsSettingsView: View {
     private var footer: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(filtered.count) de \(store.entries.count) na tela")
+                Text(String(format: String(localized: "%lld of %lld on screen"), Int64(filtered.count), Int64(store.entries.count)))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if let exportFeedback {
@@ -204,23 +204,23 @@ struct LogsSettingsView: View {
             Button {
                 copyAll()
             } label: {
-                Label(copyFeedback ?? "Copiar tudo", systemImage: "doc.on.doc")
+                Label(copyFeedback ?? String(localized: "Copy all"), systemImage: "doc.on.doc")
             }
             .disabled(store.entries.isEmpty)
             .help("⇧⌘C — log completo no clipboard")
 
-            Button("Salvar arquivo…") {
+            Button("Save file…") {
                 exportFile()
             }
             .disabled(store.entries.isEmpty)
-            .help("Salva um .log completo em qualquer pasta")
+            .help("Saves a full .log to any folder")
 
-            Button("Mostrar no Finder") {
+            Button("Show in Finder") {
                 AppLogExport.revealLogFileInFinder()
             }
             .help(store.logFileURL.path)
 
-            Button("Limpar", role: .destructive) {
+            Button("Clear", role: .destructive) {
                 store.clear()
             }
             .disabled(store.entries.isEmpty)
@@ -230,11 +230,11 @@ struct LogsSettingsView: View {
     private func copyAll() {
         let lines = AppLogExport.copyToPasteboard()
         guard lines > 0 else { return }
-        copyFeedback = "Copiado (\(lines))"
+        copyFeedback = String(format: String(localized: "Copied (%lld)"), Int64(lines))
         AppLog.info(.settings, "Botão «Copiar» log (⇧⌘C) — \(lines) linhas na área de transferência")
         Task {
             try? await Task.sleep(nanoseconds: 1_800_000_000)
-            if copyFeedback == "Copiado (\(lines))" {
+            if copyFeedback == String(format: String(localized: "Copied (%lld)"), Int64(lines)) {
                 copyFeedback = nil
             }
         }
@@ -258,7 +258,11 @@ struct LogsSettingsView: View {
         case .success(let url):
             let lines = (try? String(contentsOf: url, encoding: .utf8))
                 .map { $0.split(separator: "\n", omittingEmptySubsequences: false).count } ?? 0
-            exportFeedback = "Salvo: \(url.lastPathComponent) (\(lines) linhas)"
+            exportFeedback = String(
+                format: String(localized: "Saved: %@ (%lld lines)"),
+                url.lastPathComponent,
+                Int64(lines)
+            )
             AppLog.info(.settings, "Botão «Salvar…» log — \(url.path) (\(lines) linhas)")
             Task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -267,7 +271,7 @@ struct LogsSettingsView: View {
                 }
             }
         case .failure(let error):
-            exportFeedback = "Falha ao salvar"
+            exportFeedback = String(localized: "Failed")
             AppLog.error(.settings, "Falha ao exportar logs: \(error.localizedDescription)")
         case .none:
             break

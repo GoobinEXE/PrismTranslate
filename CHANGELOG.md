@@ -13,12 +13,14 @@ Primeiro lançamento público. Instale pelo DMG — **não precisa do Xcode**.
 ### Novidades
 
 - Instalador no `Prism-1.0.0.dmg`: dois cliques em **Instalar Prism** copiam o app para Aplicativos e abrem o Prism. O instalador recusa macOS anterior ao 15 e não pede Xcode, Homebrew nem ferramentas de linha de comando.
+- Interface em inglês (idioma-fonte) com tradução **pt-BR** via String Catalog. O app segue o idioma do sistema.
 - Continua a dar para arrastar **Prism** para **Aplicativos**, se preferir não usar o .pkg.
 - Compilar a partir do código no Xcode continua possível e é opcional (só para quem clona o repositório).
 
 ### Adicionado
 
 - Pacote `.pkg` (preinstall/postinstall) dentro do DMG, gerado por `scripts/release.sh`.
+- `Localizable.xcstrings` e `InfoPlist.xcstrings` (en + pt-BR).
 
 ### Notas de maturidade
 

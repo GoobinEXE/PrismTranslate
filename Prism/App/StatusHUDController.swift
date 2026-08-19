@@ -143,10 +143,10 @@ final class StatusHUDController {
     private func announce(status: AppState.Status, isEnabled: Bool) {
         let title: String =
             switch status {
-            case .idle: isEnabled ? "Ativo" : "Pausado"
-            case .translating: "Traduzindo…"
-            case .success: "Tradução concluída"
-            case .error: "Falha na tradução"
+            case .idle: isEnabled ? String(localized: "Active") : String(localized: "Paused")
+            case .translating: String(localized: "Translating…")
+            case .success: String(localized: "Translation complete")
+            case .error: String(localized: "Translation failed")
             }
         let message: String =
             if case .error(let detail) = status {
@@ -245,13 +245,13 @@ private struct StatusHUDView: View {
 
             if case .error = status {
                 QTSettingsLink(section: .logs, beforeOpen: onOpenDetails) {
-                    Text("Ver detalhes")
+                    Text("View details")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Abrir Configurações, seção Logs")
-                .accessibilityHint("Mostra os logs da falha na tradução")
+                .accessibilityLabel("Open Settings, Logs section")
+                .accessibilityHint("Shows the logs for the translation failure")
 
                 Button {
                     onDismiss()
@@ -262,8 +262,8 @@ private struct StatusHUDView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
-                .help("Dispensar")
-                .accessibilityLabel("Dispensar aviso")
+                .help("Dismiss")
+                .accessibilityLabel("Dismiss notice")
                 .keyboardShortcut(.cancelAction)
             }
         }
@@ -287,10 +287,10 @@ private struct StatusHUDView: View {
 
     private var title: String {
         switch status {
-        case .idle: return isEnabled ? "Ativo" : "Pausado"
-        case .translating: return "Traduzindo…"
-        case .success: return "Tradução concluída"
-        case .error: return "Falha na tradução"
+        case .idle: return isEnabled ? String(localized: "Active") : String(localized: "Paused")
+        case .translating: return String(localized: "Translating…")
+        case .success: return String(localized: "Translation complete")
+        case .error: return String(localized: "Translation failed")
         }
     }
 

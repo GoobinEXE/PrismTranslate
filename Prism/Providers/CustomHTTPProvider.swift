@@ -11,7 +11,7 @@ struct CustomHTTPProvider: TranslationProvider {
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard let endpoint = URL(string: url), !url.isEmpty else {
-            throw TranslationError.invalidConfiguration("Configure a URL do Custom HTTP")
+            throw TranslationError.invalidConfiguration(String(localized: "Set the Custom HTTP URL"))
         }
 
         ProviderLog.sending(

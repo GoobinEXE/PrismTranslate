@@ -17,10 +17,9 @@ final class LanguageMappingTests: XCTestCase {
             LanguageCode.pairLabel(from: "pt", to: "en"),
             "Português → English"
         )
-        XCTAssertEqual(
-            LanguageCode.pairLabel(from: nil, to: "en"),
-            "detecção automática → English"
-        )
+        let auto = LanguageCode.pairLabel(from: nil, to: "en")
+        XCTAssertTrue(auto.contains("English"))
+        XCTAssertTrue(auto.contains("→"))
     }
 
     func testDisplayNameFallsBackToRawCode() {

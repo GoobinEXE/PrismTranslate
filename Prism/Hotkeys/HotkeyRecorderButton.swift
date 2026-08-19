@@ -36,13 +36,13 @@ struct HotkeyRecorderButton: View {
                     beginRecording()
                 }
             } label: {
-                Text(isRecording ? "Pressione o atalho…" : chord.displayString)
+                Text(isRecording ? "Press the shortcut…" : chord.displayString)
                     .font(.body.monospaced())
                     .frame(minWidth: 120)
             }
             .buttonStyle(.bordered)
             .tint(isRecording ? .accentColor : nil)
-            .help(isRecording ? "Esc cancela" : "Clique para gravar um novo atalho")
+            .help(isRecording ? "Esc cancels" : "Click to record a new shortcut")
 
             if let conflictMessage {
                 Text(conflictMessage)
@@ -77,7 +77,7 @@ struct HotkeyRecorderButton: View {
 
             DispatchQueue.main.async {
                 if conflictingChords.contains(recorded) {
-                    conflictMessage = "Este atalho já está em uso."
+                    conflictMessage = String(localized: "This shortcut is already in use.")
                 } else {
                     chord = recorded
                     conflictMessage = nil

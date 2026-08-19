@@ -89,7 +89,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: Prism está desligado. Ligue o interruptor no menu ou em Configurações."
             )
-            onStatusChange?(.error("Prism está desligado — ligue nas Configurações"))
+            onStatusChange?(.error(String(localized: "Prism is off — turn it on in Settings")))
             AppLog.info(
                 .orchestrator,
                 "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — app desligado ──"
@@ -115,7 +115,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: outra tradução ainda está em andamento. Espere ela terminar e tente de novo."
             )
-            onStatusChange?(.error("Tradução anterior ainda em andamento — aguarde"))
+            onStatusChange?(.error(String(localized: "Previous translation still running — wait")))
             return
         }
 
@@ -151,7 +151,7 @@ final class TranslationOrchestrator {
                     .orchestrator,
                     "Nada para traduzir: o campo veio vazio (\(capture.logSummary))"
                 )
-                onStatusChange?(.error("Nenhum texto no campo focado"))
+                onStatusChange?(.error(String(localized: "No text in the focused field")))
                 AppLog.info(
                     .orchestrator,
                     "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — texto vazio ──"
@@ -226,7 +226,9 @@ final class TranslationOrchestrator {
                         showOriginal: canReplace,
                         sourceLanguageLabel: sourceLabel,
                         targetLanguageLabel: targetLabel,
-                        pairContextLabel: useOutgoing ? "Texto que escrevo" : "Texto que leio",
+                        pairContextLabel: useOutgoing
+                            ? String(localized: "Text I write")
+                            : String(localized: "Text I read"),
                         capture: capture,
                         targetApp: targetApp,
                         onReplace: { [weak self] capture, text, app in
@@ -299,7 +301,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: substituição do painel enquanto outra tradução ainda corre"
             )
-            onStatusChange?(.error("Tradução anterior ainda em andamento — aguarde"))
+            onStatusChange?(.error(String(localized: "Previous translation still running — wait")))
             return
         }
         isRunning = true

@@ -36,7 +36,12 @@ struct TranslationResultPanelView: View {
                         .lineLimit(1)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(pairContextLabel), idiomas \(languagePairLabel)")
+                .accessibilityLabel(
+                    String(
+                        format: String(localized: "%@, languages %@"),
+                        pairContextLabel,
+                        languagePairLabel
+                    ))
                 Spacer(minLength: 0)
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -46,8 +51,8 @@ struct TranslationResultPanelView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
-                .help("Fechar")
-                .accessibilityLabel("Fechar painel de tradução")
+                .help("Close")
+                .accessibilityLabel("Close translation panel")
                 .keyboardShortcut(.cancelAction)
             }
 
@@ -69,27 +74,27 @@ struct TranslationResultPanelView: View {
                     }
                 } label: {
                     Label(
-                        didCopy ? "Copiado" : "Copiar",
+                        didCopy ? "Copied" : "Copy",
                         systemImage: didCopy ? "checkmark" : "doc.on.doc")
                 }
                 .controlSize(.regular)
                 .buttonStyle(.bordered)
                 .frame(minHeight: 28)
                 .keyboardShortcut("c", modifiers: [.command])
-                .accessibilityLabel(didCopy ? "Copiado" : "Copiar tradução")
-                .accessibilityHint("Copia o texto traduzido para a área de transferência")
+                .accessibilityLabel(didCopy ? "Copied" : "Copy translation")
+                .accessibilityHint("Copies the translated text to the clipboard")
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: didCopy)
 
                 if canReplace {
-                    Button("Substituir") {
+                    Button("Replace") {
                         onReplace()
                     }
                     .controlSize(.regular)
                     .buttonStyle(.borderedProminent)
                     .frame(minHeight: 28)
                     .keyboardShortcut(.defaultAction)
-                    .accessibilityLabel("Substituir texto no campo")
-                    .accessibilityHint("Substitui o texto selecionado pela tradução")
+                    .accessibilityLabel("Replace text in field")
+                    .accessibilityHint("Replaces the selected text with the translation")
                 }
             }
         }
@@ -107,7 +112,7 @@ struct TranslationResultPanelView: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("Tradução")
+                .accessibilityLabel("Translation")
                 .accessibilityValue(translated)
 
             if showOriginal {
@@ -118,10 +123,10 @@ struct TranslationResultPanelView: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 4)
-                        .accessibilityLabel("Texto original")
+                        .accessibilityLabel("Original text")
                         .accessibilityValue(original)
                 } label: {
-                    Text("Mostrar original")
+                    Text("Show original")
                         .font(QTDesign.Fonts.caption)
                         .foregroundStyle(.secondary)
                 }

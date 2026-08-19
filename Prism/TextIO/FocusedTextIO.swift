@@ -14,19 +14,19 @@ enum FocusedTextIOError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .accessibilityDenied:
-            return "Permissão de Acessibilidade necessária — abra Ajustes do Sistema › Privacidade › Acessibilidade"
+            return String(localized: "Accessibility permission required — open System Settings › Privacy › Accessibility")
         case .noFocusedElement:
-            return "Nenhum campo de texto focado"
+            return String(localized: "No focused text field")
         case .noSelectionInReadOnly:
-            return "Selecione o texto para traduzir"
+            return String(localized: "Select the text to translate")
         case .emptyClipboard:
-            return "Não foi possível ler o texto do campo"
+            return String(localized: "Couldn’t read the field text")
         case .writeFailed:
-            return "Não foi possível substituir o texto"
+            return String(localized: "Couldn’t replace the text")
         case .readFallbackFailed:
-            return "Falha ao ler o campo (Acessibilidade e fallback de clipboard falharam)"
+            return String(localized: "Failed to read the field (Accessibility and clipboard fallback both failed)")
         case .writeFallbackFailed:
-            return "Falha ao substituir o texto (Acessibilidade e fallback de clipboard falharam)"
+            return String(localized: "Failed to replace the text (Accessibility and clipboard fallback both failed)")
         }
     }
 }

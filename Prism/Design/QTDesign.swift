@@ -44,7 +44,7 @@ struct QTKeycap: View {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(.quaternary)
             )
-            .accessibilityLabel("Atalho \(keys)")
+            .accessibilityLabel(String(format: String(localized: "Shortcut %@"), keys))
     }
 }
 

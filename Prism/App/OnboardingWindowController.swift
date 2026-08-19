@@ -57,7 +57,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Bem-vindo ao Prism"
+        panel.title = String(localized: "Welcome to Prism")
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isFloatingPanel = true

@@ -10,91 +10,91 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Os controles Ligado, Enter, HUD, idiomas destino e modo popup também ficam no ícone da barra de menus.")
+                Text("The On, Enter, HUD, target language, and popup controls are also on the menu bar icon.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("O atalho Traduzir substitui no lugar se o campo for editável; em texto só leitura abre o painel (Copiar). O modo popup (opt-in) abre o painel em qualquer seleção.")
+                Text("The Translate shortcut replaces in place if the field is editable; for read-only text it opens the panel (Copy). Popup mode (opt-in) opens the panel for any selection.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Tradução") {
-                Toggle("Ligado", isOn: appState.settingsBinding(\.isEnabled))
+            Section("Translation") {
+                Toggle("On", isOn: appState.settingsBinding(\.isEnabled))
                 Toggle(
-                    "Enter traduz e envia",
+                    "Enter translates and sends",
                     isOn: appState.settingsBinding(\.enterTranslatesAndSends))
                 Toggle(
-                    "Aviso perto do ponteiro",
+                    "Hint near pointer",
                     isOn: appState.settingsBinding(\.showStatusHUD)
                 )
-                Text("Mostra «Traduzindo…», concluído e erros junto ao mouse ao usar o atalho.")
+                Text("Shows “Translating…”, done, and errors next to the pointer when you use the shortcut.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Texto que leio") {
+            Section("Text I read") {
                 Picker(
-                    "Traduzir de",
+                    "Translate from",
                     selection: appState.settingsBinding(\.incomingSourceLanguage)
                 ) {
-                    Text("Detectar idioma").tag(String?.none)
+                    Text("Detect language").tag(String?.none)
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(String?.some(language.id))
                     }
                 }
                 Picker(
-                    "Traduzir para",
+                    "Translate to",
                     selection: appState.settingsBinding(\.incomingTargetLanguage)
                 ) {
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(language.id)
                     }
                 }
-                Text("Usado em texto só leitura e no painel ao ler conversas.")
+                Text("Used for read-only text and the panel when reading conversations.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Texto que escrevo") {
+            Section("Text I write") {
                 Picker(
-                    "Traduzir de",
+                    "Translate from",
                     selection: appState.settingsBinding(\.outgoingSourceLanguage)
                 ) {
-                    Text("Detectar idioma").tag(String?.none)
+                    Text("Detect language").tag(String?.none)
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(String?.some(language.id))
                     }
                 }
                 Picker(
-                    "Traduzir para",
+                    "Translate to",
                     selection: appState.settingsBinding(\.outgoingTargetLanguage)
                 ) {
                     ForEach(LanguageCode.commonTargets) { language in
                         Text(language.displayName).tag(language.id)
                     }
                 }
-                Text("Usado ao substituir texto em campos editáveis.")
+                Text("Used when replacing text in editable fields.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Mais opções") {
-                Button("Abrir Atalhos…") {
+            Section("More options") {
+                Button("Open Shortcuts…") {
                     appState.settingsSelection = .shortcuts
                     appState.rememberSettingsSection(.shortcuts)
                 }
-                .accessibilityLabel("Ir para seção Atalhos")
-                .accessibilityHint("Mostra a seção Atalhos nesta janela")
-                Button("Abrir Provedor…") {
+                .accessibilityLabel("Go to Shortcuts section")
+                .accessibilityHint("Shows the Shortcuts section in this window")
+                Button("Open Provider…") {
                     appState.settingsSelection = .provider
                     appState.rememberSettingsSection(.provider)
                 }
-                .accessibilityLabel("Ir para seção Provedor")
-                .accessibilityHint("Mostra a seção Provedor nesta janela")
+                .accessibilityLabel("Go to Provider section")
+                .accessibilityHint("Shows the Provider section in this window")
             }
 
-            Section("Sistema") {
-                Toggle("Abrir no login", isOn: appState.settingsBinding(\.openAtLogin))
+            Section("System") {
+                Toggle("Open at login", isOn: appState.settingsBinding(\.openAtLogin))
             }
         }
         .formStyle(.grouped)
@@ -114,8 +114,8 @@ struct ProviderSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Motor") {
-                Picker("Motor", selection: appState.settingsBinding(\.providerKind)) {
+            Section("Engine") {
+                Picker("Engine", selection: appState.settingsBinding(\.providerKind)) {
                     ForEach(EnginePickerGroup.allCases) { group in
                         Section(group.title) {
                             ForEach(group.providers) { kind in
@@ -156,7 +156,7 @@ struct ProviderSettingsView: View {
                 }
             }
 
-            Section("Configuração") {
+            Section("Configuration") {
                 providerFields
             }
         }
@@ -179,7 +179,7 @@ struct ProviderSettingsView: View {
     private var providerFields: some View {
         switch appState.settings.providerKind {
         case .apple:
-            Text("Sem API key. A tradução roda no aparelho com os idiomas baixados no macOS.")
+            Text("No API key. Translation runs on this Mac with languages downloaded in macOS.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -191,7 +191,7 @@ struct ProviderSettingsView: View {
                         Text(packStatusText(for: row.state))
                             .foregroundStyle(packColor(for: row.state))
                         if row.state == .needsDownload || row.state.isFailed {
-                            Button("Baixar…") {
+                            Button("Download…") {
                                 Task { await prepareApplePacks(pair: (row.source, row.target)) }
                             }
                             .disabled(applePackState == .downloading)
@@ -211,59 +211,59 @@ struct ProviderSettingsView: View {
             }
 
             if applePackState == .needsDownload || applePackState.isFailed {
-                Button("Baixar idiomas usados…") {
+                Button("Download languages in use…") {
                     Task { await prepareApplePacks() }
                 }
                 .disabled(applePackState == .downloading)
-                .accessibilityHint("Abre o diálogo do sistema para baixar os pacotes de origem e destino")
+                .accessibilityHint("Opens the system dialog to download source and target packs")
             }
 
-            Button("Abrir Idiomas de Tradução nos Ajustes…") {
+            Button("Open Translation Languages in System Settings…") {
                 Permissions.openTranslationLanguagesSettings()
             }
-            .accessibilityHint("Abre Ajustes do Sistema na lista de idiomas de tradução")
+            .accessibilityHint("Opens System Settings to the translation languages list")
 
             Text(
-                "Baixe origem e destino. O botão acima pede o download pelo diálogo do macOS; se ele não aparecer, use Ajustes › Geral › Idioma e Região › Idiomas de Tradução. Com “Modo no dispositivo” ligado, a tradução fica offline."
+                "Download source and target. The button above asks macOS to download them; if nothing appears, use Settings › General › Language & Region › Translation Languages. With On-Device Mode on, translation stays offline."
             )
             .font(.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         case .deepl:
-            SecureField("API Key DeepL", text: $deeplKey)
-                .help("Chave da API DeepL (conta Free ou Pro). Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API DeepL, armazenada no Keychain")
+            SecureField("DeepL API Key", text: $deeplKey)
+                .help("DeepL API key (Free or Pro account). Stored in the Keychain.")
+                .accessibilityHint("Secret DeepL API key, stored in the Keychain")
                 .onChange(of: deeplKey) { _, newValue in
                     KeychainStore.set(newValue, for: .deeplAPIKey)
                 }
             Toggle(
-                "Usar API Free (api-free.deepl.com)",
+                "Use Free API (api-free.deepl.com)",
                 isOn: appState.settingsBinding(\.deeplUseFreeAPI))
         case .google:
-            SecureField("API Key Google Cloud Translation", text: $googleKey)
-                .help("Chave da API Google Cloud Translation. Guardada no Keychain.")
-                .accessibilityHint("Chave secreta da API Google Cloud, armazenada no Keychain")
+            SecureField("Google Cloud Translation API Key", text: $googleKey)
+                .help("Google Cloud Translation API key. Stored in the Keychain.")
+                .accessibilityHint("Secret Google Cloud API key, stored in the Keychain")
                 .onChange(of: googleKey) { _, newValue in
                     KeychainStore.set(newValue, for: .googleAPIKey)
                 }
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
-                .help("Endpoint compatível com OpenAI, por exemplo LM Studio local.")
-            TextField("Modelo", text: appState.settingsBinding(\.openAIModel))
-            SecureField("API Key (opcional)", text: $openAIKey)
-                .help("Opcional para servidores locais. Guardada no Keychain.")
-                .accessibilityHint("Chave de API opcional, armazenada no Keychain")
+                .help("OpenAI-compatible endpoint, for example local LM Studio.")
+            TextField("Model", text: appState.settingsBinding(\.openAIModel))
+            SecureField("API Key (optional)", text: $openAIKey)
+                .help("Optional for local servers. Stored in the Keychain.")
+                .accessibilityHint("Optional API key, stored in the Keychain")
                 .onChange(of: openAIKey) { _, newValue in
                     KeychainStore.set(newValue, for: .openAIAPIKey)
                 }
-            Text("LM Studio padrão: http://localhost:1234/v1")
+            Text("Default LM Studio: http://localhost:1234/v1")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .customHTTP:
             TextField("URL", text: appState.settingsBinding(\.customHTTPURL))
-            TextField("Método", text: appState.settingsBinding(\.customHTTPMethod))
+            TextField("Method", text: appState.settingsBinding(\.customHTTPMethod))
             TextField(
-                "Headers JSON", text: appState.settingsBinding(\.customHTTPHeadersJSON),
+                "JSON headers", text: appState.settingsBinding(\.customHTTPHeadersJSON),
                 axis: .vertical
             )
             .lineLimit(2...4)
@@ -273,7 +273,7 @@ struct ProviderSettingsView: View {
             )
             .lineLimit(3...6)
             TextField(
-                "JSON path da resposta", text: appState.settingsBinding(\.customHTTPResponsePath))
+                "Response JSON path", text: appState.settingsBinding(\.customHTTPResponsePath))
             Text("Placeholders: {{text}}, {{to}}, {{from}}")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -286,12 +286,12 @@ struct ProviderSettingsView: View {
 
     private var applePackLabel: String {
         switch applePackState {
-        case .checking: return "Verificando idiomas…"
-        case .installed: return "Idiomas de tradução prontos"
-        case .needsDownload: return "Falta baixar um ou mais idiomas"
-        case .downloading: return "Baixando — confirme o diálogo do sistema"
-        case .unsupported: return "Par de idiomas não suportado"
-        case .failed(let message): return "Falha: \(message)"
+        case .checking: return String(localized: "Checking languages…")
+        case .installed: return String(localized: "Translation languages ready")
+        case .needsDownload: return String(localized: "One or more languages still need downloading")
+        case .downloading: return String(localized: "Downloading — confirm the system dialog")
+        case .unsupported: return String(localized: "Language pair not supported")
+        case .failed(let message): return String(format: String(localized: "Failed: %@"), message)
         }
     }
 
@@ -300,12 +300,12 @@ struct ProviderSettingsView: View {
 
     private func packStatusText(for state: LanguagePackState) -> String {
         switch state {
-        case .checking: return "Verificando…"
-        case .installed: return "Pronto"
-        case .needsDownload: return "Não baixado"
-        case .downloading: return "Baixando…"
-        case .unsupported: return "Não suportado"
-        case .failed: return "Falhou"
+        case .checking: return String(localized: "Checking…")
+        case .installed: return String(localized: "Ready")
+        case .needsDownload: return String(localized: "Not downloaded")
+        case .downloading: return String(localized: "Downloading…")
+        case .unsupported: return String(localized: "Not supported")
+        case .failed: return String(localized: "Failed")
         }
     }
 
@@ -434,7 +434,7 @@ private struct EngineBadgeChip: View {
     let badge: EngineBadge
 
     var body: some View {
-        Text(badge.rawValue)
+        Text(badge.title)
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -485,9 +485,9 @@ struct ShortcutsSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Atalhos globais") {
+            Section("Global shortcuts") {
                 HStack {
-                    Text("Traduzir")
+                    Text("Translate")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateOnlyHotkey),
@@ -495,25 +495,25 @@ struct ShortcutsSettingsView: View {
                     )
                 }
                 HStack {
-                    Text("Traduzir e enviar")
+                    Text("Translate and send")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateAndSendHotkey),
                         conflictingChords: sendConflicts
                     )
                 }
-                Button("Restaurar padrões (⌃⌥T / ⌃⌥⏎ / ⌃⌥Y)") {
+                Button("Restore defaults (⌃⌥T / ⌃⌥⏎ / ⌃⌥Y)") {
                     appState.resetHotkeysToDefaults()
                 }
             }
 
-            Section("Modo popup") {
+            Section("Popup mode") {
                 Toggle(
-                    "Ativar modo popup",
+                    "Enable popup mode",
                     isOn: appState.settingsBinding(\.popupModeEnabled)
                 )
                 HStack {
-                    Text("Atalho do popup")
+                    Text("Popup shortcut")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.popupHotkey),
@@ -522,7 +522,7 @@ struct ShortcutsSettingsView: View {
                     .disabled(!appState.settings.popupModeEnabled)
                 }
                 Text(
-                    "Mostra a tradução num painel. Em campos editáveis, permite Copiar ou Substituir."
+                    "Shows the translation in a panel. In editable fields, you can Copy or Replace."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -530,7 +530,7 @@ struct ShortcutsSettingsView: View {
 
             Section {
                 Text(
-                    "Clique no atalho e pressione a nova combinação. Esc cancela. Prefira ⌃⌥ para evitar conflitos. O atalho Traduzir substitui no lugar (campo editável) ou abre o painel só com Copiar (só leitura). O atalho de popup — se estiver ligado — abre o painel em qualquer seleção, com Substituir quando o campo for editável. Com “Enter traduz e envia”, Enter sozinho também traduz e envia."
+                    "Click the shortcut and press the new combination. Esc cancels. Prefer ⌃⌥ to avoid conflicts. Translate replaces in place (editable field) or opens the panel with Copy only (read-only). The popup shortcut — if on — opens the panel for any selection, with Replace when the field is editable. With “Enter translates and sends”, Enter alone also translates and sends."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -550,12 +550,12 @@ struct PermissionsSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Necessárias") {
+            Section("Required") {
                 permissionRow(
                     ok: accessibilityOK,
-                    okText: "Acessibilidade concedida",
-                    pendingText: "Acessibilidade necessária",
-                    caption: "Ler e substituir o texto do campo focado.",
+                    okText: "Accessibility granted",
+                    pendingText: "Accessibility required",
+                    caption: "Read and replace text in the focused field.",
                     open: {
                         _ = Permissions.isAccessibilityTrusted(prompt: true)
                         Permissions.openAccessibilitySettings()
@@ -563,9 +563,9 @@ struct PermissionsSettingsView: View {
                 )
                 permissionRow(
                     ok: inputMonitoringOK,
-                    okText: "Monitoramento de Entrada concedido",
-                    pendingText: "Monitoramento de Entrada necessário",
-                    caption: "Captura os atalhos globais (⌃⌥T, ⌃⌥⏎) em qualquer app.",
+                    okText: "Input Monitoring granted",
+                    pendingText: "Input Monitoring required",
+                    caption: "Captures global shortcuts (⌃⌥T, ⌃⌥⏎) in any app.",
                     open: {
                         _ = Permissions.requestInputMonitoring()
                         Permissions.openInputMonitoringSettings()
@@ -594,8 +594,8 @@ struct PermissionsSettingsView: View {
                 Text(ok ? okText : pendingText)
                 Spacer()
                 if !ok {
-                    Button("Abrir Ajustes", action: open)
-                        .accessibilityHint("Abre Ajustes do Sistema para conceder esta permissão")
+                    Button("Open System Settings", action: open)
+                        .accessibilityHint("Opens System Settings to grant this permission")
                 }
             }
             Text(caption)
@@ -612,25 +612,25 @@ struct PermissionsSettingsView: View {
 struct TestSettingsView: View {
     @EnvironmentObject private var appState: AppState
 
-    @State private var testText = "Olá, mundo!"
+    @State private var testText = String(localized: "Hello, world!")
     @State private var isTesting = false
     @State private var testResult: Result<String, Error>?
 
     var body: some View {
         Form {
-            Section("Entrada") {
-                TextField("Texto", text: $testText)
-                LabeledContent("Motor atual") {
+            Section("Input") {
+                TextField("Text", text: $testText)
+                LabeledContent("Current engine") {
                     Label(
                         appState.settings.providerKind.displayName,
                         systemImage: appState.settings.providerKind.symbolName
                     )
                 }
                 LabeledContent(
-                    "Destino (suas)",
+                    "Target (outgoing)",
                     value: LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)
                 )
-                Button(isTesting ? "Traduzindo…" : "Testar tradução") {
+                Button(isTesting ? "Translating…" : "Test translation") {
                     Task { await runTest() }
                 }
                 .disabled(
@@ -639,12 +639,12 @@ struct TestSettingsView: View {
                         || testText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
-            Section("Resultado") {
+            Section("Result") {
                 resultView
             }
 
             Section {
-                Text("Valida o motor e o par «texto que escrevo» nesta janela. Não abre o painel, o HUD nem dispara atalhos.")
+                Text("Checks the engine and the “text I write” pair in this window. Does not open the panel, HUD, or fire shortcuts.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -658,13 +658,13 @@ struct TestSettingsView: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("Traduzindo…")
+                Text("Translating…")
                     .foregroundStyle(.secondary)
             }
         } else {
             switch testResult {
             case .none:
-                Text("Rode um teste para validar o motor e o idioma configurados.")
+                Text("Run a test to validate the configured engine and language.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             case .success(let translated):
@@ -693,7 +693,7 @@ struct TestSettingsView: View {
                     code: 1,
                     userInfo: [
                         NSLocalizedDescriptionKey:
-                            "Uma tradução por atalho ainda está em andamento. Aguarde e tente de novo."
+                            String(localized: "A shortcut translation is still running. Wait and try again.")
                     ]
                 )
             )
@@ -762,7 +762,7 @@ struct AboutSettingsView: View {
                         Text("Prism Translate")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("Versão \(marketingVersion) (\(buildNumber))")
+                        Text(String(format: String(localized: "Version %@ (%@)"), marketingVersion, buildNumber))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -770,19 +770,19 @@ struct AboutSettingsView: View {
                 .padding(.vertical, 6)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
-                    "Prism Translate, versão \(marketingVersion), build \(buildNumber)")
+                    String(format: String(localized: "Prism Translate, version %@, build %@"), marketingVersion, buildNumber))
             }
 
             // ── O App ───────────────────────────────────────────────
-            Section("O App") {
+            Section("The App") {
                 Text(
-                    "Traduz o texto do campo focado em qualquer app — um atalho, no lugar, sem copiar e colar."
+                    "Translates the focused field in any app — one shortcut, in place, no copy and paste."
                 )
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
 
                 Text(
-                    "Motores: Apple Translation no aparelho, DeepL, Google Translate e LM Studio local. A interface fica na barra de menus — quase invisível."
+                    "Engines: Apple Translation on this Mac, DeepL, Google Translate, and local LM Studio. The interface lives in the menu bar — almost invisible."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -790,7 +790,7 @@ struct AboutSettingsView: View {
             }
 
             // ── O Time ──────────────────────────────────────────────
-            Section("O Time") {
+            Section("The Team") {
                 HStack(alignment: .top, spacing: 12) {
                     AboutDeveloperAvatar()
                     VStack(alignment: .leading, spacing: 2) {
@@ -810,20 +810,20 @@ struct AboutSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                aboutRow("Localização", AppCredits.location)
+                aboutRow("Location", AppCredits.location)
                 Button("GitHub \(AppCredits.githubHandle)") {
                     NSWorkspace.shared.open(AppRelease.githubProfileURL)
                 }
-                .accessibilityLabel("Abrir GitHub de \(AppCredits.developerName)")
+                .accessibilityLabel(String(format: String(localized: "Open GitHub for %@"), AppCredits.developerName))
             }
 
             // ── História ────────────────────────────────────────────
-            Section("História") {
-                aboutRow("Criado em", "2 de agosto de 2026")
-                aboutRow("Nome original", "QuickTranslate")
-                aboutRow("Rebrand", "Prism Translate — ago. 2026")
+            Section("History") {
+                aboutRow("Created", String(localized: "August 2, 2026"))
+                aboutRow("Original name", "QuickTranslate")
+                aboutRow("Rebrand", String(localized: "Prism Translate — Aug 2026"))
                 Text(
-                    "Nasceu como um tradutor simples de menu bar focado em substituir o texto no lugar. O rebrand trouxe uma identidade nova, mas o espírito continua o mesmo: traduzir sem atrapalhar."
+                    "It started as a simple menu-bar translator that replaces text in place. The rebrand brought a new identity, but the spirit is the same: translate without getting in the way."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -831,7 +831,7 @@ struct AboutSettingsView: View {
             }
 
             // ── Novidades ───────────────────────────────────────────
-            Section("Novidades da \(marketingVersion)") {
+            Section(String(format: String(localized: "What’s new in %@"), marketingVersion)) {
                 Text(ChangelogHighlights.summaryForCurrentVersion())
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -840,15 +840,15 @@ struct AboutSettingsView: View {
             }
 
             // ── Atualizações ────────────────────────────────────────
-            Section("Atualizações") {
-                aboutRow("Canal", "Pré-lançamento")
-                aboutRow("Distribuição", "GitHub Releases (fora da App Store)")
+            Section("Updates") {
+                aboutRow("Channel", String(localized: "Pre-release"))
+                aboutRow("Distribution", String(localized: "GitHub Releases (outside the App Store)"))
 
                 Button {
                     Task { await checkForUpdates() }
                 } label: {
                     HStack {
-                        Text(isCheckingUpdate ? "Verificando…" : "Verificar atualizações")
+                        Text(isCheckingUpdate ? "Checking…" : "Check for Updates")
                         if isCheckingUpdate {
                             Spacer()
                             ProgressView()
@@ -857,7 +857,7 @@ struct AboutSettingsView: View {
                     }
                 }
                 .disabled(isCheckingUpdate)
-                .accessibilityLabel("Verificar atualizações")
+                .accessibilityLabel("Check for Updates")
 
                 if let updateResult {
                     Text(updateMessage(updateResult))
@@ -867,20 +867,20 @@ struct AboutSettingsView: View {
                 }
 
                 if case .available(let version, let url) = updateResult {
-                    Button("Baixar \(version)…") {
+                    Button(String(format: String(localized: "Download %@…"), version)) {
                         NSWorkspace.shared.open(url)
                     }
                 }
             }
 
             // ── Suporte ─────────────────────────────────────────────
-            Section("Suporte") {
-                Button("Reabrir tutorial de configuração…") {
+            Section("Support") {
+                Button("Reopen setup tutorial…") {
                     appState.showOnboarding()
                 }
-                .accessibilityLabel("Reabrir tutorial de configuração")
+                .accessibilityLabel("Reopen setup tutorial")
 
-                Button("Reportar problema…") {
+                Button("Report a problem…") {
                     NSWorkspace.shared.open(
                         AppRelease.reportIssueURL(
                             version: marketingVersion,
@@ -889,19 +889,19 @@ struct AboutSettingsView: View {
                         )
                     )
                 }
-                .accessibilityHint("Abre uma issue no GitHub com versão e sistema preenchidos")
+                .accessibilityHint("Opens a GitHub issue with version and system filled in")
 
-                Button("Copiar informações do app") {
+                Button("Copy app info") {
                     copyAppInfo()
-                    flashDiagnosticNote("Informações copiadas")
+                    flashDiagnosticNote(String(localized: "Copied info"))
                 }
-                .accessibilityHint("Copia versão, build, identificador e motor atual para a área de transferência")
+                .accessibilityHint("Copies version, build, identifier, and current engine to the clipboard")
 
-                Button("Abrir Logs…") {
+                Button("Open Logs…") {
                     appState.settingsSelection = .logs
                     appState.rememberSettingsSection(.logs)
                 }
-                .accessibilityHint("Mostra a seção Logs nesta janela")
+                .accessibilityHint("Shows the Logs section in this window")
 
                 if let diagnosticNote {
                     Text(diagnosticNote)
@@ -922,35 +922,35 @@ struct AboutSettingsView: View {
                     .foregroundStyle(.secondary)
 
                 Text(
-                    "Código-fonte disponível para uso não comercial. Apple Translation, DeepL, Google Translate e LM Studio são marcas dos respectivos donos. O Prism os usa como motores de tradução opcionais."
+                    "Source code is available for noncommercial use. Apple Translation, DeepL, Google Translate, and LM Studio are trademarks of their owners. Prism uses them as optional translation engines."
                 )
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
 
-                Button("Ver licença") {
+                Button("View license") {
                     if let url = AppRelease.bundledLicenseURL {
                         NSWorkspace.shared.open(url)
                     } else {
                         NSWorkspace.shared.open(AppRelease.licenseURL)
                     }
                 }
-                .accessibilityLabel("Abrir o texto da licença PolyForm Noncommercial")
+                .accessibilityLabel("Open the PolyForm Noncommercial license text")
 
                 Button("PolyForm Noncommercial 1.0.0") {
                     NSWorkspace.shared.open(AppRelease.licenseURL)
                 }
-                .accessibilityLabel("Abrir a página da licença PolyForm Noncommercial")
+                .accessibilityLabel("Open the PolyForm Noncommercial license page")
 
-                Button("Repositório no GitHub") {
+                Button("GitHub repository") {
                     NSWorkspace.shared.open(AppRelease.repositoryURL)
                 }
-                .accessibilityLabel("Abrir repositório no GitHub")
+                .accessibilityLabel("Open repository on GitHub")
 
-                Button("Página de releases") {
+                Button("Releases page") {
                     NSWorkspace.shared.open(AppRelease.releasesURL)
                 }
-                .accessibilityLabel("Abrir página de releases no GitHub")
+                .accessibilityLabel("Open the GitHub releases page")
             }
         }
         .formStyle(.grouped)
@@ -971,10 +971,10 @@ struct AboutSettingsView: View {
         let info = [
             "Prism Translate \(marketingVersion) (\(buildNumber))",
             "Bundle: \(AppRelease.bundleIdentifier)",
-            "Canal: pré-lançamento",
-            "Sistema: \(AppRelease.runningMacOS)",
-            "Mínimo: macOS 15.0",
-            "Motor: \(appState.settings.providerKind.displayName)",
+            String(localized: "Channel: pre-release"),
+            String(format: String(localized: "System: %@"), AppRelease.runningMacOS),
+            String(localized: "Minimum: macOS 15.0"),
+            String(format: String(localized: "Engine: %@"), appState.settings.providerKind.displayName),
         ].joined(separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(info, forType: .string)
@@ -1004,15 +1004,15 @@ struct AboutSettingsView: View {
     private func updateMessage(_ result: UpdateCheckResult) -> String {
         switch result {
         case .upToDate:
-            return "Você já está na versão mais recente."
+            return String(localized: "You’re already on the latest version.")
         case .aheadOfRelease(let published):
-            return "Esta build está à frente da última publicação (\(published))."
+            return String(format: String(localized: "This build is ahead of the last published release (%@)."), published)
         case .available(let version, _):
-            return "Versão \(version) disponível."
+            return String(format: String(localized: "Version %@ is available."), version)
         case .nonePublished:
-            return "Ainda não há versão publicada no GitHub. Quando houver, este botão aponta para o download."
+            return String(localized: "No version has been published on GitHub yet. When one is, this button will point to the download.")
         case .failed(let message):
-            return "Não foi possível verificar: \(message)"
+            return String(format: String(localized: "Couldn’t check: %@"), message)
         }
     }
 

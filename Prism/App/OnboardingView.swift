@@ -30,49 +30,49 @@ struct OnboardingView: View {
     private let steps: [OnboardingStep] = [
         OnboardingStep(
             id: 0,
-            title: "Traduza sem sair do campo",
+            title: "Translate without leaving the field",
             subtitle:
-                "O Prism traduz e substitui o texto do campo focado em qualquer app — sem janelas, sem copiar e colar.",
+                "Prism translates and replaces the focused field in any app — no extra windows, no copy and paste.",
             symbolName: "prism",
             symbolColor: .accentColor
         ),
         OnboardingStep(
             id: 1,
-            title: "Permissão de Acessibilidade",
+            title: "Accessibility permission",
             subtitle:
-                "É o que permite ler e substituir o texto do campo em que você digita. Sem ela, a tradução não acontece.",
+                "This is what lets Prism read and replace the text you type. Without it, translation cannot run.",
             symbolName: "accessibility",
             symbolColor: .blue
         ),
         OnboardingStep(
             id: 2,
-            title: "Monitoramento de Entrada",
+            title: "Input Monitoring",
             subtitle:
-                "Entrega os atalhos globais ao app mesmo com outro app em primeiro plano. Sem ele, ⌃⌥T parece “não fazer nada”.",
+                "Delivers global shortcuts even when another app is frontmost. Without it, ⌃⌥T looks like it “does nothing”.",
             symbolName: "keyboard",
             symbolColor: .orange
         ),
         OnboardingStep(
             id: 3,
-            title: "Idioma e tradução",
+            title: "Language and translation",
             subtitle:
-                "Escolha o idioma destino. Com Apple Translation, os pacotes são baixados agora e a tradução roda no aparelho.",
+                "Choose the target language. With Apple Translation, packs download now and translation runs on this Mac.",
             symbolName: "character.bubble",
             symbolColor: .green
         ),
         OnboardingStep(
             id: 4,
-            title: "Atalhos na prática",
+            title: "Shortcuts in practice",
             subtitle:
-                "Estes são os seus atalhos atuais. Dá para trocá-los em Configurações → Atalhos.",
+                "These are your current shortcuts. You can change them in Settings → Shortcuts.",
             symbolName: "command",
             symbolColor: .purple
         ),
         OnboardingStep(
             id: 5,
-            title: "Tudo pronto",
+            title: "You’re all set",
             subtitle:
-                "Confira o checklist — o ícone do prisma fica na barra de menus para ligar/desligar, trocar idioma e abrir as Configurações.",
+                "Check the list — the prism icon stays in the menu bar to turn Prism on or off, change language, and open Settings.",
             symbolName: "checkmark.circle.fill",
             symbolColor: .green
         ),
@@ -118,15 +118,15 @@ struct OnboardingView: View {
             PrismGlyph()
                 .frame(width: 16, height: 16)
                 .foregroundStyle(.secondary)
-            Text("Configuração")
+            Text("Setup")
                 .font(QTDesign.Fonts.heading)
                 .foregroundStyle(.secondary)
             Spacer()
-            Text("Etapa \(stepIndex + 1) de \(steps.count)")
+            Text(String(format: String(localized: "Step %lld of %lld"), Int64(stepIndex + 1), Int64(steps.count)))
                 .font(QTDesign.Fonts.caption.weight(.medium))
                 .foregroundStyle(.tertiary)
                 .monospacedDigit()
-                .accessibilityLabel("Etapa \(stepIndex + 1) de \(steps.count)")
+                .accessibilityLabel(String(format: String(localized: "Step %lld of %lld"), Int64(stepIndex + 1), Int64(steps.count)))
         }
         .padding(.horizontal, QTDesign.Spacing.l)
         .padding(.vertical, 12)
@@ -185,19 +185,19 @@ struct OnboardingView: View {
             VStack(spacing: QTDesign.Spacing.s) {
                 shortcutRow(
                     keys: appState.settings.translateOnlyHotkey.displayString,
-                    label: "Traduz e substitui no lugar"
+                    label: "Translates and replaces in place"
                 )
                 shortcutRow(
                     keys: appState.settings.translateAndSendHotkey.displayString,
-                    label: "Traduz, substitui e envia"
+                    label: "Translates, replaces, and sends"
                 )
             }
         case 1:
             VStack(spacing: QTDesign.Spacing.s) {
                 permissionCard(
                     ok: accessibilityOK,
-                    okTitle: "Acessibilidade concedida",
-                    pendingTitle: "Acessibilidade necessária"
+                    okTitle: "Accessibility granted",
+                    pendingTitle: "Accessibility required"
                 ) {
                     _ = Permissions.isAccessibilityTrusted(prompt: true)
                     Permissions.openAccessibilitySettings()
@@ -205,7 +205,7 @@ struct OnboardingView: View {
                 }
                 if !accessibilityOK {
                     pendingBadge(
-                        "Você pode continuar e conceder depois — a tradução só funciona com esta permissão."
+                        "You can continue and grant this later — translation only works with this permission."
                     )
                 }
             }
@@ -213,8 +213,8 @@ struct OnboardingView: View {
             VStack(spacing: QTDesign.Spacing.s) {
                 permissionCard(
                     ok: inputMonitoringOK,
-                    okTitle: "Monitoramento de Entrada concedido",
-                    pendingTitle: "Monitoramento de Entrada necessário"
+                    okTitle: "Input Monitoring granted",
+                    pendingTitle: "Input Monitoring required"
                 ) {
                     _ = Permissions.requestInputMonitoring()
                     Permissions.openInputMonitoringSettings()
@@ -222,7 +222,7 @@ struct OnboardingView: View {
                 }
                 if !inputMonitoringOK {
                     pendingBadge(
-                        "Sem ela os atalhos globais ficam inativos — o menu bar avisa quando isso acontecer."
+                        "Without it, global shortcuts stay inactive — the menu bar warns you when that happens."
                     )
                 }
             }
@@ -230,7 +230,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
                 GlassSurface {
                     Picker(
-                        "Idioma destino (suas mensagens)",
+                        "Target language (your messages)",
                         selection: Binding(
                             get: { appState.settings.outgoingTargetLanguage },
                             set: { appState.setOutgoingTargetLanguage($0) }
@@ -245,17 +245,17 @@ struct OnboardingView: View {
                 }
                 languagePackCard
                 QTSettingsLink(section: .provider) {
-                    Label("Abrir Configurações → Provedor", systemImage: "arrow.up.right.square")
+                    Label("Open Settings → Provider", systemImage: "arrow.up.right.square")
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Abrir Configurações, seção Provedor")
-                .accessibilityHint("Abre a janela de Configurações na seção Provedor")
+                .accessibilityLabel("Open Settings, Provider section")
+                .accessibilityHint("Opens the Settings window on the Provider section")
                 QTTipRow(
                     icon: "key.fill",
                     text:
-                        "Prefere DeepL, Google ou LM Studio? Configure o motor em Configurações → Provedor."
+                        "Prefer DeepL, Google, or LM Studio? Configure the engine in Settings → Provider."
                 )
             }
             .onAppear(perform: refreshLanguagePack)
@@ -263,30 +263,30 @@ struct OnboardingView: View {
             VStack(spacing: QTDesign.Spacing.s) {
                 shortcutRow(
                     keys: appState.settings.translateOnlyHotkey.displayString,
-                    label: "Seleciona o texto do campo, traduz e substitui"
+                    label: "Selects the field text, translates, and replaces"
                 )
                 shortcutRow(
                     keys: appState.settings.translateAndSendHotkey.displayString,
-                    label: "Faz o mesmo e envia (Enter)"
+                    label: "Does the same and sends (Enter)"
                 )
                 if appState.settings.popupModeEnabled {
                     shortcutRow(
                         keys: appState.settings.popupHotkey.displayString,
-                        label: "Mostra o resultado num painel (modo popup)"
+                        label: "Shows the result in a panel (popup mode)"
                     )
                 }
                 shortcutRow(
                     keys: "⏎",
-                    label: "Só se “Enter traduz e envia” estiver ligado no menu"
+                    label: "Only if “Enter translates and sends” is on in the menu"
                 )
                 QTSettingsLink(section: .shortcuts) {
-                    Label("Abrir Configurações → Atalhos", systemImage: "arrow.up.right.square")
+                    Label("Open Settings → Shortcuts", systemImage: "arrow.up.right.square")
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Abrir Configurações, seção Atalhos")
-                .accessibilityHint("Abre a janela de Configurações na seção Atalhos")
+                .accessibilityLabel("Open Settings, Shortcuts section")
+                .accessibilityHint("Opens the Settings window on the Shortcuts section")
                 .padding(.top, 4)
             }
         case 5:
@@ -305,27 +305,27 @@ struct OnboardingView: View {
             Spacer()
 
             if stepIndex == 0 {
-                Button("Pular") {
+                Button("Skip") {
                     // Vai ao checklist para ver o que ainda falta — não marca concluído.
                     go(to: steps.count - 1)
                 }
                 .foregroundStyle(.secondary)
-                .help("Pula para o checklist final sem concluir o tutorial.")
-                .accessibilityHint("Mostra o checklist com itens pendentes")
+                .help("Jumps to the final checklist without finishing the tutorial.")
+                .accessibilityHint("Shows the checklist with pending items")
             } else {
-                Button("Voltar") {
+                Button("Back") {
                     go(to: stepIndex - 1)
                 }
             }
 
             if isLastStep {
-                Button("Concluir") {
+                Button("Finish") {
                     finish()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
             } else {
-                Button(stepIndex == 0 ? "Começar" : "Continuar") {
+                Button(stepIndex == 0 ? "Get started" : "Continue") {
                     go(to: stepIndex + 1)
                 }
                 .keyboardShortcut(.defaultAction)
@@ -347,7 +347,7 @@ struct OnboardingView: View {
         }
         .animation(stepAnimation, value: stepIndex)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Etapa \(stepIndex + 1) de \(steps.count)")
+        .accessibilityLabel(String(format: String(localized: "Step %lld of %lld"), Int64(stepIndex + 1), Int64(steps.count)))
     }
 
     private var stepAnimation: Animation? {
@@ -362,7 +362,7 @@ struct OnboardingView: View {
         }
         let step = steps[index]
         AccessibilityNotification.Announcement(
-            "Etapa \(index + 1) de \(steps.count): \(step.title)"
+            String(format: String(localized: "Step %lld of %lld: %@"), Int64(index + 1), Int64(steps.count), step.title)
         ).post()
     }
 
@@ -391,7 +391,7 @@ struct OnboardingView: View {
                     Spacer(minLength: 0)
                 }
 
-                Button("Abrir Ajustes do Sistema…", action: openAction)
+                Button("Open System Settings…", action: openAction)
                     .buttonStyle(.bordered)
                     .controlSize(.large)
             }
@@ -438,35 +438,35 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
             GlassSurface {
                 VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-                    checklistRow(ok: accessibilityOK, text: "Acessibilidade") {
+                    checklistRow(ok: accessibilityOK, text: "Accessibility") {
                         Permissions.openAccessibilitySettings()
                     }
-                    checklistRow(ok: inputMonitoringOK, text: "Monitoramento de Entrada") {
+                    checklistRow(ok: inputMonitoringOK, text: "Input Monitoring") {
                         Permissions.openInputMonitoringSettings()
                     }
                     checklistRow(
                         ok: languagesReady,
                         text:
-                            "Idiomas de tradução (\(LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)))",
+                            String(format: String(localized: "Translation languages (%@)"), LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)),
                         settingsSection: .general
                     )
-                    checklistRow(ok: true, text: "Ícone do prisma na barra de menus", fix: nil)
+                    checklistRow(ok: true, text: "Prism icon in the menu bar", fix: nil)
                 }
                 .padding(14)
             }
 
             if !accessibilityOK || !inputMonitoringOK {
                 QTSettingsLink(section: .permissions) {
-                    Label("Abrir Configurações → Permissões", systemImage: "lock.shield")
+                    Label("Open Settings → Permissions", systemImage: "lock.shield")
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Abrir Configurações, seção Permissões")
-                .accessibilityHint("Abre a janela de Configurações na seção Permissões")
+                .accessibilityLabel("Open Settings, Permissions section")
+                .accessibilityHint("Opens the Settings window on the Permissions section")
             }
 
-            Text("Itens em laranja ficam pendentes — você pode corrigir agora ou depois pelo menu.")
+            Text("Orange items are still pending — you can fix them now or later from the menu.")
                 .font(QTDesign.Fonts.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -488,19 +488,19 @@ struct OnboardingView: View {
             if !ok {
                 if let settingsSection {
                     QTSettingsLink(section: settingsSection) {
-                        Text("Corrigir…")
+                        Text("Fix…")
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
                 } else if let fix {
-                    Button("Corrigir…", action: fix)
+                    Button("Fix…", action: fix)
                         .buttonStyle(.borderless)
                         .controlSize(.small)
                 }
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(text): \(ok ? "pronto" : "pendente")")
+        .accessibilityLabel("\(text): \(ok ? String(localized: "ready") : String(localized: "pending"))")
     }
 
     // MARK: - Language packs (Apple Translation)
@@ -529,19 +529,19 @@ struct OnboardingView: View {
                 }
 
                 if packState == .needsDownload || packState.isFailed {
-                    Button(packState.isFailed ? "Tentar de novo" : "Baixar idiomas…") {
+                    Button(packState.isFailed ? "Try again" : "Download languages…") {
                         attemptLanguageDownload()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
 
-                    Button("Abrir Idiomas de Tradução nos Ajustes…") {
+                    Button("Open Translation Languages in System Settings…") {
                         Permissions.openTranslationLanguagesSettings()
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
                     .font(QTDesign.Fonts.caption)
-                    .accessibilityHint("Abre Ajustes do Sistema na lista de idiomas de tradução")
+                    .accessibilityHint("Opens System Settings to the translation languages list")
                 }
             }
             .padding(14)
@@ -552,12 +552,12 @@ struct OnboardingView: View {
     private var packTitle: String {
         let target = LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)
         switch packState {
-        case .checking: return "Verificando idiomas…"
-        case .installed: return "Idiomas prontos (destino: \(target))"
-        case .needsDownload: return "Download necessário (destino: \(target))"
-        case .downloading: return "Baixando idiomas — confirme o diálogo do sistema"
-        case .unsupported: return "Par de idiomas não suportado — mude o destino ou o provedor"
-        case .failed: return "Download não concluído"
+        case .checking: return String(localized: "Checking languages…")
+        case .installed: return String(format: String(localized: "Languages ready (target: %@)"), target)
+        case .needsDownload: return String(format: String(localized: "Download needed (target: %@)"), target)
+        case .downloading: return String(localized: "Downloading languages — confirm the system dialog")
+        case .unsupported: return String(localized: "Language pair not supported — change the target or the provider")
+        case .failed: return String(localized: "Download not completed")
         }
     }
 

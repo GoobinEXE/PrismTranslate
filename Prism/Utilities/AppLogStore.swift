@@ -19,8 +19,8 @@ enum AppLogLevel: Int, Codable, CaseIterable, Comparable, Identifiable {
         switch self {
         case .debug: return "Debug"
         case .info: return "Info"
-        case .warning: return "Aviso"
-        case .error: return "Erro"
+        case .warning: return String(localized: "Warning")
+        case .error: return String(localized: "Error")
         }
     }
 
@@ -392,7 +392,7 @@ enum AppLogExport {
     @MainActor
     static func presentSavePanel() -> Result<URL, Error>? {
         let panel = NSSavePanel()
-        panel.title = "Salvar log do Prism"
+        panel.title = String(localized: "Save Prism log")
         panel.message = "Arquivo de texto completo — pode anexar ou colar no chat."
         panel.allowedContentTypes = [.plainText, .log]
         panel.nameFieldStringValue = "Prism-\(fileStamp()).log"

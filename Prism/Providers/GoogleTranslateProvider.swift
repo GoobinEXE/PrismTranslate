@@ -8,14 +8,14 @@ struct GoogleTranslateProvider: TranslationProvider {
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
             AppLog.error(.google, "Google Translate: API key não configurada — abra Configurações › Provedor")
-            throw TranslationError.invalidConfiguration("Configure a API key do Google nas Configurações")
+            throw TranslationError.invalidConfiguration(String(localized: "Set the Google API key in Settings"))
         }
 
         var components = URLComponents(string: "https://translation.googleapis.com/language/translate/v2")!
         components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
 
         guard let url = components.url else {
-            throw TranslationError.invalidConfiguration("URL Google inválida")
+            throw TranslationError.invalidConfiguration(String(localized: "Invalid Google URL"))
         }
 
         ProviderLog.sending(

@@ -29,6 +29,6 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Prism Translate.</string>
 	<key>NSAccessibilityUsageDescription</key>
-	<string>O Prism precisa de Acessibilidade para ler e substituir o texto no campo focado.</string>
+	<string>Prism needs Accessibility to read and replace text in the focused field.</string>
 </dict>
 </plist>

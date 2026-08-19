@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/compat-macos.svg" width="840" alt="Só no Mac. Precisa de macOS 15 Sequoia ou mais novo. Não funciona no iPhone, iPad ou Windows.">
+  <img src="docs/readme/compat-macos.svg" width="840" alt="Disponível no Mac, com macOS 15 Sequoia ou mais novo. Windows em desenvolvimento. iPad nos planos, sem prazo.">
 </p>
 
 ## Instalar
