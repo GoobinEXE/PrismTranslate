@@ -1,0 +1,28 @@
+#!/bin/bash
+# Garante o .app em /Applications, permissões de leitura e abre o Prism
+# na conta do usuário logado (o instalador corre como root).
+set -euo pipefail
+
+APP="/Applications/Prism.app"
+
+if [[ ! -d "$APP" ]]; then
+  echo "erro: $APP não foi instalado" >&2
+  exit 1
+fi
+
+chmod -R a+rX "$APP"
+# O binário precisa continuar executável após a cópia do payload.
+if [[ -f "$APP/Contents/MacOS/Prism" ]]; then
+  chmod a+x "$APP/Contents/MacOS/Prism"
+fi
+
+# Abre o app como o usuário da sessão gráfica — não como root —
+# para o onboarding (permissões e pacotes de idioma da Apple) correr na conta certa.
+console_user="$(stat -f '%Su' /dev/console 2>/dev/null || true)"
+if [[ -n "$console_user" && "$console_user" != "root" && "$console_user" != "loginwindow" ]]; then
+  if command -v sudo >/dev/null 2>&1; then
+    sudo -u "$console_user" open -a "$APP" || true
+  fi
+fi
+
+exit 0

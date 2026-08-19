@@ -2,13 +2,15 @@
 
 Passo a passo para gerar, assinar, notarizar e publicar uma versão do Prism fora da Mac App Store (distribuição direta via Developer ID + GitHub Releases).
 
-> **Atalho:** o script [`scripts/release.sh`](scripts/release.sh) automatiza tudo (archive → export → notarização → staple → DMG). Este documento explica cada etapa manualmente e serve de referência quando algo der errado.
+O artefato público é um **`.dmg`**. Quem baixa **não precisa do Xcode**: o disco contém o instalador `.pkg` (recomendado) e o `.app` para arrastar para Aplicativos. Compilar a partir do código continua possível e é opcional — veja [`BUILDING.md`](BUILDING.md).
+
+> **Atalho:** o script [`scripts/release.sh`](scripts/release.sh) automatiza tudo (archive → export → notarização → PKG → DMG). Este documento explica cada etapa manualmente e serve de referência quando algo der errado.
 
 ---
 
 ## 0. Tornar o repositório público (primeira vez)
 
-Checklist **antes** do DMG / tag `v0.7.0`. Não rode isto no automático — é o passo seu, na hora de publicar.
+Checklist **antes** do DMG / tag `v1.0.0`. Não rode isto no automático — é o passo seu, na hora de publicar.
 
 - [ ] Confirme que não há secrets (`.env`, `Secrets.xcconfig`, chaves, `.p12`)
 - [ ] `LICENSE` na raiz é a PolyForm Noncommercial 1.0.0; GitHub deve detectar a licença
@@ -17,13 +19,15 @@ Checklist **antes** do DMG / tag `v0.7.0`. Não rode isto no automático — é 
   - Local: `git remote set-url origin https://github.com/GoobinEXE/PrismTranslate.git`
 - [ ] Description do repo: app de menu bar para traduzir o campo focado; Topics: `macos`, `translation`, `menubar`
 - [ ] Tornar o repositório **público**
-- [ ] Tag anotada `v0.7.0` + GitHub Release (DMG opcional nesta primeira vez)
+- [ ] Tag anotada `v1.0.0` + GitHub Release com `Prism-1.0.0.dmg`
 
-Versão do primeiro artefato público: **0.7.0** (não 1.0.0).
+Versão do primeiro artefato público: **1.0.0**.
 
 ---
 
 ## 1. Requisitos
+
+Estes requisitos são da **máquina que gera o DMG**, não do Mac de quem instala o app.
 
 - **Apple Developer Program** ativo (US$ 99/ano) — necessário para Developer ID e notarização.
 - **Certificado "Developer ID Application"** instalado no Keychain da máquina de build.
@@ -34,6 +38,10 @@ Versão do primeiro artefato público: **0.7.0** (não 1.0.0).
     security find-identity -v -p codesigning | grep "Developer ID Application"
     ```
 
+- **Certificado "Developer ID Installer"** (recomendado) — assina o `.pkg` que o usuário executa.
+  - Crie o mesmo sítio, tipo **Developer ID Installer** (CSR no Keychain Access).
+  - Verifique com: `security find-identity -v | grep "Developer ID Installer"`
+  - Sem este certificado o script ainda gera o `.pkg`, mas o instalador pode ser recusado pelo Gatekeeper até você criar o cert.
 - **Xcode 16+** com Command Line Tools funcionando (`xcodebuild -version`).
 - **Credencial para notarização** (uma das duas):
   - **Perfil no Keychain** (recomendado — evita senha em variável de ambiente):
@@ -106,7 +114,7 @@ codesign -dv --entitlements - build/export/Prism.app
 
 ---
 
-## 3. Notarização
+## 3. Notarização do .app
 
 A Apple exige notarização para apps distribuídos fora da loja (senão o Gatekeeper bloqueia).
 
@@ -151,18 +159,60 @@ xcrun stapler validate build/export/Prism.app
 
 ---
 
-## 4. Criar o DMG (apenas `hdiutil`, sem ferramentas de terceiros)
+## 4. Instalador `.pkg` (sem Xcode no Mac de destino)
+
+O Prism é um `.app` autocontido: não há Homebrew, Python, CLT nem runtime extra para o usuário instalar. O `.pkg` ainda assim faz três coisas úteis:
+
+1. **Recusa macOS &lt; 15** (`preinstall` + `allowed-os-versions` no `packaging/distribution.xml`)
+2. **Copia** `Prism.app` para `/Applications`
+3. **Abre o app** na conta do usuário logado (`postinstall`), para o onboarding pedir permissões e o Prism baixar pacotes de idioma da Apple se faltarem
+
+Scripts e textos do instalador estão em [`packaging/`](packaging/). O `scripts/release.sh` corre `pkgbuild` + `productbuild`, assina com **Developer ID Installer** (se existir), notariza e stapleia o `.pkg`.
+
+Resumo manual:
+
+```bash
+VERSION=1.0.0
+pkgbuild \
+  --root build/pkg-root \
+  --identifier com.marcelopessoa.prism \
+  --version "$VERSION" \
+  --install-location /Applications \
+  --scripts packaging/scripts \
+  --min-os-version 15.0 \
+  build/Prism-component.pkg
+
+productbuild \
+  --distribution packaging/distribution.xml \
+  --package-path build \
+  --resources packaging/resources \
+  build/Prism-$VERSION-unsigned.pkg
+
+productsign --sign "Developer ID Installer" --timestamp \
+  build/Prism-$VERSION-unsigned.pkg build/Prism-$VERSION.pkg
+
+xcrun notarytool submit build/Prism-$VERSION.pkg --keychain-profile "prism-notary" --wait
+xcrun stapler staple build/Prism-$VERSION.pkg
+```
+
+(Substitua a versão em `packaging/distribution.xml` — o `__VERSION__` — se estiver a gerar o XML à mão. O script de release faz esse `sed`.)
+
+---
+
+## 5. Criar o DMG (apenas `hdiutil`, sem ferramentas de terceiros)
+
+O disco contém o instalador **e** o arrastar-para-Aplicativos:
 
 ```bash
 VERSION=1.0.0
 STAGING=build/dmg-staging
 rm -rf "$STAGING" && mkdir -p "$STAGING"
 
-# Copia o app já notarizado/stapled e cria o atalho para /Applications
 cp -R build/export/Prism.app "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
+cp "build/Prism-$VERSION.pkg" "$STAGING/Instalar Prism.pkg"
+cp packaging/resources/Como\ instalar.txt "$STAGING/Como instalar.txt"
 
-# Gera o DMG comprimido (UDZO), somente leitura
 hdiutil create \
   -volname "Prism $VERSION" \
   -srcfolder "$STAGING" \
@@ -170,23 +220,25 @@ hdiutil create \
   "build/Prism-$VERSION.dmg"
 ```
 
-Assine o DMG também (recomendado) e valide:
+Assine o DMG, notarize e staple (o script faz os três):
 
 ```bash
 codesign --sign "Developer ID Application" --timestamp "build/Prism-$VERSION.dmg"
+xcrun notarytool submit "build/Prism-$VERSION.dmg" --keychain-profile "prism-notary" --wait
+xcrun stapler staple "build/Prism-$VERSION.dmg"
 spctl --assess --type open --context context:primary-signature -v "build/Prism-$VERSION.dmg"
 ```
 
-> Opcional: também é possível notarizar e staplear o próprio DMG (`notarytool submit` + `stapler staple` no `.dmg`). Como o `.app` dentro dele já está stapled, isso é redundante mas melhora a experiência de primeira abertura sem internet.
+Anexe **só o DMG** no GitHub Release. O `.pkg` já vai dentro. Quem clona o repo para abrir no Xcode usa o zip de código-fonte que o GitHub gera automaticamente na tag — é o caminho opcional.
 
 ---
 
-## 5. Primeira execução — instruções para o usuário final (Gatekeeper)
+## 6. Primeira execução — instruções para o usuário final (Gatekeeper)
 
 Inclua isto na página de release / README:
 
-1. Abra o DMG e arraste **Prism** para a pasta **Aplicativos**.
-2. Abra o app. Como foi notarizado pela Apple, o macOS mostra apenas um aviso informando que foi baixado da internet — clique em **Abrir**.
+1. Abra o DMG e dê dois cliques em **Instalar Prism** (ou arraste **Prism** para **Aplicativos**).
+2. Abra o app se o instalador não o tiver aberto. Como foi notarizado pela Apple, o macOS mostra apenas um aviso informando que foi baixado da internet — clique em **Abrir**.
    - Se o macOS bloquear (“não pode ser aberto”): vá em **Ajustes do Sistema → Privacidade e Segurança**, role até o final e clique em **Abrir Mesmo Assim**.
 3. O app pedirá as permissões necessárias (o onboarding guia o processo):
    - **Acessibilidade** — Ajustes do Sistema → Privacidade e Segurança → **Acessibilidade** → habilite **Prism**. Necessária para ler e substituir o texto do campo focado.
@@ -198,7 +250,7 @@ Inclua isto na página de release / README:
 
 ---
 
-## 6. Publicar no GitHub Releases
+## 7. Publicar no GitHub Releases
 
 1. Atualize o [`CHANGELOG.md`](CHANGELOG.md): mova as mudanças de “Unreleased” para a versão com a data do release.
 2. Confirme que `MARKETING_VERSION` no Xcode bate com a versão do changelog.
@@ -222,14 +274,16 @@ Inclua isto na página de release / README:
    shasum -a 256 build/Prism-1.0.0.dmg
    ```
 
+Não anexe o projeto Xcode nem peça Xcode nas notas do release. O zip de código-fonte da tag já cobre quem quer compilar.
+
 ---
 
-## 7. Checklist rápido de release
+## 8. Checklist rápido de release
 
 - [ ] Versão bumpada (`MARKETING_VERSION`) e `CHANGELOG.md` atualizado
-- [ ] `security find-identity` mostra o certificado Developer ID Application
+- [ ] `security find-identity` mostra Developer ID Application (e, de preferência, Developer ID Installer)
 - [ ] Archive + export OK (`codesign --verify` sem erros)
-- [ ] `notarytool submit --wait` → **Accepted**
-- [ ] `stapler validate` OK
-- [ ] DMG criado, assinado e testado em uma máquina/conta limpa
-- [ ] Tag + GitHub Release com DMG e checksum publicados
+- [ ] `notarytool submit --wait` → **Accepted** no `.app`, no `.pkg` e no `.dmg`
+- [ ] `stapler validate` OK nos três
+- [ ] DMG testado numa máquina/conta **sem Xcode**
+- [ ] Tag + GitHub Release com o DMG e o checksum publicados

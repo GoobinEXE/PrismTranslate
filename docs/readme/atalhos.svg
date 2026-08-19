@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="168" viewBox="0 0 880 168" role="img" aria-labelledby="title desc">
+  <title id="title">Atalhos padrão</title>
+  <desc id="desc">Control Option T traduz no lugar. Control Option Enter traduz e envia.</desc>
+  <defs>
+    <style>
+      .card { fill: #F6F3EC; stroke: #E3DDD2; }
+      .title { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
+      .sub { font: 400 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #6A645C; }
+      .key { fill: #FFFFFF; stroke: #D9D3C8; }
+      .klabel { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
+      .plus { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #8A837A; }
+    </style>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="428" height="167" rx="18" class="card"/>
+  <text x="28" y="40" class="title">Traduz no lugar</text>
+  <text x="28" y="62" class="sub">Troca o texto. Não envia a mensagem.</text>
+  <g transform="translate(28, 88)">
+    <rect class="key" x="0" y="0" width="86" height="36" rx="8"/>
+    <text x="43" y="23" text-anchor="middle" class="klabel">Control</text>
+    <text x="96" y="24" class="plus">+</text>
+    <rect class="key" x="114" y="0" width="80" height="36" rx="8"/>
+    <text x="154" y="23" text-anchor="middle" class="klabel">Option</text>
+    <text x="206" y="24" class="plus">+</text>
+    <rect class="key" x="224" y="0" width="40" height="36" rx="8"/>
+    <text x="244" y="23" text-anchor="middle" class="klabel">T</text>
+  </g>
+  <text x="28" y="148" class="sub">Dá para mudar em Preferências.</text>
+
+  <rect x="452.5" y="0.5" width="427" height="167" rx="18" class="card"/>
+  <text x="480" y="40" class="title">Traduz e envia</text>
+  <text x="480" y="62" class="sub">Troca o texto e aperta Enter por você.</text>
+  <g transform="translate(480, 88)">
+    <rect class="key" x="0" y="0" width="86" height="36" rx="8"/>
+    <text x="43" y="23" text-anchor="middle" class="klabel">Control</text>
+    <text x="96" y="24" class="plus">+</text>
+    <rect class="key" x="114" y="0" width="80" height="36" rx="8"/>
+    <text x="154" y="23" text-anchor="middle" class="klabel">Option</text>
+    <text x="206" y="24" class="plus">+</text>
+    <rect class="key" x="224" y="0" width="72" height="36" rx="8"/>
+    <text x="260" y="23" text-anchor="middle" class="klabel">Enter</text>
+  </g>
+  <text x="480" y="148" class="sub">Útil no chat, e-mail e formulários.</text>
+</svg>

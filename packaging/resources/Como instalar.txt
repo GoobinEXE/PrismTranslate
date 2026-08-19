@@ -1,0 +1,18 @@
+Prism — como instalar
+=====================
+
+Não precisa do Xcode.
+
+1. Dê dois cliques em "Instalar Prism.pkg"
+   O instalador verifica o macOS (15 ou mais novo), copia o Prism
+   para Aplicativos e abre o app.
+
+   Alternativa: arraste Prism para a pasta Aplicativos.
+
+2. Na primeira abertura, autorize Acessibilidade e Monitoramento de Entrada.
+   Sem isso o Prism não lê nem substitui o texto.
+
+3. Pacotes de idioma da tradução da Apple, se faltarem, o próprio app baixa.
+
+Quem quiser estudar ou modificar o código abre o projeto no Xcode
+(veja BUILDING.md no repositório). Isso é opcional e só para desenvolvimento.

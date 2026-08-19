@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Prism</title>
+    <organization>com.marcelopessoa</organization>
+    <options customize="never" require-scripts="true" hostArchitectures="arm64,x86_64" rootVolumeOnly="true"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <license file="LICENSE"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="15.0"/>
+        </allowed-os-versions>
+    </volume-check>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.marcelopessoa.prism"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.marcelopessoa.prism" visible="false">
+        <pkg-ref id="com.marcelopessoa.prism"/>
+    </choice>
+    <pkg-ref id="com.marcelopessoa.prism" version="__VERSION__" onConclusion="none">Prism-component.pkg</pkg-ref>
+</installer-gui-script>

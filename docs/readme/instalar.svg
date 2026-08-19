@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="188" viewBox="0 0 880 188" role="img" aria-labelledby="title desc">
+  <title id="title">Como instalar</title>
+  <desc id="desc">Quatro passos: baixar o DMG, correr o instalador, abrir o Prism e autorizar as permissùes. Nùo precisa do Xcode.</desc>
+  <defs>
+    <style>
+      .card { fill: #F6F3EC; stroke: #E3DDD2; }
+      .n { font: 700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F6F3EC; }
+      .title { font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
+      .sub { font: 400 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #6A645C; }
+    </style>
+  </defs>
+
+  <!-- 1 -->
+  <rect x="0.5" y="0.5" width="206" height="187" rx="18" class="card"/>
+  <circle cx="28" cy="28" r="12" fill="#1C1B19"/>
+  <text x="28" y="32.5" text-anchor="middle" class="n">1</text>
+  <g transform="translate(78, 44)" fill="none" stroke="#1C1B19" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+    <ellipse cx="24" cy="18" rx="28" ry="10"/>
+    <path d="M-4 18 V36 C-4 42 8 48 24 48 C40 48 52 42 52 36 V18"/>
+    <path d="M24 8 V32 M18 26 L24 32 L30 26"/>
+  </g>
+  <text x="18" y="132" class="title">Baixe o DMG</text>
+  <text x="18" y="154" class="sub">Na pùgina de Releases.</text>
+
+  <!-- 2 -->
+  <rect x="224.5" y="0.5" width="206" height="187" rx="18" class="card"/>
+  <circle cx="252" cy="28" r="12" fill="#1C1B19"/>
+  <text x="252" y="32.5" text-anchor="middle" class="n">2</text>
+  <g transform="translate(286, 46)">
+    <rect x="0" y="14" width="36" height="36" rx="8" fill="#3B6FD4"/>
+    <polygon points="12,22 24,28 12,34" fill="#F6F3EC"/>
+    <path d="M44 32 H78" stroke="#1C1B19" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M70 26 L78 32 L70 38" fill="none" stroke="#1C1B19" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M86 18 L104 18 L110 24 L110 50 L86 50 Z" fill="none" stroke="#1C1B19" stroke-width="1.7" stroke-linejoin="round"/>
+    <path d="M86 18 L86 24 L110 24" fill="none" stroke="#1C1B19" stroke-width="1.7" stroke-linejoin="round"/>
+  </g>
+  <text x="242" y="132" class="title">Instale</text>
+  <text x="242" y="154" class="sub">Dois cliques no .pkg. Sem Xcode.</text>
+
+  <!-- 3 -->
+  <rect x="448.5" y="0.5" width="206" height="187" rx="18" class="card"/>
+  <circle cx="476" cy="28" r="12" fill="#1C1B19"/>
+  <text x="476" y="32.5" text-anchor="middle" class="n">3</text>
+  <g transform="translate(514, 42)">
+    <rect x="8" y="4" width="56" height="56" rx="14" fill="#F0EDE6" stroke="#E3DDD2"/>
+    <g transform="translate(22, 18)" fill="none" stroke="#1C1B19" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 1.5 L2.2 13.4 L10.6 13.4 Z"/>
+      <path d="M7 1.5 L12.2 9 L10.6 13.4"/>
+      <path d="M0 7.7 L4.2 8.3"/>
+      <path d="M10.9 8.3 L15.7 4.5 M10.9 8.3 L15.7 8.3 M10.9 8.3 L15.7 12.2"/>
+    </g>
+  </g>
+  <text x="466" y="132" class="title">Abra o Prism</text>
+  <text x="466" y="154" class="sub">Se o Mac perguntar, clique Abrir.</text>
+
+  <!-- 4 -->
+  <rect x="672.5" y="0.5" width="207" height="187" rx="18" class="card"/>
+  <circle cx="700" cy="28" r="12" fill="#1C1B19"/>
+  <text x="700" y="32.5" text-anchor="middle" class="n">4</text>
+  <g transform="translate(738, 46)" fill="none" stroke="#1C1B19" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 4 L42 12 V28 C42 38 24 46 24 46 C24 46 6 38 6 28 V12 Z"/>
+    <path d="M16 26 L22 32 L34 18"/>
+  </g>
+  <text x="690" y="132" class="title">Autorize</text>
+  <text x="690" y="154" class="sub">Duas permissùes, na primeira vez.</text>
+</svg>

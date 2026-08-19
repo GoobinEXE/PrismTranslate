@@ -6,6 +6,25 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.0.0] - 2026-08-18
+
+Primeiro lançamento público. Instale pelo DMG — **não precisa do Xcode**.
+
+### Novidades
+
+- Instalador no `Prism-1.0.0.dmg`: dois cliques em **Instalar Prism** copiam o app para Aplicativos e abrem o Prism. O instalador recusa macOS anterior ao 15 e não pede Xcode, Homebrew nem ferramentas de linha de comando.
+- Continua a dar para arrastar **Prism** para **Aplicativos**, se preferir não usar o .pkg.
+- Compilar a partir do código no Xcode continua possível e é opcional (só para quem clona o repositório).
+
+### Adicionado
+
+- Pacote `.pkg` (preinstall/postinstall) dentro do DMG, gerado por `scripts/release.sh`.
+
+### Notas de maturidade
+
+- Validado E2E: **Apple Translation**, **DeepL** e **LM Studio / OpenAI local**.
+- Google Cloud Translation e Custom HTTP ainda não contam até validação ponta a ponta.
+
 ## [0.7.0] - 2026-08-14
 
 Edição Community para o primeiro lançamento público: licença PolyForm Noncommercial, sem motores de IA na nuvem. Controles no menu bar (HUD e modo popup) e pacotes Apple Translation mais confiáveis.

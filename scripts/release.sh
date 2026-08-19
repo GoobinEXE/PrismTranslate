@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 #
 # release.sh — Automatiza o release do Prism:
-#   archive → export (Developer ID) → notarização → staple → DMG
+#   archive → export (Developer ID) → notarização → staple → PKG → DMG
+#
+# O DMG é o artefato para o usuário final: não precisa de Xcode.
+# Contém o instalador .pkg (caminho recomendado) e o .app para arrastar
+# para Aplicativos. Compilar a partir do código (BUILDING.md) continua opcional.
 #
 # USO:
 #   TEAM_ID=ABCDE12345 NOTARY_PROFILE=prism-notary ./scripts/release.sh
@@ -16,8 +20,10 @@
 #   VERSION         (opcional)     Versão do release; padrão: MARKETING_VERSION do projeto
 #   SKIP_NOTARIZE   (opcional)     Se "1", pula notarização/staple (apenas para testes locais!)
 #
-# Pré-requisitos: Xcode + CLT funcionando, certificado "Developer ID Application"
-# no Keychain, e credenciais de notarização (perfil OU Apple ID + senha de app).
+# Pré-requisitos (máquina de *build*, não do usuário final):
+#   Xcode + CLT, certificado "Developer ID Application", credenciais de notarização.
+#   "Developer ID Installer" é recomendado para assinar o .pkg; se faltar, o script
+#   avisa e segue (o .app e o .dmg ainda são assinados).
 #
 set -euo pipefail
 
@@ -28,6 +34,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$REPO_ROOT/Prism.xcodeproj"
 SCHEME="Prism"
 APP_NAME="Prism"
+BUNDLE_ID="com.marcelopessoa.prism"
+PACKAGING_DIR="$REPO_ROOT/packaging"
 
 BUILD_DIR="$REPO_ROOT/build"
 ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
@@ -35,6 +43,11 @@ EXPORT_DIR="$BUILD_DIR/export"
 APP_PATH="$EXPORT_DIR/$APP_NAME.app"
 EXPORT_PLIST="$BUILD_DIR/ExportOptions.plist"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
+PKG_ROOT="$BUILD_DIR/pkg-root"
+PKG_SCRIPTS="$BUILD_DIR/pkg-scripts"
+PKG_RESOURCES="$BUILD_DIR/pkg-resources"
+COMPONENT_PKG="$BUILD_DIR/Prism-component.pkg"
+DIST_XML="$BUILD_DIR/distribution.xml"
 
 # Cores só quando o stdout é um terminal
 if [[ -t 1 ]]; then
@@ -47,10 +60,21 @@ info()  { echo "${GREEN}==>${RESET} $*"; }
 warn()  { echo "${YELLOW}aviso:${RESET} $*"; }
 die()   { echo "${RED}erro:${RESET} $*" >&2; exit 1; }
 
+find_identity() {
+  local needle="$1"
+  security find-identity -v 2>/dev/null | awk -F'"' -v n="$needle" '$0 ~ n { print $2; exit }'
+}
+
+notarize_submit() {
+  local artifact="$1"
+  xcrun notarytool submit "$artifact" "${NOTARY_ARGS[@]}" --wait \
+    || die "Notarização recusada ($artifact). Veja o log com: xcrun notarytool log <submission-id> ${NOTARY_ARGS[*]}"
+}
+
 # ---------------------------------------------------------------------------
-# Verificações de pré-requisitos (fail fast)
+# Verificações de pré-requisitos (fail fast) — só na máquina que *gera* o DMG
 # ---------------------------------------------------------------------------
-info "Verificando pré-requisitos…"
+info "Verificando pré-requisitos de build…"
 
 command -v xcodebuild >/dev/null 2>&1 \
   || die "xcodebuild não encontrado. Instale o Xcode e rode: xcode-select --switch /Applications/Xcode.app"
@@ -61,13 +85,21 @@ xcodebuild -version >/dev/null 2>&1 \
 [[ -d "$PROJECT" ]] \
   || die "Projeto não encontrado em: $PROJECT (rode o script a partir do repositório)."
 
+[[ -d "$PACKAGING_DIR/scripts" ]] \
+  || die "Pasta de empacotamento ausente: $PACKAGING_DIR"
+
 [[ -n "${TEAM_ID:-}" ]] \
   || die "Defina TEAM_ID (Team ID da conta Apple Developer, ex.: TEAM_ID=ABCDE12345)."
 
-# Certificado Developer ID Application no Keychain
-if ! security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
-  die "Nenhum certificado 'Developer ID Application' no Keychain.
+APP_IDENTITY="$(find_identity "Developer ID Application")"
+[[ -n "$APP_IDENTITY" ]] \
+  || die "Nenhum certificado 'Developer ID Application' no Keychain.
 Crie em developer.apple.com (Certificates) ou pelo Xcode → Settings → Accounts → Manage Certificates."
+
+INSTALLER_IDENTITY="$(find_identity "Developer ID Installer")"
+if [[ -z "$INSTALLER_IDENTITY" ]]; then
+  warn "Nenhum certificado 'Developer ID Installer'. O .pkg sai sem assinatura de instalador.
+Crie um em developer.apple.com → Certificates → Developer ID Installer. O .app e o .dmg continuam assinados."
 fi
 
 # Credenciais de notarização: perfil do Keychain OU Apple ID + senha de app
@@ -91,12 +123,15 @@ if [[ -z "${VERSION:-}" ]]; then
 fi
 
 DMG_PATH="$BUILD_DIR/$APP_NAME-$VERSION.dmg"
+PKG_PATH="$BUILD_DIR/$APP_NAME-$VERSION.pkg"
 info "Release do $APP_NAME versão $VERSION (Team: $TEAM_ID)"
+
+mkdir -p "$BUILD_DIR"
 
 # ---------------------------------------------------------------------------
 # 1. Archive (Release, assinatura Developer ID)
 # ---------------------------------------------------------------------------
-info "1/6 Gerando archive…"
+info "1/8 Gerando archive…"
 rm -rf "$ARCHIVE_PATH"
 xcodebuild archive \
   -project "$PROJECT" \
@@ -114,7 +149,7 @@ xcodebuild archive \
 # ---------------------------------------------------------------------------
 # 2. Export do .app assinado
 # ---------------------------------------------------------------------------
-info "2/6 Exportando .app com Developer ID…"
+info "2/8 Exportando .app com Developer ID…"
 
 cat > "$EXPORT_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -145,36 +180,90 @@ codesign --verify --deep --strict --verbose=2 "$APP_PATH" \
   || die "Assinatura inválida no .app exportado."
 
 # ---------------------------------------------------------------------------
-# 3. Notarização
+# 3. Notarização do .app
 # ---------------------------------------------------------------------------
 if [[ "${SKIP_NOTARIZE:-0}" != "1" ]]; then
-  info "3/6 Enviando para notarização (pode levar alguns minutos)…"
+  info "3/8 Enviando o .app para notarização (pode levar alguns minutos)…"
   ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
   rm -f "$ZIP_PATH"
   ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+  notarize_submit "$ZIP_PATH"
 
-  # --wait bloqueia até a Apple concluir; falha se o status não for Accepted
-  xcrun notarytool submit "$ZIP_PATH" "${NOTARY_ARGS[@]}" --wait \
-    || die "Notarização recusada. Veja o log com: xcrun notarytool log <submission-id> ${NOTARY_ARGS[*]}"
-
-  # -------------------------------------------------------------------------
-  # 4. Staple (anexa o ticket ao app para validação offline)
-  # -------------------------------------------------------------------------
-  info "4/6 Aplicando staple…"
+  info "Aplicando staple no .app…"
   xcrun stapler staple "$APP_PATH"
-  xcrun stapler validate "$APP_PATH" || die "Staple inválido."
+  xcrun stapler validate "$APP_PATH" || die "Staple inválido no .app."
 else
-  warn "3/6 e 4/6 pulados (SKIP_NOTARIZE=1)."
+  warn "3/8 pulado (SKIP_NOTARIZE=1)."
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Criação do DMG (hdiutil, sem ferramentas de terceiros)
+# 4. PKG — instalador que não exige Xcode no Mac de destino
 # ---------------------------------------------------------------------------
-info "5/6 Criando DMG…"
+info "4/8 Montando o instalador .pkg…"
+rm -rf "$PKG_ROOT" "$PKG_SCRIPTS" "$PKG_RESOURCES" "$COMPONENT_PKG" "$PKG_PATH"
+mkdir -p "$PKG_ROOT" "$PKG_SCRIPTS" "$PKG_RESOURCES"
+
+ditto "$APP_PATH" "$PKG_ROOT/$APP_NAME.app"
+
+cp "$PACKAGING_DIR/scripts/preinstall" "$PKG_SCRIPTS/preinstall"
+cp "$PACKAGING_DIR/scripts/postinstall" "$PKG_SCRIPTS/postinstall"
+chmod 755 "$PKG_SCRIPTS/preinstall" "$PKG_SCRIPTS/postinstall"
+
+# Recurso da licença: o Installer.app mostra o texto PolyForm na etapa legal.
+cp "$REPO_ROOT/LICENSE" "$PKG_RESOURCES/LICENSE"
+cp "$PACKAGING_DIR/resources/welcome.html" "$PKG_RESOURCES/welcome.html"
+cp "$PACKAGING_DIR/resources/conclusion.html" "$PKG_RESOURCES/conclusion.html"
+
+pkgbuild \
+  --root "$PKG_ROOT" \
+  --identifier "$BUNDLE_ID" \
+  --version "$VERSION" \
+  --install-location /Applications \
+  --scripts "$PKG_SCRIPTS" \
+  --min-os-version 15.0 \
+  "$COMPONENT_PKG"
+
+sed "s/__VERSION__/${VERSION}/g" "$PACKAGING_DIR/distribution.xml" > "$DIST_XML"
+
+UNSIGNED_PKG="$BUILD_DIR/$APP_NAME-$VERSION-unsigned.pkg"
+productbuild \
+  --distribution "$DIST_XML" \
+  --package-path "$BUILD_DIR" \
+  --resources "$PKG_RESOURCES" \
+  "$UNSIGNED_PKG"
+
+if [[ -n "$INSTALLER_IDENTITY" ]]; then
+  info "Assinando o .pkg com Developer ID Installer…"
+  productsign --sign "$INSTALLER_IDENTITY" --timestamp "$UNSIGNED_PKG" "$PKG_PATH"
+  rm -f "$UNSIGNED_PKG"
+else
+  mv "$UNSIGNED_PKG" "$PKG_PATH"
+fi
+
+[[ -f "$PKG_PATH" ]] || die "Falha ao criar o instalador: $PKG_PATH"
+
+# ---------------------------------------------------------------------------
+# 5. Notarização do .pkg
+# ---------------------------------------------------------------------------
+if [[ "${SKIP_NOTARIZE:-0}" != "1" ]]; then
+  info "5/8 Enviando o .pkg para notarização…"
+  notarize_submit "$PKG_PATH"
+  xcrun stapler staple "$PKG_PATH"
+  xcrun stapler validate "$PKG_PATH" || die "Staple inválido no .pkg."
+else
+  warn "5/8 pulado (SKIP_NOTARIZE=1)."
+fi
+
+# ---------------------------------------------------------------------------
+# 6. DMG — artefato único do GitHub Release
+# ---------------------------------------------------------------------------
+info "6/8 Criando DMG…"
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
-cp -R "$APP_PATH" "$STAGING_DIR/"
+ditto "$APP_PATH" "$STAGING_DIR/$APP_NAME.app"
 ln -s /Applications "$STAGING_DIR/Applications"
+cp "$PKG_PATH" "$STAGING_DIR/Instalar $APP_NAME.pkg"
+cp "$PACKAGING_DIR/resources/Como instalar.txt" "$STAGING_DIR/Como instalar.txt"
 
 rm -f "$DMG_PATH"
 hdiutil create \
@@ -184,18 +273,35 @@ hdiutil create \
   "$DMG_PATH"
 
 info "Assinando o DMG…"
-codesign --sign "Developer ID Application" --timestamp "$DMG_PATH"
+codesign --sign "$APP_IDENTITY" --timestamp "$DMG_PATH"
 
 # ---------------------------------------------------------------------------
-# 6. Resumo final
+# 7. Notarização do DMG (abertura sem internet na primeira vez)
 # ---------------------------------------------------------------------------
-info "6/6 Concluído!"
+if [[ "${SKIP_NOTARIZE:-0}" != "1" ]]; then
+  info "7/8 Enviando o DMG para notarização…"
+  notarize_submit "$DMG_PATH"
+  xcrun stapler staple "$DMG_PATH"
+  xcrun stapler validate "$DMG_PATH" || die "Staple inválido no DMG."
+else
+  warn "7/8 pulado (SKIP_NOTARIZE=1)."
+fi
+
+# ---------------------------------------------------------------------------
+# 8. Resumo final
+# ---------------------------------------------------------------------------
+info "8/8 Concluído!"
 echo ""
 echo "  App:      $APP_PATH"
+echo "  PKG:      $PKG_PATH"
 echo "  DMG:      $DMG_PATH"
 echo "  SHA-256:  $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
 echo ""
+echo "O DMG é o ficheiro a anexar no GitHub Release. Quem baixa não precisa de Xcode:"
+echo "  • recomendado: dois cliques em «Instalar Prism.pkg»"
+echo "  • alternativa: arrastar Prism para Aplicativos"
+echo ""
 echo "Próximos passos:"
-echo "  1. Teste o DMG em uma máquina/conta limpa"
-echo "  2. Atualize o CHANGELOG.md e crie a tag v$VERSION"
+echo "  1. Teste o DMG numa máquina/conta sem Xcode"
+echo "  2. Confirme o CHANGELOG.md e a tag v$VERSION"
 echo "  3. Publique no GitHub Releases (veja RELEASING.md, seção 6)"

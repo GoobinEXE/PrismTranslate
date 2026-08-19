@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="168" viewBox="0 0 880 168" role="img" aria-labelledby="title desc">
+  <title id="title">Compatibilidade</title>
+  <desc id="desc">Prism Translate roda só no Mac, com macOS 15 Sequoia ou mais novo. Não funciona no iPhone, iPad ou Windows.</desc>
+  <defs>
+    <style>
+      .card { fill: #F6F3EC; stroke: #E3DDD2; }
+      .title { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
+      .sub { font: 400 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #6A645C; }
+    </style>
+  </defs>
+
+  <!-- Só no Mac -->
+  <rect x="0.5" y="0.5" width="280" height="167" rx="18" class="card"/>
+  <g transform="translate(28, 28)">
+    <rect x="8" y="0" width="72" height="46" rx="5" fill="#2A2926"/>
+    <rect x="13" y="5" width="62" height="36" rx="2.5" fill="#EEF3F8"/>
+    <polygon points="44,12 36,28 52,28" fill="none" stroke="#3B6FD4" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M36 20 L32 22" stroke="#C9C4BA" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M52 20 L60 16 M52 20 L61 20 M52 20 L60 24" stroke="#E24A3B" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M52 20 L61 20" stroke="#4CAF6A" stroke-width="1.2" stroke-linecap="round"/>
+    <rect x="0" y="48" width="88" height="7" rx="2" fill="#2A2926"/>
+    <rect x="28" y="51.5" width="32" height="2" rx="1" fill="#5C5854"/>
+  </g>
+  <text x="28" y="112" class="title">Só no Mac</text>
+  <text x="28" y="134" class="sub">App da barra de menus do macOS.</text>
+
+  <!-- Versão -->
+  <rect x="300.5" y="0.5" width="280" height="167" rx="18" class="card"/>
+  <g transform="translate(328, 32)">
+    <rect x="0" y="0" width="88" height="44" rx="10" fill="#1C1B19"/>
+    <text x="44" y="28" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#F6F3EC">15+</text>
+  </g>
+  <text x="328" y="112" class="title">macOS 15 Sequoia</text>
+  <text x="328" y="134" class="sub">Ou qualquer versão mais nova.</text>
+
+  <!-- Não compatível -->
+  <rect x="600.5" y="0.5" width="279" height="167" rx="18" class="card"/>
+  <g transform="translate(628, 30)" fill="none" stroke="#B9B3A8" stroke-width="1.6" stroke-linejoin="round">
+    <!-- phone -->
+    <rect x="0" y="2" width="22" height="40" rx="4"/>
+    <circle cx="11" cy="36" r="1.4" fill="#B9B3A8" stroke="none"/>
+    <!-- tablet -->
+    <rect x="34" y="8" width="32" height="34" rx="4"/>
+    <!-- window -->
+    <rect x="78" y="10" width="42" height="30" rx="3"/>
+    <path d="M78 18 H120" />
+    <circle cx="84" cy="14" r="1.3" fill="#B9B3A8" stroke="none"/>
+    <circle cx="89" cy="14" r="1.3" fill="#B9B3A8" stroke="none"/>
+    <path d="M-4 0 L128 48" stroke="#C45C4A" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <text x="628" y="112" class="title">Fora disto, não abre</text>
+  <text x="628" y="134" class="sub">iPhone, iPad e Windows: não.</text>
+</svg>

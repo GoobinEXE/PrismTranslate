@@ -1,86 +1,81 @@
-# Prism Translate
+<p align="center">
+  <img src="docs/readme/icon.png" width="148" alt="Ícone do Prism Translate: um prisma de vidro refratando a luz">
+</p>
 
-App de menu bar para macOS que traduz o texto do campo focado com atalhos — rápido e quase sem interface.
+<h1 align="center">Prism Translate</h1>
 
-No sistema (Dock, barra de menus, Ajustes) o nome de display é **Prism**. Esta é a edição **Community**: código-fonte disponível para uso não comercial.
+<p align="center">
+  Traduz o texto do campo em que você está digitando.<br>
+  Fica na barra de menus do Mac — rápido, quase sem janela.
+</p>
 
-## Requisitos
+<p align="center">
+  Edição Community · uso pessoal e estudo. Uso comercial precisa de licença à parte.
+</p>
 
-- macOS 15.0+ (Sequoia) — necessário para Apple Translation
-- Xcode 16+
-- Permissões de **Acessibilidade** e **Monitoramento de Entrada**
+<p align="center">
+  <img src="docs/readme/compat-macos.svg" width="840" alt="Só no Mac. Precisa de macOS 15 Sequoia ou mais novo. Não funciona no iPhone, iPad ou Windows.">
+</p>
 
-## Instalação
+## Instalar
+
+<p align="center">
+  <img src="docs/readme/instalar.svg" width="840" alt="Quatro passos: baixar o DMG, arrastar para Aplicativos, abrir o Prism e autorizar as permissões.">
+</p>
 
 1. Baixe o `Prism-x.y.z.dmg` mais recente em [GitHub Releases](../../releases)
-2. Abra o DMG e arraste **Prism** para **Aplicativos**
-3. Abra o app — o macOS avisa que foi baixado da internet; clique em **Abrir**. Se bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**
-4. Conceda **Acessibilidade** e **Monitoramento de Entrada** quando o onboarding pedir (Ajustes do Sistema → Privacidade e Segurança)
+2. Abra o arquivo e arraste **Prism** para **Aplicativos**
+3. Abra o app. O macOS avisa que veio da internet — clique em **Abrir**. Se bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**
+4. Na primeira vez o Prism pede duas permissões. Sem elas ele não lê nem troca o texto.
 
-Para mantenedores: o processo completo de assinatura, notarização e publicação está em [RELEASING.md](RELEASING.md).
+<p align="center">
+  <img src="docs/readme/permissoes.svg" width="840" alt="Nas Ajustes do Sistema, em Privacidade e Segurança, ligue Prism em Acessibilidade e em Monitoramento de Entrada.">
+</p>
 
-## Como abrir e rodar
+**Acessibilidade** deixa o app pegar e colocar o texto. **Monitoramento de Entrada** deixa os atalhos funcionarem em qualquer programa. Os dois ficam em **Ajustes do Sistema → Privacidade e Segurança**. Procure **Prism** em cada lista e ligue.
 
-1. Abra `Prism.xcodeproj` no Xcode
-2. Selecione o target **Prism** e rode (⌘R)
-3. Na primeira execução, autorize Acessibilidade (e Input Monitoring se o sistema pedir)
-4. O ícone aparece na barra de menus (prisma)
+Quando terminar de autorizar, o prisma aparece no canto direito do topo da tela:
 
-## Uso rápido (padrão)
+<p align="center">
+  <img src="docs/readme/barra-de-menus.svg" width="840" alt="Depois de abrir, o ícone do Prism fica à direita da barra de menus, no topo da tela.">
+</p>
 
-Sem configurar nada: o motor padrão é **Apple Translation** (on-device).
+## Usar
 
-| Atalho | Ação |
-|--------|------|
-| `⌃⌥T` | Traduz e substitui o texto — **não envia** |
-| `⌃⌥⏎` | Traduz, substitui e **envia** (simula Enter) |
-| Enter | Só traduz/envia se **“Enter traduz e envia”** estiver ligado no menu |
+Sem configurar nada, a tradução é a da Apple, no próprio Mac.
 
-Os atalhos usam **Control+Option** de propósito — quase não conflitam com outros apps. Dá para mudar (ou restaurar o padrão `⌃⌥T` / `⌃⌥⏎`) em **Preferências → Atalhos**.
+<p align="center">
+  <img src="docs/readme/atalhos.svg" width="840" alt="Control Option T traduz no lugar. Control Option Enter traduz e envia.">
+</p>
 
-Escolha o idioma destino no menu da barra. Ligue/desligue o app pelo toggle **Ligado**. Em Preferências, ative **Abrir no login** se quiser o app ao iniciar a sessão.
+Esses atalhos quase não brigam com os de outros apps. Dá para mudar — ou voltar ao padrão — em **Preferências → Atalhos**.
 
-## Provedores
+No menu do prisma:
 
-Em **Preferências**:
+- Escolha o idioma de destino
+- Ligue ou desligue o app em **Ligado**
+- Se quiser, ative **Enter traduz e envia** (aí o Enter sozinho também traduz)
+- **Aviso perto do ponteiro** mostra um recado discreto na hora da tradução
+- **Modo popup** abre um painel com a tradução, em vez de só substituir no campo
 
-- **Apple Translation** (padrão, zero config)
-- **DeepL** (API key)
-- **Google Cloud Translation** (API key)
-- **OpenAI-compatible / LM Studio** (base URL + modelo; key opcional — servidor local)
-- **Custom HTTP** (URL, template JSON, path da resposta)
+Em Preferências, **Abrir no login** deixa o Prism pronto quando você entra na conta.
 
-Chaves de API ficam no Keychain.
+## Outras formas de traduzir
 
-## Critérios de aceite — v1.0
+O padrão é a tradução da Apple. Se quiser outra, abra **Preferências**:
 
-A v1.0 está pronta quando todos os itens abaixo funcionam de ponta a ponta:
+- **DeepL** ou **Google** — você cola a chave da API
+- **LM Studio** (ou qualquer servidor no estilo OpenAI) — no seu computador
+- **HTTP personalizado** — se você já tem um endpoint próprio
 
-- [ ] **Traduzir / substituir** — com o foco em um campo de texto, `⌃⌥T` lê o texto, traduz e substitui no lugar (sem enviar)
-- [ ] **Traduzir + enviar** — `⌃⌥⏎` traduz, substitui e simula Enter
-- [ ] **Onboarding de permissões** — na primeira execução, o tutorial guia Acessibilidade e Monitoramento de Entrada, com links para Ajustes do Sistema
-- [ ] **Provedores** — Apple Translation, DeepL, Google Cloud Translation, OpenAI-compatible / LM Studio e Custom HTTP selecionáveis em Preferências
-- [ ] **Atalhos configuráveis** — gravar novos atalhos e restaurar os padrões `⌃⌥T` / `⌃⌥⏎` em Preferências → Atalhos
-- [ ] **Abrir no login** — o toggle em Preferências registra/desregistra o login item
-
-Fonte da verdade dos atalhos padrão: `HotkeyChord.swift` / `AppSettings.swift`.
+As chaves ficam no chaveiro do Mac, não no código.
 
 ## Licença
 
-Prism Translate Community é distribuído sob a [PolyForm Noncommercial License 1.0.0](LICENSE).
+Uso pessoal, estudo e pesquisa: ok. Empresa, produto ou qualquer uso comercial: precisa de uma licença combinada com o autor.
 
-Você pode usar, estudar e modificar o código para **fins não comerciais** (uso pessoal, pesquisa, organizações listadas na licença). Uso comercial exige uma licença à parte, concedida pelo autor. O texto completo está em [`LICENSE`](LICENSE); o aviso obrigatório está em [`NOTICE`](NOTICE).
+O texto completo está em [`LICENSE`](LICENSE) (PolyForm Noncommercial 1.0.0).
 
-## Estrutura
+---
 
-```
-Prism/
-  App/           # Menu bar, estado, orquestração
-  Hotkeys/       # CGEvent tap (atalhos + Enter)
-  TextIO/        # Accessibility + fallback clipboard
-  Translation/   # Protocolo e engine
-  Providers/     # Apple, DeepL, Google, LM Studio / OpenAI local, Custom HTTP
-  Settings/      # Preferências
-  Design/        # Tokens visuais e glifo Prism
-  Utilities/     # Teclado, Keychain, permissões
-```
+Quer abrir o projeto no Xcode, estudar ou modificar o código? Isso é **opcional** — só para quem clona o repositório. Veja o [guia de compilação](BUILDING.md).
