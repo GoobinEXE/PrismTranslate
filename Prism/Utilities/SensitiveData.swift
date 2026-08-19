@@ -31,7 +31,8 @@ final class SensitiveData {
     deinit {
         var mutable = bytes
         mutable.withUnsafeMutableBytes { raw in
-            raw.resetBytes(in: 0..<raw.count)
+            guard let base = raw.baseAddress else { return }
+            memset(base, 0, raw.count)
         }
     }
 }

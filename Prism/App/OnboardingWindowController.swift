@@ -5,7 +5,7 @@ import SwiftUI
 final class OnboardingController: NSObject, NSWindowDelegate {
     static let shared = OnboardingController()
 
-    private static let completedKey = "didCompleteOnboarding"
+    nonisolated private static let completedKey = "didCompleteOnboarding"
 
     private var panel: NSPanel?
     private var hosting: NSView?

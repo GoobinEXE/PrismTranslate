@@ -845,7 +845,8 @@ private struct PasteboardBackup {
         for index in items.indices {
             for key in items[index].keys {
                 items[index][key]?.withUnsafeMutableBytes { raw in
-                    raw.resetBytes(in: 0..<raw.count)
+                    guard let base = raw.baseAddress else { return }
+                    memset(base, 0, raw.count)
                 }
             }
         }
