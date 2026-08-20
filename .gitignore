@@ -96,9 +96,13 @@ scripts/community-gitignore
 !/CHANGELOG.md
 !/INSTALL.md
 !/docs/security/*.md
+!/Prism.Windows/**/*.md
+!/Prism.Windows/README.md
 
-# IDE
-.idea/
+# .NET / Prism.Windows
+Prism.Windows/**/bin/
+Prism.Windows/**/obj/
+Prism.Windows/.vs/
 *.swp
 *.swo
 *~

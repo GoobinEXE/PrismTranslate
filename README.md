@@ -123,3 +123,7 @@ O texto completo está em [`LICENSE`](LICENSE) (PolyForm Noncommercial 1.0.0).
 ---
 
 Quer abrir o projeto no Xcode? Clone o repositório, abra `Prism.xcodeproj` (macOS 15+, Xcode 16+) e rode o target **Prism**.
+
+## Windows (em desenvolvimento)
+
+O núcleo portável está em [`Prism.Windows/`](Prism.Windows/README.md) (.NET 8). Neste host podes `dotnet test` na solução; a UI WinUI 3 (bandeja, Fluent) requer um PC Windows com Visual Studio 2022 + Windows App SDK.
