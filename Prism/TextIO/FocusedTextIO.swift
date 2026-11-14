@@ -8,8 +8,14 @@ enum FocusedTextIOError: LocalizedError, Equatable {
     case noSelectionInReadOnly
     case emptyClipboard
     case writeFailed
+    case selectionChanged
     case readFallbackFailed
     case writeFallbackFailed
+
+    /// A mensagem exibida veio de falta de Acessibilidade (o status guarda só o texto).
+    static func isPermissionMessage(_ message: String) -> Bool {
+        message == FocusedTextIOError.accessibilityDenied.errorDescription
+    }
 
     var errorDescription: String? {
         switch self {
@@ -26,6 +32,8 @@ enum FocusedTextIOError: LocalizedError, Equatable {
             return String(localized: "Couldn’t read the field text")
         case .writeFailed:
             return String(localized: "Couldn’t replace the text")
+        case .selectionChanged:
+            return String(localized: "The selection changed during translation, so nothing was replaced. Select the text and try again.")
         case .readFallbackFailed:
             return String(
                 localized:
@@ -202,6 +210,12 @@ final class FocusedTextIO {
         restorePendingUserPasteboard(after: 0.35, onlyIfChangeCount: changeCount)
     }
 
+    /// Restaura o clipboard do usuário só se ele não mudou desde `baseline`
+    /// (contagem lida quando o painel abriu).
+    func finishPasteboardSession(onlyIfChangeCount baseline: Int) {
+        restorePendingUserPasteboard(after: 0.35, onlyIfChangeCount: baseline)
+    }
+
     /// Selects text if needed, then returns the selection for translation.
     /// Prefer existing selection; otherwise select-all (AX range or ⌘A) like DeepL on editable fields.
     /// When `preferReplaceInPlace` is true (⌃⌥T / ⌃⌥⏎ / Enter), infer editability for AX-opaque
@@ -312,7 +326,8 @@ final class FocusedTextIO {
                 "Substituição: tentando Acessibilidade (campo inteiro=\(capture.didSelectAll))")
             do {
                 try writeViaAccessibility(
-                    text, preferSelectionOnly: true, previousText: capture.text)
+                    text, preferSelectionOnly: true, previousText: capture.text,
+                    allowWholeValue: capture.didSelectAll)
                 AppLog.info(.textIO, "Escrita via Acessibilidade confirmada")
                 // AX path may still hold a pending borrow from a prior attempt; flush it.
                 restorePendingUserPasteboard(after: 0.35)
@@ -342,7 +357,10 @@ final class FocusedTextIO {
             selectAllFirst = !hasSelection
         }
         if selectAllFirst && !capture.didSelectAll {
-            AppLog.debug(.textIO, "Clipboard: forçando ⌘A (a seleção sumiu depois da captura)")
+            // A captura era só um trecho: ⌘A + colar trocaria o campo inteiro pela
+            // tradução do trecho. Melhor não substituir nada.
+            AppLog.warning(.textIO, "Seleção sumiu depois da captura de um trecho — não substituindo")
+            throw FocusedTextIOError.selectionChanged
         }
 
         do {
@@ -511,7 +529,8 @@ final class FocusedTextIO {
     private func writeViaAccessibility(
         _ text: String,
         preferSelectionOnly: Bool,
-        previousText: String
+        previousText: String,
+        allowWholeValue: Bool
     ) throws {
         guard AXIsProcessTrusted() else {
             throw FocusedTextIOError.accessibilityDenied
@@ -552,6 +571,12 @@ final class FocusedTextIO {
             } else {
                 AppLog.debug(.textIO, "✏️ AX sem seleção ativa para substituir")
             }
+        }
+
+        // Trocar o valor inteiro só é seguro quando a captura foi o campo inteiro;
+        // com um trecho, isso apagaria o resto do texto.
+        guard allowWholeValue else {
+            throw FocusedTextIOError.writeFailed
         }
 
         // Native AppKit fields often accept full value replacement.
@@ -769,6 +794,29 @@ final class FocusedTextIO {
         try await settleAfterKey(nanoseconds: 40_000_000)
 
         backup.restore(after: 0.45, onlyIfChangeCount: changeCountAtPaste)
+    }
+
+    /// O usuário copiou a tradução no painel: o backup do clipboard antigo não deve
+    /// mais ser restaurado (apagaria a cópia) nem vazar para a próxima sessão.
+    func discardPasteboardSession() {
+        if pendingUserPasteboard != nil {
+            AppLog.debug(.textIO, "📋 descartando backup do clipboard (usuário copiou a tradução)")
+        }
+        pasteboardSessionTimeoutTask?.cancel()
+        pasteboardSessionTimeoutTask = nil
+        pasteboardSessionStartedAt = nil
+        pendingUserPasteboard = nil
+    }
+
+    /// True só quando o campo focado expõe `AXValue` como texto vazio. Hosts opacos
+    /// (sem valor legível) retornam false, para não mudar o comportamento neles.
+    static func isFocusedFieldKnownEmpty() -> Bool {
+        guard AXIsProcessTrusted(), let element = focusedElement() else { return false }
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success,
+            let string = value as? String
+        else { return false }
+        return string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func beginPasteboardSessionTimeout() {

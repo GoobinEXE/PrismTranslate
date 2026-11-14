@@ -126,7 +126,34 @@ final class TranslationEngine {
                 .engine,
                 "\(provider.displayName) falhou após \(AppLog.duration(since: started)): \(error.localizedDescription)"
             )
+            if let rescued = await translateWithAppleFallback(text, from: from, to: to, failed: provider.displayName, error: error) {
+                return rescued
+            }
             throw error
+        }
+    }
+
+    /// Motor reserva: se DeepL, Google ou um servidor local falham (rede, cota, chave,
+    /// servidor desligado), tenta a tradução da Apple no próprio Mac. Par de idiomas
+    /// recusado não cai aqui, porque a Apple recusaria do mesmo jeito.
+    private func translateWithAppleFallback(
+        _ text: String, from: String?, to: String, failed: String, error: Error
+    ) async -> TranslationOutcome? {
+        guard settings.providerKind != .apple else { return nil }
+        if (error as? TranslationError)?.isUnsupportedLanguagePair == true { return nil }
+        guard #available(macOS 15.0, *) else { return nil }
+        AppLog.warning(.engine, "Usando Apple Translation como reserva porque \(failed) falhou")
+        do {
+            let outcome = try await AppleTranslationProvider(bridge: appleBridge).translate(text, from: from, to: to)
+            AppLog.info(.engine, "Motor reserva (Apple) concluiu — \(outcome.text.count) caracteres")
+            return TranslationOutcome(
+                text: outcome.text,
+                detectedSourceLanguage: outcome.detectedSourceLanguage ?? (from == nil ? LanguageDetector.detect(in: text) : nil),
+                fallbackFrom: failed
+            )
+        } catch {
+            AppLog.error(.engine, "Motor reserva (Apple) também falhou: \(error.localizedDescription)")
+            return nil
         }
     }
 
@@ -188,7 +215,8 @@ final class TranslationEngine {
         case .deepl:
             return DeepLProvider(
                 apiKey: SensitiveData(keychain: .deeplAPIKey) ?? SensitiveData(""),
-                useFreeAPI: settings.deeplUseFreeAPI
+                useFreeAPI: settings.deeplUseFreeAPI,
+                tone: settings.translationTone
             )
         case .google:
             return GoogleTranslateProvider(
@@ -200,7 +228,9 @@ final class TranslationEngine {
                 baseURL: settings.openAIBaseURL,
                 model: settings.openAIModel,
                 apiKey: SensitiveData(keychain: .openAIAPIKey) ?? SensitiveData(""),
-                requiresAPIKey: false
+                requiresAPIKey: false,
+                protectedTerms: settings.protectedTerms,
+                tone: settings.translationTone
             )
         case .customHTTP:
             return CustomHTTPProvider(

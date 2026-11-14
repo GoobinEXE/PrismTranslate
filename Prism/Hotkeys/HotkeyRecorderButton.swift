@@ -76,7 +76,9 @@ struct HotkeyRecorderButton: View {
             }
 
             DispatchQueue.main.async {
-                if conflictingChords.contains(recorded) {
+                if recorded.isReservedBySystem {
+                    conflictMessage = String(localized: "macOS uses this shortcut. Try ⌃⌥ with a letter.")
+                } else if conflictingChords.contains(recorded) {
                     conflictMessage = String(localized: "This shortcut is already in use.")
                 } else {
                     chord = recorded

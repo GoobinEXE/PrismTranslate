@@ -1,6 +1,23 @@
 import Foundation
 import ServiceManagement
 
+/// Registro desejado na tradução (DeepL `formality`; instrução no prompt dos motores de IA).
+enum TranslationTone: String, Codable, CaseIterable, Identifiable {
+    case automatic
+    case formal
+    case informal
+
+    var id: String { rawValue }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .automatic: return "Automatic"
+        case .formal: return "Formal"
+        case .informal: return "Informal"
+        }
+    }
+}
+
 struct AppSettings: Equatable {
     var isEnabled: Bool = true
     var enterTranslatesAndSends: Bool = false
@@ -33,6 +50,12 @@ struct AppSettings: Equatable {
     /// Toast perto do ponteiro (Traduzindo / concluído / erro) ao usar o atalho.
     var showStatusHUD: Bool = true
 
+    /// Bundle IDs dos apps em que os atalhos do Prism ficam inativos.
+    var ignoredAppBundleIDs: [String] = []
+    /// Nomes e termos que os motores de IA devem manter sem tradução.
+    var protectedTerms: [String] = []
+    /// Registro formal/informal, onde o motor suporta.
+    var translationTone: TranslationTone = .automatic
     /// When false (default), logs record character counts only — no text previews.
     var logTextPreviews: Bool = false
     /// When false, the translation LRU cache is disabled.
@@ -89,14 +112,29 @@ struct AppSettings: Equatable {
         case .apple:
             return "\(name) (no dispositivo)"
         case .deepl:
-            return "\(name) · \(deeplUseFreeAPI ? "API gratuita" : "API Pro")"
+            return "\(name) · \(deeplUseFreeAPI ? "API gratuita" : "API Pro")\(toneLogSuffix)"
         case .google:
             return name
         case .openAICompatible:
-            return "\(name) · modelo \(openAIModel) · \(openAIBaseURL)"
+            return "\(name) · modelo \(openAIModel) · \(openAIBaseURL)\(toneLogSuffix)\(termsLogSuffix)"
         case .customHTTP:
             return "\(name) · \(customHTTPMethod.uppercased()) \(customHTTPURL)"
         }
+    }
+
+    private var toneLogSuffix: String {
+        translationTone == .automatic ? "" : " · tom \(translationTone.rawValue)"
+    }
+
+    /// Entra na impressão digital do motor (limpa o cache quando os termos mudam).
+    private var termsLogSuffix: String {
+        guard !protectedTerms.isEmpty else { return "" }
+        // FNV-1a: estável e barato; só precisa distinguir listas diferentes.
+        var hash: UInt32 = 2_166_136_261
+        for byte in protectedTerms.joined(separator: "\n").utf8 {
+            hash = (hash ^ UInt32(byte)) &* 16_777_619
+        }
+        return " · termos \(protectedTerms.count)#\(String(hash, radix: 16))"
     }
 
     private static let defaultsKey = "AppSettings"
@@ -222,6 +260,9 @@ private struct CodableSettings: Codable {
     var popupModeEnabled: Bool?
     var popupHotkey: HotkeyChord?
     var showStatusHUD: Bool?
+    var ignoredAppBundleIDs: [String]?
+    var protectedTerms: [String]?
+    var translationTone: String?
     var logTextPreviews: Bool?
     var cacheTranslations: Bool?
     var deeplUseFreeAPI: Bool
@@ -250,6 +291,9 @@ private struct CodableSettings: Codable {
         popupModeEnabled = settings.popupModeEnabled
         popupHotkey = settings.popupHotkey
         showStatusHUD = settings.showStatusHUD
+        ignoredAppBundleIDs = settings.ignoredAppBundleIDs
+        protectedTerms = settings.protectedTerms
+        translationTone = settings.translationTone.rawValue
         logTextPreviews = settings.logTextPreviews
         cacheTranslations = settings.cacheTranslations
         deeplUseFreeAPI = settings.deeplUseFreeAPI
@@ -296,6 +340,9 @@ private struct CodableSettings: Codable {
         s.popupModeEnabled = popupModeEnabled ?? false
         s.popupHotkey = popupHotkey ?? .popupDefault
         s.showStatusHUD = showStatusHUD ?? true
+        s.ignoredAppBundleIDs = ignoredAppBundleIDs ?? []
+        s.protectedTerms = protectedTerms ?? []
+        s.translationTone = translationTone.flatMap(TranslationTone.init(rawValue:)) ?? .automatic
         s.logTextPreviews = logTextPreviews ?? false
         s.cacheTranslations = cacheTranslations ?? true
         s.deeplUseFreeAPI = deeplUseFreeAPI

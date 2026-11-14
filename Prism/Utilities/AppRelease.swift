@@ -46,7 +46,7 @@ enum AppRelease {
     }
 
     static var displayName: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Prism"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Prism Translate"
     }
 
     static var marketingVersion: String {
@@ -58,12 +58,12 @@ enum AppRelease {
     }
 
     static var bundleIdentifier: String {
-        Bundle.main.bundleIdentifier ?? "com.marcelopessoa.prism"
+        Bundle.main.bundleIdentifier ?? "dev.prism.tradutor"
     }
 
     static var copyright: String {
         Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String
-            ?? "Copyright © 2026 Prism Translate."
+            ?? "Copyright © 2026 Prism. All rights reserved."
     }
 
     static var runningMacOS: String {

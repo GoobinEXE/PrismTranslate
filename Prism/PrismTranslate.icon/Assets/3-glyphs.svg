@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Prism Translate — camada 3: glifos</title>
+  <g id="glyphs">
+    <path d="M156 604L241 420L259 420L344 604L302 604L287.22 572L212.78 572L198 604ZM250 491.44L272.43 540L227.57 540Z" fill="#F2ECE1" fill-rule="evenodd"/>
+    <path d="M394 438V586M379 424C388 424 394 430 394 440C394 430 400 424 409 424M379 600C388 600 394 594 394 584C394 594 400 600 409 600" fill="none" stroke="#8F9397" stroke-width="10" stroke-linecap="round"/>
+    <path d="M438 512H504M484 490L508 512L484 534" fill="none" stroke="#F2ECE1" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter"/>
+    <path d="M 618.22 420L 621.78 455.56M 540 474.22H 700M 669.78 485.78C 653.78 548 612.89 588.89 543.56 612M 570.22 485.78C 586.22 548 627.11 588.89 698.22 612" fill="none" stroke="#01ABE8" stroke-width="28" stroke-linecap="butt" stroke-linejoin="miter"/>
+  </g>
+</svg>

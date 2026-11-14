@@ -11,7 +11,10 @@
 #
 # SAÍDA:
 #   build/Prism-<versão>.zip
-#   SHA-256 impresso no final (atualize o cask em packaging/homebrew/Casks/prism-translate.rb)
+#   SHA-256 impresso no final.
+#
+# O cask do Homebrew aponta para o zip notarizado (scripts/release.sh --homebrew no repo
+# do mantenedor). Este zip é ad-hoc e só atualiza o cask com UPDATE_CASK=1.
 #
 set -euo pipefail
 
@@ -90,7 +93,7 @@ ditto --norsrc --noextattr --noqtn "$APP_PATH" "$STAGING_DIR/$APP_NAME.app"
 
 SHA256="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
 
-if [[ -f "$CASK_PATH" ]]; then
+if [[ "${UPDATE_CASK:-0}" == "1" && -f "$CASK_PATH" ]]; then
   python3 - "$CASK_PATH" "$VERSION" "$SHA256" <<'PY'
 import pathlib, re, sys
 path = pathlib.Path(sys.argv[1])
@@ -110,5 +113,5 @@ echo "  SHA-256:  $SHA256"
 echo ""
 echo "Próximos passos:"
 echo "  1. Anexe o zip num GitHub Release (tag v$VERSION)"
-echo "  2. Publique o cask em GoobinEXE/homebrew-tap (veja packaging/homebrew/README.md)"
+echo "  2. Para o Homebrew, prefira o zip notarizado (Developer ID); este é ad-hoc"
 echo "  3. Teste: brew tap goobinexe/tap && brew trust --tap goobinexe/tap && brew install --cask prism-translate"

@@ -85,6 +85,7 @@ compile_commands.json
 
 # Maintainer-only scripts — kept locally, not in Community source
 scripts/release.sh
+scripts/setup-release.sh
 scripts/gen_xcstrings.py
 scripts/publish-community.sh
 scripts/community-excludes.txt

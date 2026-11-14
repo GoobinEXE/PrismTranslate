@@ -10,6 +10,10 @@ struct TranslationResultPanelView: View {
     let sourceLanguageLabel: String
     let targetLanguageLabel: String
     let pairContextLabel: String
+    var targetLanguageCode: String = ""
+    var notice: String? = nil
+    /// Nil quando o painel não pode traduzir de novo (menu de idioma some).
+    var onRetarget: ((String) -> Void)? = nil
     var onCopy: () -> Void
     var onReplace: () -> Void
     var onClose: () -> Void
@@ -29,16 +33,13 @@ struct TranslationResultPanelView: View {
     private var panelContent: some View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
             HStack(alignment: .center, spacing: QTDesign.Spacing.s) {
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    languageChip
                     Text(pairContextLabel)
                         .font(QTDesign.Fonts.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(languagePairLabel)
-                        .font(QTDesign.Fonts.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
                 }
+                .lineLimit(1)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
                     String(
@@ -60,6 +61,13 @@ struct TranslationResultPanelView: View {
                 .keyboardShortcut(.cancelAction)
             }
 
+            if let notice {
+                Label(notice, systemImage: "info.circle")
+                    .font(QTDesign.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             ViewThatFits(in: .vertical) {
                 textStack
                 ScrollView {
@@ -70,28 +78,17 @@ struct TranslationResultPanelView: View {
 
             HStack(spacing: QTDesign.Spacing.s) {
                 Spacer(minLength: 0)
-                Button {
-                    onCopy()
-                    didCopy = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        didCopy = false
-                    }
-                } label: {
-                    Label(
-                        didCopy ? "Copied" : "Copy",
-                        systemImage: didCopy ? "checkmark" : "doc.on.doc")
-                }
-                .controlSize(.regular)
-                .buttonStyle(.bordered)
-                .frame(minHeight: 28)
-                .keyboardShortcut("c", modifiers: [.command])
-                .accessibilityLabel(didCopy ? "Copied" : "Copy translation")
-                .accessibilityHint("Copies the translated text to the clipboard")
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: didCopy)
+                copyButton
 
                 if canReplace {
-                    Button("Replace") {
+                    Button {
                         onReplace()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Replace")
+                            Text("⏎")
+                                .font(.caption.monospaced())
+                        }
                     }
                     .controlSize(.regular)
                     .buttonStyle(.borderedProminent)
@@ -106,6 +103,79 @@ struct TranslationResultPanelView: View {
         .padding(.vertical, QTDesign.Spacing.m)
         .frame(minWidth: 360, idealWidth: 420, maxWidth: 520, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Em contexto somente leitura, Copiar é a ação principal (⏎); ao editar, Substituir assume.
+    @ViewBuilder
+    private var copyButton: some View {
+        let button = Button {
+            didCopy = true
+            onCopy()
+        } label: {
+            HStack(spacing: 6) {
+                Label(
+                    didCopy ? "Copied" : "Copy",
+                    systemImage: didCopy ? "checkmark" : "doc.on.doc")
+                Text(canReplace ? "⌘C" : "⏎")
+                    .font(.caption.monospaced())
+                    // Sobre o fundo de destaque a dica mantém o contraste do rótulo.
+                    .opacity(canReplace ? 0.6 : 1)
+            }
+        }
+        .controlSize(.regular)
+        .frame(minHeight: 28)
+        .keyboardShortcut("c", modifiers: [.command])
+        .accessibilityLabel(didCopy ? "Copied" : "Copy translation")
+        .accessibilityHint("Copies the translation and closes the panel")
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: didCopy)
+
+        if canReplace {
+            button.buttonStyle(.bordered)
+        } else {
+            button.buttonStyle(.borderedProminent)
+        }
+    }
+
+    /// Par de idiomas; com tradução disponível, vira menu para trocar o destino ali mesmo.
+    @ViewBuilder
+    private var languageChip: some View {
+        let chip = HStack(spacing: 3) {
+            Text(languagePairLabel)
+            if onRetarget != nil {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+            }
+        }
+        .font(QTDesign.Fonts.caption.weight(.semibold))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(.fill.tertiary))
+
+        if let onRetarget {
+            Menu {
+                ForEach(LanguageCode.commonTargets) { language in
+                    Button {
+                        onRetarget(language.id)
+                    } label: {
+                        if language.id == targetLanguageCode {
+                            Label(language.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(language.displayName)
+                        }
+                    }
+                }
+            } label: {
+                chip
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Translate to another language")
+            .accessibilityLabel(String(format: String(localized: "Target language: %@"), targetLanguageLabel))
+        } else {
+            chip
+        }
     }
 
     private var textStack: some View {

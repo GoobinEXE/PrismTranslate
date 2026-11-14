@@ -30,6 +30,7 @@ enum KeyboardSimulator {
         case "c": return CGKeyCode(kVK_ANSI_C)
         case "v": return CGKeyCode(kVK_ANSI_V)
         case "t": return CGKeyCode(kVK_ANSI_T)
+        case "z": return CGKeyCode(kVK_ANSI_Z)
         default: return nil
         }
     }

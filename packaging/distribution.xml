@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>Prism</title>
-    <organization>com.marcelopessoa</organization>
+    <title>Prism Translate</title>
+    <organization>dev.prism</organization>
     <options customize="never" require-scripts="true" hostArchitectures="__ARCHS__" rootVolumeOnly="true"/>
     <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
     <welcome file="welcome.html" mime-type="text/html"/>
@@ -14,12 +14,12 @@
     </volume-check>
     <choices-outline>
         <line choice="default">
-            <line choice="com.marcelopessoa.prism"/>
+            <line choice="dev.prism.tradutor"/>
         </line>
     </choices-outline>
     <choice id="default"/>
-    <choice id="com.marcelopessoa.prism" visible="false">
-        <pkg-ref id="com.marcelopessoa.prism"/>
+    <choice id="dev.prism.tradutor" visible="false">
+        <pkg-ref id="dev.prism.tradutor"/>
     </choice>
-    <pkg-ref id="com.marcelopessoa.prism" version="__VERSION__" onConclusion="none">Prism-component.pkg</pkg-ref>
+    <pkg-ref id="dev.prism.tradutor" version="__VERSION__" onConclusion="none">Prism-component.pkg</pkg-ref>
 </installer-gui-script>

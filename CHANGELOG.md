@@ -6,6 +6,73 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.1.1] - 2026-11-14
+
+Redesign da interface (visual nativo do macOS), correções de fluxo e paleta da marca Prism. Build `21`.
+
+### Novidades
+
+- Menu nativo no clique direito do prisma, com cinco itens: Ligado, Traduzir área de transferência, Traduções recentes (as últimas 5, para copiar de novo), Configurações e Sair
+- Desfazer no aviso perto do ponteiro, logo depois de substituir o texto
+- No painel, o par de idiomas vira um menu para traduzir para outro idioma ali mesmo
+- Motor reserva: se DeepL, Google ou o servidor local falharem, a tradução da Apple no Mac assume e o aviso diz isso
+- Configurações: apps ignorados pelos atalhos, botão para verificar a chave de API, termos que os motores de IA não traduzem e tom formal ou informal
+- Menu da barra mais direto: liga/desliga no topo, avisos de permissão primeiro, modo popup sempre visível
+- Copiar fecha o painel de tradução, por clique, ⌘C ou Enter
+- Configuração inicial em 4 passos, com as duas permissões na mesma tela
+- Cada atalho em Ajustes explica o que faz
+- Cor de destaque no ciano da marca Prism
+- Aba Sobre com o logo da Prism (monograma P do site, em SVG, com versão para o modo escuro)
+
+### Changed
+
+- Cartões de conteúdo usam preenchimento semântico do sistema (`QTCard`, antes `GlassSurface`); Liquid Glass fica no painel de resultado, no HUD e no onboarding
+- `AccentColor` em `#005F85` (claro) e `#0078A8` (escuro), conforme `docs/brand/PALETTE.md`, que agora espelha os tokens do site Prism
+- SVGs de `docs/readme/` recoloridos para Marfim `#F2ECE1`, tinta `#0D0F13` e `ink-cyan` `#005F85`
+- Etiqueta de status do menu aparece só em "Traduzindo…", "Concluído" e "Erro"; o interruptor já indica ligado ou pausado
+- Ajustes › Provedor volta a mostrar as etiquetas do motor (Grátis, Pago, IA, Local)
+- Removidos textos longos de Geral, Provedor, Atalhos e Sobre, e 34 strings sem uso do catálogo
+
+### Security
+
+- Inclui o reforço de dados sensíveis publicado na 1.0.14 (logs, Keychain, transporte HTTP, cache e área de transferência)
+- App assinado com Developer ID e notarizado pela Apple; o Homebrew instala sem o passo "Abrir Mesmo Assim"
+
+### Fixed
+
+- Onboarding: o pedido de Monitoramento de Entrada só acontecia depois da Acessibilidade concedida; quem seguia sem ela não encontrava o Prism na lista do sistema
+- Onboarding: o checklist mandava os pacotes de idioma para Ajustes › Geral em vez de Provedor
+- Menu e Ajustes › Permissões não avisavam quando faltava só a Acessibilidade
+- Painel de tradução: Enter copiava e fechava, mas o clique em Copiar deixava o painel aberto
+- Painel de tradução: em textos lidos via área de transferência (Discord, PDF), copiar a tradução e fechar o painel devolvia o conteúdo antigo da área de transferência 0,35 s depois
+- Substituição: se a seleção sumisse durante a tradução de um trecho, o campo inteiro virava a tradução do trecho; agora nada é substituído e o erro explica o motivo
+- "Enter traduz e envia": ⇧Enter (nova linha) também traduzia e enviava; Enter em campo vazio era engolido; com o painel aberto, o Enter do painel podia disparar "traduzir e enviar"
+- Erros de Acessibilidade no aviso perto do ponteiro e no menu levam a Configurações › Permissões em vez de Logs
+- Um segundo atalho durante uma tradução mostrava erro e fazia o menu voltar a ocioso no meio dela
+- Onboarding: a janela ficava por cima dos Ajustes do Sistema; o checklist verificava só o par "texto que escrevo"
+- Gravador de atalhos aceitava ⌘C, ⌘V, ⌘Z e outros atalhos de edição do macOS
+- "Enter traduz e envia" traduzia de novo um texto que já estava no idioma de destino; agora só envia
+- Atalho com o Prism pausado não dava nenhum retorno; agora o aviso diz que ele está pausado
+- Substituir no painel com outra tradução em curso fechava o painel e perdia a tradução; agora o painel fica aberto
+- No modo popup, sem seleção, o atalho podia selecionar a conversa inteira em apps como o Discord
+
+## [1.1.0] - 2026-10-29
+
+Bundle ID unificado: `dev.prism.tradutor` (Debug, Release, instalador e docs). Build `20`.
+
+### Novidades
+
+- Identificador do app alinhado para testes e distribuição (`dev.prism.tradutor`)
+- Pacote Mac App Store / TestFlight: `./scripts/export-testflight.sh` gera `.pkg` para o Transporter
+
+### Changed
+
+- `PRODUCT_BUNDLE_IDENTIFIER` Debug/Release → `dev.prism.tradutor` (tests → `dev.prism.tradutor.tests`)
+- Empacotamento (`release.sh`, `distribution.xml`), Homebrew zap, docs e fallbacks de código usam o novo ID
+- Preferências/Keychain passam a viver sob `dev.prism.tradutor` (instalação antiga sob `com.marcelopessoa.prism` não migra sozinha)
+- Entitlements App Store (`PrismAppStore.entitlements`, sandbox ON) separados dos de Community/Developer ID
+- `ITSAppUsesNonExemptEncryption` e descrição de rede local no `Info.plist`
+
 ## [1.0.14] - 2026-08-19
 
 Hardening de dados sensíveis: logs, Keychain, transporte HTTP e retenção em memória.

@@ -81,7 +81,7 @@ struct QTBanner<Actions: View>: View {
     }
 
     var body: some View {
-        GlassSurface(cornerRadius: QTDesign.Radius.small) {
+        QTCard(cornerRadius: QTDesign.Radius.small) {
             VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
                 HStack(alignment: .top, spacing: QTDesign.Spacing.s) {
                     Image(systemName: icon)

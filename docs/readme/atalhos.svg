@@ -4,12 +4,12 @@
   <desc id="desc">Control Option T traduz no lugar. Control Option Enter traduz e envia.</desc>
   <defs>
     <style>
-      .card { fill: #F6F3EC; stroke: #E3DDD2; }
-      .title { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
-      .sub { font: 400 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #6A645C; }
+      .card { fill: #F2ECE1; stroke: #EAE3D6; }
+      .title { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #0D0F13; }
+      .sub { font: 400 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #4A515E; }
       .key { fill: #FFFFFF; stroke: #D9D3C8; }
-      .klabel { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1B19; }
-      .plus { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #8A837A; }
+      .klabel { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #0D0F13; }
+      .plus { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #4A515E; }
     </style>
   </defs>
 

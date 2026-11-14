@@ -143,7 +143,7 @@ final class AppLogStore: ObservableObject {
     private var currentRunID: String?
     private let fileURL: URL
     private let fileQueue = DispatchQueue(
-        label: "com.marcelopessoa.prism.applog.file", qos: .utility)
+        label: "dev.prism.tradutor.applog.file", qos: .utility)
 
     private init() {
         let support =

@@ -55,6 +55,8 @@ final class TranslationOrchestrator {
     var isBusy: Bool { isRunning }
 
     var onStatusChange: ((AppState.Status) -> Void)?
+    /// Original e tradução de cada tradução concluída (histórico curto do menu).
+    var onTranslated: ((String, String) -> Void)?
     var pressReturnHandler: (() -> Void)?
 
     init(settings: AppSettings, engine: TranslationEngine, textIO: FocusedTextIO) {
@@ -89,7 +91,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: Prism está desligado. Ligue o interruptor no menu ou em Configurações."
             )
-            onStatusChange?(.error(String(localized: "Prism is off — turn it on in Settings")))
+            onStatusChange?(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
             AppLog.info(
                 .orchestrator,
                 "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — app desligado ──"
@@ -115,7 +117,8 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: outra tradução ainda está em andamento. Espere ela terminar e tente de novo."
             )
-            onStatusChange?(.error(String(localized: "Previous translation still running — wait")))
+            // Sem trocar o status: o HUD continua em «Traduzindo…» da tradução em curso,
+            // e um erro aqui faria o menu voltar a ocioso no meio dela.
             return
         }
 
@@ -140,6 +143,8 @@ final class TranslationOrchestrator {
             }
         }
 
+        // Começa no ponteiro; assim que a captura informar onde está o texto, o aviso vai para lá.
+        StatusHUDController.shared.setAnchor(nil)
         onStatusChange?(.translating)
 
         do {
@@ -151,13 +156,16 @@ final class TranslationOrchestrator {
                 preferReplaceInPlace = true
                 allowSelectAllWhenEditable = true
             case .popup:
+                // Painel é leitura: sem seleção, nunca ⌘A em host cego para Acessibilidade
+                // (no Discord isso pegaria a conversa inteira). Campo editável ainda pode.
                 preferReplaceInPlace = false
-                allowSelectAllWhenEditable = true
+                allowSelectAllWhenEditable = false
             }
             let capture = try await textIO.selectAndReadFocusedText(
                 preferReplaceInPlace: preferReplaceInPlace,
                 allowSelectAllWhenEditable: allowSelectAllWhenEditable
             )
+            StatusHUDController.shared.setAnchor(capture.selectionScreenRect)
             let trimmed = capture.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else {
                 AppLog.warning(
@@ -192,6 +200,25 @@ final class TranslationOrchestrator {
                     .orchestrator,
                     "Texto já em \(LanguageCode.displayName(for: detected)) (idioma de leitura) — usando o par de escrita \(LanguageCode.pairLabel(from: outgoingFrom, to: outgoingTo))"
                 )
+            }
+
+            // Texto que você escreve já no idioma de destino: traduzir de novo só estraga.
+            // Com «traduzir e enviar», apenas envia; sem enviar, avisa.
+            if case .replaceInPlace(let sendAfter) = presentation,
+                capture.isEditable, usedOutgoingPair,
+                let detected,
+                LanguageCode.normalize(detected) == LanguageCode.normalize(outgoingTo)
+            {
+                let language = LanguageCode.displayName(for: outgoingTo)
+                if sendAfter {
+                    AppLog.info(.orchestrator, "Texto já em \(language) — sem traduzir, só enviando")
+                    pressReturnHandler?()
+                    onStatusChange?(.success)
+                } else {
+                    AppLog.info(.orchestrator, "Texto já em \(language) — nada a traduzir")
+                    onStatusChange?(.error(String(format: String(localized: "The text is already in %@."), language)))
+                }
+                return
             }
 
             var from = usedOutgoingPair ? outgoingFrom : incomingFrom
@@ -239,6 +266,11 @@ final class TranslationOrchestrator {
 
             let output = preserveSurroundingWhitespace(
                 original: capture.text, translated: outcome.text)
+            onTranslated?(trimmed, outcome.text)
+            if let failed = outcome.fallbackFrom {
+                StatusHUDController.shared.offerNote(
+                    String(format: String(localized: "%@ failed, so this Mac translated it."), failed))
+            }
 
             let action = TranslationActionPolicy.resolve(
                 presentation: presentation,
@@ -267,6 +299,9 @@ final class TranslationOrchestrator {
                     "Abrindo painel \(sourceLabel) → \(targetLabel) — \(replaceHint)"
                 )
                 holdPasteboardForPanel = true
+                // Linha de base do clipboard na abertura do painel: se o usuário copiar
+                // algo enquanto o painel está aberto, o fechamento não restaura por cima.
+                let pasteboardBaseline = NSPasteboard.general.changeCount
                 TranslationResultPanelController.shared.show(
                     .init(
                         original: capture.text,
@@ -285,7 +320,15 @@ final class TranslationOrchestrator {
                                 capture: capture, text: text, targetApp: app)
                         },
                         onDismissWithoutReplace: { [weak self] in
-                            self?.textIO.finishPasteboardSession(onlyIfUnchanged: true)
+                            self?.textIO.finishPasteboardSession(onlyIfChangeCount: pasteboardBaseline)
+                        },
+                        onKeepClipboard: { [weak self] in
+                            self?.textIO.discardPasteboardSession()
+                        },
+                        targetLanguageCode: to,
+                        retranslate: retranslator(text: trimmed, original: capture.text, from: from),
+                        notice: outcome.fallbackFrom.map {
+                            String(format: String(localized: "%@ failed, so this Mac translated it."), $0)
                         }
                     )
                 )
@@ -309,6 +352,11 @@ final class TranslationOrchestrator {
                 try await Task.sleep(nanoseconds: 25_000_000)
                 AppLog.info(.orchestrator, "Enviando tecla Return (traduzir e enviar)")
                 pressReturnHandler?()
+            } else {
+                // Mensagem enviada não se desfaz; substituição simples, sim.
+                StatusHUDController.shared.offerUndo { [weak self] in
+                    self?.undoLastReplace(in: targetApp)
+                }
             }
 
             onStatusChange?(.success)
@@ -362,6 +410,10 @@ final class TranslationOrchestrator {
         }
         do {
             try await performReplace(capture: capture, text: text, targetApp: targetApp)
+            StatusHUDController.shared.setAnchor(capture.selectionScreenRect)
+            StatusHUDController.shared.offerUndo { [weak self] in
+                self?.undoLastReplace(in: targetApp)
+            }
             onStatusChange?(.success)
         } catch {
             AppLog.error(
@@ -402,6 +454,104 @@ final class TranslationOrchestrator {
         )
         try await textIO.replaceSelection(capture, with: text)
         AppLog.info(.orchestrator, "Substituição concluída")
+    }
+
+    /// Desfaz a substituição com ⌘Z no app de origem: a colagem (e a escrita via
+    /// Acessibilidade na maioria dos campos nativos) entra no histórico de desfazer dele.
+    private func undoLastReplace(in targetApp: NSRunningApplication?) {
+        AppLog.info(.orchestrator, "«Desfazer» no aviso — enviando ⌘Z para \(targetApp?.localizedName ?? "o app de origem")")
+        Task { @MainActor in
+            if let targetApp, !targetApp.isActive {
+                targetApp.activate()
+                try? await Task.sleep(nanoseconds: 60_000_000)
+            }
+            KeyboardSimulator.pressCommandKey("z")
+        }
+    }
+
+    /// Tradução para outro destino a partir do painel (menu de idioma no topo).
+    private func retranslator(
+        text: String, original: String, from: String?
+    ) -> (String) async throws -> String {
+        { [weak self] target in
+            guard let self else { throw CancellationError() }
+            AppLog.info(.orchestrator, "Painel: traduzindo de novo para \(LanguageCode.displayName(for: target))")
+            let outcome = try await self.engine.translate(text, from: from, to: target)
+            self.onTranslated?(text, outcome.text)
+            return self.preserveSurroundingWhitespace(original: original, translated: outcome.text)
+        }
+    }
+
+    /// Traduz o texto que já está na área de transferência e mostra no painel (só Copiar).
+    /// Útil quando não há seleção, por exemplo texto copiado de um PDF protegido.
+    func translateClipboard() async {
+        guard settings.isEnabled else {
+            onStatusChange?(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
+            return
+        }
+        guard !isRunning else { return }
+        let raw = NSPasteboard.general.string(forType: .string) ?? ""
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            onStatusChange?(.error(String(localized: "The clipboard has no text to translate.")))
+            return
+        }
+        isRunning = true
+        runStartDate = Date()
+        defer {
+            isRunning = false
+            runStartDate = nil
+        }
+        StatusHUDController.shared.setAnchor(nil)
+        onStatusChange?(.translating)
+        // Mesma regra do atalho: texto já no idioma de leitura (ex.: algo que você
+        // escreveu em português) vai para o idioma de escrita; a Apple recusa pt → pt.
+        var from = settings.resolvedSourceLanguage(outgoing: false)
+        var to = settings.incomingTargetLanguage
+        if let detected = LanguageDetector.detect(in: trimmed),
+            LanguageCode.normalize(detected) == LanguageCode.normalize(to)
+        {
+            let outgoingTo = settings.outgoingTargetLanguage
+            guard LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(to) else {
+                onStatusChange?(.error(String(format: String(localized: "The text is already in %@."), LanguageCode.displayName(for: to))))
+                return
+            }
+            AppLog.info(.orchestrator, "Área de transferência já em \(LanguageCode.displayName(for: detected)) — usando o idioma de escrita")
+            from = detected
+            to = outgoingTo
+        }
+        AppLog.info(.orchestrator, "Traduzindo a área de transferência — \(trimmed.count) caracteres, \(LanguageCode.pairLabel(from: from, to: to))")
+        do {
+            let outcome = try await engine.translate(trimmed, from: from, to: to)
+            onTranslated?(trimmed, outcome.text)
+            let sourceLabel = LanguageCode.displayName(
+                for: from ?? outcome.detectedSourceLanguage ?? LanguageCode.systemLanguage)
+            TranslationResultPanelController.shared.show(
+                .init(
+                    original: trimmed,
+                    translated: outcome.text,
+                    canReplace: false,
+                    showOriginal: true,
+                    sourceLanguageLabel: sourceLabel,
+                    targetLanguageLabel: LanguageCode.displayName(for: to),
+                    pairContextLabel: String(localized: "Clipboard"),
+                    capture: FocusedTextCapture(text: trimmed, didSelectAll: false, isEditable: false),
+                    targetApp: nil,
+                    onReplace: nil,
+                    onDismissWithoutReplace: nil,
+                    onKeepClipboard: nil,
+                    targetLanguageCode: to,
+                    retranslate: retranslator(text: trimmed, original: trimmed, from: from),
+                    notice: outcome.fallbackFrom.map {
+                        String(format: String(localized: "%@ failed, so this Mac translated it."), $0)
+                    }
+                )
+            )
+            onStatusChange?(.success)
+        } catch {
+            AppLog.error(.orchestrator, "Tradução da área de transferência falhou: \(error.localizedDescription)")
+            onStatusChange?(.error(error.localizedDescription))
+        }
     }
 
     private func preserveSurroundingWhitespace(original: String, translated: String) -> String {

@@ -9,6 +9,8 @@ final class HotkeyMonitor {
     var onPopup: (() -> Void)?
     /// Enter in a text field when “Enter traduz e envia” is on (distinct from the ⌃⌥⏎ hotkey).
     var onEnterTranslateAndSend: (() -> Void)?
+    /// Atalho usado com o Prism pausado: o evento segue para o app, mas o usuário é avisado.
+    var onShortcutWhilePaused: (() -> Void)?
     /// Fired on the main queue whenever tap install state changes.
     var onTapStatusChange: ((Bool) -> Void)?
 
@@ -28,6 +30,7 @@ final class HotkeyMonitor {
     private var translateOnly = HotkeyChord.translateOnlyDefault
     private var translateAndSend = HotkeyChord.translateAndSendDefault
     private var popupChord = HotkeyChord.popupDefault
+    private var ignoredBundleIDs = Set<String>()
 
     var isTapActive: Bool {
         lock.lock()
@@ -65,6 +68,18 @@ final class HotkeyMonitor {
             .hotkey,
             "Atalhos atualizados — Traduzir \(translateOnly.displayString), Traduzir e enviar \(translateAndSend.displayString), Painel \(popupLabel), Enter traduz \(enterTranslatesAndSends ? "sim" : "não"), Prism \(enabled ? "ligado" : "desligado")"
         )
+    }
+
+    /// Apps em primeiro plano nos quais todos os eventos passam intactos.
+    func setIgnoredBundleIDs(_ ids: [String]) {
+        let next = Set(ids)
+        lock.lock()
+        let changed = ignoredBundleIDs != next
+        ignoredBundleIDs = next
+        lock.unlock()
+        if changed {
+            AppLog.info(.hotkey, "Apps ignorados atualizados — \(next.count) app(s)")
+        }
     }
 
     /// While true, all hotkey matching is skipped so the settings recorder can capture keys.
@@ -220,9 +235,19 @@ final class HotkeyMonitor {
         let onlyChord = translateOnly
         let sendChord = translateAndSend
         let popup = popupChord
+        let ignored = ignoredBundleIDs
         lock.unlock()
 
         if injecting || recording || type != .keyDown {
+            return Unmanaged.passUnretained(event)
+        }
+
+        // `frontmostApplication` é lido fora da main thread; o NSWorkspace tolera isso para leitura
+        // e o pior caso é um evento tratado com o app anterior durante a troca de foco.
+        if !ignored.isEmpty,
+           let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           ignored.contains(front)
+        {
             return Unmanaged.passUnretained(event)
         }
 
@@ -259,14 +284,21 @@ final class HotkeyMonitor {
             )
         }
 
-        // Enter mode: plain Return/Enter translates and sends (text fields only)
+        // Enter mode: plain Return/Enter translates and sends (text fields only).
+        // ⇧⏎ é nova linha nos apps de chat; com o painel aberto, ⏎ é do painel.
         if enterMode,
             keyCode == Int64(kVK_Return) || keyCode == Int64(kVK_ANSI_KeypadEnter),
             !flags.contains(.maskCommand),
             !flags.contains(.maskAlternate),
-            !flags.contains(.maskControl)
+            !flags.contains(.maskControl),
+            !flags.contains(.maskShift),
+            !ResultPanelVisibility.shared.isVisible
         {
             let editable = FocusedTextIO.isFocusedTextEditable()
+            if editable, FocusedTextIO.isFocusedFieldKnownEmpty() {
+                // Nada para traduzir: o Enter segue para o app (ex.: enviar formulário).
+                return Unmanaged.passUnretained(event)
+            }
             if editable {
                 if !isEnabled {
                     AppLog.warning(
@@ -305,6 +337,7 @@ final class HotkeyMonitor {
                 .hotkey,
                 "Atalho «\(name)» (\(chord.displayString)) ignorado — Prism está desligado"
             )
+            Task { @MainActor in self.onShortcutWhilePaused?() }
             return Unmanaged.passUnretained(event)
         }
         AppLog.info(.hotkey, "Atalho usado: «\(name)» (\(chord.displayString))")
@@ -325,5 +358,24 @@ final class HotkeyMonitor {
             self.injectionDepth = max(0, self.injectionDepth - 1)
             self.lock.unlock()
         }
+    }
+}
+
+/// Visibilidade do painel de resultado, lida na thread do event tap.
+final class ResultPanelVisibility: @unchecked Sendable {
+    static let shared = ResultPanelVisibility()
+    private let lock = NSLock()
+    private var visible = false
+
+    var isVisible: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return visible
+    }
+
+    func set(_ value: Bool) {
+        lock.lock()
+        visible = value
+        lock.unlock()
     }
 }

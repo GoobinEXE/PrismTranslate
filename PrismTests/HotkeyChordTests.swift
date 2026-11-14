@@ -128,4 +128,18 @@ final class HotkeyChordTests: XCTestCase {
         let decoded = try JSONDecoder().decode(HotkeyChord.self, from: data)
         XCTAssertEqual(decoded, original)
     }
+
+    // MARK: Reserved shortcuts
+
+    func testSystemEditingShortcutsAreReserved() {
+        XCTAssertTrue(HotkeyChord(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command]).isReservedBySystem)
+        XCTAssertTrue(HotkeyChord(keyCode: UInt16(kVK_ANSI_Z), modifiers: [.command, .shift]).isReservedBySystem)
+    }
+
+    func testDefaultsAndControlOptionChordsAreNotReserved() {
+        XCTAssertFalse(HotkeyChord.translateOnlyDefault.isReservedBySystem)
+        XCTAssertFalse(HotkeyChord.translateAndSendDefault.isReservedBySystem)
+        XCTAssertFalse(HotkeyChord.popupDefault.isReservedBySystem)
+        XCTAssertFalse(HotkeyChord(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command, .option]).isReservedBySystem)
+    }
 }

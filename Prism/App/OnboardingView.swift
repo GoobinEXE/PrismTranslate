@@ -10,7 +10,7 @@ struct OnboardingStep: Identifiable {
     let symbolColor: Color
 }
 
-/// Wizard de configuração — 6 etapas com gates suaves: dá para continuar sem a
+/// Wizard de configuração — 4 etapas com gates suaves: dá para continuar sem a
 /// permissão, mas o estado pendente fica visível até o checklist final.
 struct OnboardingView: View {
     var onClose: () -> Void
@@ -40,22 +40,14 @@ struct OnboardingView: View {
         ),
         OnboardingStep(
             id: 1,
-            title: String(localized: "Accessibility permission"),
+            title: String(localized: "Two permissions"),
             subtitle: String(localized:
-                "This is what lets Prism read and replace the text you type. Without it, translation cannot run."),
-            symbolName: "accessibility",
+                "Allow both so Prism can read your text and catch its shortcut in any app."),
+            symbolName: "lock.shield",
             symbolColor: .blue
         ),
         OnboardingStep(
             id: 2,
-            title: String(localized: "Input Monitoring"),
-            subtitle: String(localized:
-                "Delivers global shortcuts even when another app is frontmost. Without it, ⌃⌥T looks like it “does nothing”."),
-            symbolName: "keyboard",
-            symbolColor: .orange
-        ),
-        OnboardingStep(
-            id: 3,
             title: String(localized: "Language and translation"),
             subtitle: String(localized:
                 "Choose the target language. With Apple Translation, packs download now and translation runs on this Mac."),
@@ -63,15 +55,7 @@ struct OnboardingView: View {
             symbolColor: .green
         ),
         OnboardingStep(
-            id: 4,
-            title: String(localized: "Shortcuts in practice"),
-            subtitle: String(localized:
-                "These are your current shortcuts. You can change them in Settings → Shortcuts."),
-            symbolName: "command",
-            symbolColor: .purple
-        ),
-        OnboardingStep(
-            id: 5,
+            id: 3,
             title: String(localized: "You’re all set"),
             subtitle: String(localized:
                 "Check the list — the prism icon stays in the menu bar to turn Prism on or off, change language, and open Settings."),
@@ -79,6 +63,12 @@ struct OnboardingView: View {
             symbolColor: .green
         ),
     ]
+
+    private var continueLabel: LocalizedStringKey {
+        if stepIndex == 0 { return "Get started" }
+        if stepIndex == 1, !accessibilityOK || !inputMonitoringOK { return "Continue anyway" }
+        return "Continue"
+    }
 
     private var isLastStep: Bool { stepIndex >= steps.count - 1 }
     private var current: OnboardingStep { steps[stepIndex] }
@@ -199,6 +189,12 @@ struct OnboardingView: View {
                     keys: appState.settings.translateAndSendHotkey.displayString,
                     label: "Translates, replaces, and sends"
                 )
+                if appState.settings.popupModeEnabled {
+                    shortcutRow(
+                        keys: appState.settings.popupHotkey.displayString,
+                        label: "Shows the result in a panel (popup mode)"
+                    )
+                }
             }
         case 1:
             VStack(spacing: QTDesign.Spacing.s) {
@@ -210,31 +206,25 @@ struct OnboardingView: View {
                     Permissions.openAccessibilitySettings()
                     refreshPermissions()
                 }
-                if !accessibilityOK {
-                    pendingBadge(
-                        "You can continue and grant this later — translation only works with this permission."
-                    )
-                }
-            }
-        case 2:
-            VStack(spacing: QTDesign.Spacing.s) {
                 permissionCard(
                     ok: inputMonitoringOK,
                     okTitle: "Input Monitoring granted",
                     pendingTitle: "Input Monitoring required"
                 ) {
+                    // Registra o Prism na lista antes de abrir; sem isso ele não aparece lá.
+                    requestInputMonitoringOnce()
                     Permissions.openInputMonitoringSettings()
                     refreshPermissions()
                 }
-                if !inputMonitoringOK {
+                if !accessibilityOK || !inputMonitoringOK {
                     pendingBadge(
-                        "Without it, global shortcuts stay inactive — the menu bar warns you when that happens."
+                        "You can continue and grant them later. Prism needs both to translate."
                     )
                 }
             }
-        case 3:
+        case 2:
             VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-                GlassSurface {
+                QTCard {
                     Picker(
                         "Target language (your messages)",
                         selection: Binding(
@@ -265,37 +255,7 @@ struct OnboardingView: View {
                 )
             }
             .onAppear(perform: refreshLanguagePack)
-        case 4:
-            VStack(spacing: QTDesign.Spacing.s) {
-                shortcutRow(
-                    keys: appState.settings.translateOnlyHotkey.displayString,
-                    label: "Selects the field text, translates, and replaces"
-                )
-                shortcutRow(
-                    keys: appState.settings.translateAndSendHotkey.displayString,
-                    label: "Does the same and sends (Enter)"
-                )
-                if appState.settings.popupModeEnabled {
-                    shortcutRow(
-                        keys: appState.settings.popupHotkey.displayString,
-                        label: "Shows the result in a panel (popup mode)"
-                    )
-                }
-                shortcutRow(
-                    keys: "⏎",
-                    label: "Only if “Enter translates and sends” is on in the menu"
-                )
-                QTSettingsLink(section: .shortcuts) {
-                    Label("Open Settings → Shortcuts", systemImage: "arrow.up.right.square")
-                }
-                .buttonStyle(.borderless)
-                .controlSize(.small)
-                .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Open Settings, Shortcuts section")
-                .accessibilityHint("Opens the Settings window on the Shortcuts section")
-                .padding(.top, 4)
-            }
-        case 5:
+        case 3:
             checklist
         default:
             EmptyView()
@@ -311,7 +271,7 @@ struct OnboardingView: View {
             Spacer()
 
             if stepIndex == 0 {
-                Button("Skip") {
+                Button("Skip to summary") {
                     // Vai ao checklist para ver o que ainda falta — não marca concluído.
                     go(to: steps.count - 1)
                 }
@@ -331,7 +291,7 @@ struct OnboardingView: View {
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
             } else {
-                Button(stepIndex == 0 ? "Get started" : "Continue") {
+                Button(continueLabel) {
                     go(to: stepIndex + 1)
                 }
                 .keyboardShortcut(.defaultAction)
@@ -361,6 +321,11 @@ struct OnboardingView: View {
     }
 
     private func go(to index: Int) {
+        // Saindo das permissões sem conceder Acessibilidade: ainda assim registra o
+        // Monitoramento de Entrada, senão o Prism nunca entra nessa lista.
+        if stepIndex == 1, index > 1 {
+            requestInputMonitoringOnce()
+        }
         if let animation = stepAnimation {
             withAnimation(animation) { stepIndex = index }
         } else {
@@ -385,24 +350,25 @@ struct OnboardingView: View {
         pendingTitle: LocalizedStringKey,
         openAction: @escaping () -> Void
     ) -> some View {
-        GlassSurface {
-            VStack(spacing: QTDesign.Spacing.m) {
-                HStack(spacing: QTDesign.Spacing.s) {
-                    Image(
-                        systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(ok ? Color.green : Color.orange)
-                    Text(ok ? okTitle : pendingTitle)
-                        .font(QTDesign.Fonts.callout.weight(.medium))
-                    Spacer(minLength: 0)
+        QTCard {
+            HStack(spacing: QTDesign.Spacing.s) {
+                Image(
+                    systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(ok ? Color.green : Color.orange)
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                .accessibilityHidden(true)
+                Text(ok ? okTitle : pendingTitle)
+                    .font(QTDesign.Fonts.callout.weight(.medium))
+                Spacer(minLength: 0)
+                // Concedida, não há o que abrir: o botão some em vez de ficar inútil.
+                if !ok {
+                    Button("Open System Settings…", action: openAction)
+                        .buttonStyle(.bordered)
                 }
-
-                Button("Open System Settings…", action: openAction)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
             }
             .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
         }
     }
 
@@ -421,7 +387,7 @@ struct OnboardingView: View {
     }
 
     private func shortcutRow(keys: String, label: LocalizedStringKey) -> some View {
-        GlassSurface(cornerRadius: QTDesign.Radius.small) {
+        QTCard(cornerRadius: QTDesign.Radius.small) {
             HStack {
                 QTKeycap(keys: keys)
                 Text(label)
@@ -442,19 +408,20 @@ struct OnboardingView: View {
 
     private var checklist: some View {
         VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
-            GlassSurface {
+            QTCard {
                 VStack(alignment: .leading, spacing: QTDesign.Spacing.s) {
                     checklistRow(ok: accessibilityOK, text: String(localized: "Accessibility")) {
                         Permissions.openAccessibilitySettings()
                     }
                     checklistRow(ok: inputMonitoringOK, text: String(localized: "Input Monitoring")) {
+                        requestInputMonitoringOnce()
                         Permissions.openInputMonitoringSettings()
                     }
                     checklistRow(
                         ok: languagesReady,
                         text:
                             String(format: String(localized: "Translation languages (%@)"), LanguageCode.displayName(for: appState.settings.outgoingTargetLanguage)),
-                        settingsSection: .general
+                        settingsSection: .provider
                     )
                     checklistRow(ok: true, text: String(localized: "Prism icon in the menu bar"), fix: nil)
                 }
@@ -512,7 +479,7 @@ struct OnboardingView: View {
     // MARK: - Language packs (Apple Translation)
 
     private var languagePackCard: some View {
-        GlassSurface {
+        QTCard {
             VStack(spacing: QTDesign.Spacing.m) {
                 HStack(spacing: QTDesign.Spacing.s) {
                     Image(systemName: packIconName)
@@ -585,21 +552,38 @@ struct OnboardingView: View {
         }
     }
 
-    private func refreshLanguagePack() {
-        guard stepIndex == 3 || stepIndex == 5, packState != .downloading else { return }
-        Task { @MainActor in
-            let settings = appState.settings
-            let pair = AppleTranslationBridge.defaultPackPair(settings: settings)
+    /// Os dois pares (texto que leio e texto que escrevo), como em Configurações › Provedor.
+    /// Antes só o par de escrita era verificado, e o checklist dizia «pronto» mesmo
+    /// com o par de leitura sem pacote.
+    private func packStates() async -> [(pair: (source: String?, target: String), state: LanguagePackState)] {
+        var result: [(pair: (source: String?, target: String), state: LanguagePackState)] = []
+        for pair in AppleTranslationBridge.packPairs(settings: appState.settings) {
             let state = await appState.appleBridge.languagePackState(
                 from: pair.source,
                 to: pair.target,
                 ignoreCache: true
             )
-            guard stepIndex == 3 || stepIndex == 5, packState != .downloading else { return }
+            result.append((pair, state))
+        }
+        return result
+    }
+
+    private static func combined(_ states: [LanguagePackState]) -> LanguagePackState {
+        if states.allSatisfy({ $0 == .installed }) { return .installed }
+        if states.contains(.needsDownload) { return .needsDownload }
+        if states.contains(.unsupported) { return .unsupported }
+        return states.first(where: { $0 != .installed }) ?? .checking
+    }
+
+    private func refreshLanguagePack() {
+        guard stepIndex == 2 || stepIndex == 3, packState != .downloading else { return }
+        Task { @MainActor in
+            let state = Self.combined(await packStates().map(\.state))
+            guard stepIndex == 2 || stepIndex == 3, packState != .downloading else { return }
             // Keep the failure visible until the pack actually installs or the user retries.
             if packState.isFailed && state != .installed { return }
             packState = state
-            if state == .needsDownload && !didAutoAttemptDownload && stepIndex == 3 {
+            if state == .needsDownload && !didAutoAttemptDownload && stepIndex == 2 {
                 attemptLanguageDownload()
             }
         }
@@ -609,42 +593,43 @@ struct OnboardingView: View {
         didAutoAttemptDownload = true
         packState = .downloading
         Task { @MainActor in
-            let settings = appState.settings
-            let pair = AppleTranslationBridge.defaultPackPair(settings: settings)
             do {
-                try await appState.appleBridge.ensureLanguagePacks(
-                    from: pair.source,
-                    to: pair.target
-                )
-                packState = .installed
+                for entry in await packStates() where entry.state == .needsDownload {
+                    try await appState.appleBridge.ensureLanguagePacks(
+                        from: entry.pair.source,
+                        to: entry.pair.target
+                    )
+                }
+                packState = Self.combined(await packStates().map(\.state))
             } catch {
-                let current = await appState.appleBridge.languagePackState(
-                    from: pair.source,
-                    to: pair.target
-                )
+                let current = Self.combined(await packStates().map(\.state))
                 packState = current == .installed ? .installed : .failed(error.localizedDescription)
             }
         }
     }
 
     private func registerPrivacyPromptIfNeeded(for index: Int) {
-        switch index {
-        case 1:
-            guard !accessibilityOK, !didRegisterAccessibilityPrompt else { return }
+        guard index == 1 else { return }
+        // Um diálogo do sistema por vez: Monitoramento de Entrada só depois da Acessibilidade.
+        if !accessibilityOK {
+            guard !didRegisterAccessibilityPrompt else { return }
             didRegisterAccessibilityPrompt = true
             Permissions.registerAccessibilityPromptIfNeeded()
-        case 2:
-            guard !inputMonitoringOK, !didRegisterInputMonitoringPrompt else { return }
-            didRegisterInputMonitoringPrompt = true
-            Permissions.registerInputMonitoringIfNeeded()
-        default:
-            break
+        } else {
+            requestInputMonitoringOnce()
         }
+    }
+
+    private func requestInputMonitoringOnce() {
+        guard !inputMonitoringOK, !didRegisterInputMonitoringPrompt else { return }
+        didRegisterInputMonitoringPrompt = true
+        Permissions.registerInputMonitoringIfNeeded()
     }
 
     private func refreshPermissions() {
         accessibilityOK = Permissions.isAccessibilityTrusted()
         inputMonitoringOK = Permissions.isInputMonitoringGranted()
+        registerPrivacyPromptIfNeeded(for: stepIndex)
         refreshLanguagePack()
     }
 }

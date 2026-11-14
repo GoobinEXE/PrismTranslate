@@ -5,10 +5,13 @@ struct TranslationOutcome: Equatable {
     let text: String
     /// App-style language code when the provider reported detection (e.g. auto source).
     let detectedSourceLanguage: String?
+    /// Nome do motor configurado que falhou, quando a tradução veio do motor reserva (Apple).
+    var fallbackFrom: String?
 
-    init(text: String, detectedSourceLanguage: String? = nil) {
+    init(text: String, detectedSourceLanguage: String? = nil, fallbackFrom: String? = nil) {
         self.text = text
         self.detectedSourceLanguage = detectedSourceLanguage
+        self.fallbackFrom = fallbackFrom
     }
 }
 

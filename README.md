@@ -71,16 +71,16 @@ Para apagar também preferências e dados locais (logs, ajustes salvos):
 brew uninstall --cask --zap prism-translate
 ```
 
-**Baixou o zip manualmente?** Saia do Prism (menu do prisma → **Ligado**, desligado), arraste **Prism** de **Aplicativos** para o Lixo e esvazie o Lixo.
+**Baixou o zip manualmente?** Saia do Prism (menu do prisma → **Sair**, no rodapé; **Ligado** só pausa o app), arraste **Prism** de **Aplicativos** para o Lixo e esvazie o Lixo.
 
 **Limpar permissões (opcional):** em **Ajustes do Sistema → Privacidade e Segurança**, remova **Prism** de **Acessibilidade** e **Monitoramento de Entrada**.
 
 Se quiser apagar tudo à mão (sem `--zap`), apague estas pastas no Finder (**Ir → Ir para a pasta…**, ⌘⇧G):
 
-- `~/Library/Preferences/com.marcelopessoa.prism.plist`
+- `~/Library/Preferences/dev.prism.tradutor.plist`
 - `~/Library/Application Support/Prism`
 
-Chaves de API ficam no **Chaveiro** do Mac (serviço `com.marcelopessoa.prism`); remova-as lá se não for reinstalar.
+Chaves de API ficam no **Chaveiro** do Mac (serviço `dev.prism.tradutor`); remova-as lá se não for reinstalar.
 
 Mais detalhes no [tutorial de instalação](INSTALL.md#desinstalar).
 
@@ -92,21 +92,30 @@ Sem configurar nada, a tradução é a da Apple, no próprio Mac.
   <img src="docs/readme/atalhos.svg" width="840" alt="Control Option T traduz no lugar. Control Option Enter traduz e envia.">
 </p>
 
-Esses atalhos quase não brigam com os de outros apps. Dá para mudar — ou voltar ao padrão — em **Preferências → Atalhos**.
+Esses atalhos quase não brigam com os de outros apps. Dá para mudar — ou voltar ao padrão — em **Configurações → Atalhos**.
 
-No menu do prisma:
+Em texto só de leitura, **⌃⌥T** abre o painel de tradução. **⌃⌥Y** abre o painel com **Modo popup** ligado.
 
-- Escolha o idioma de destino
-- Ligue ou desligue o app em **Ligado**
-- Se quiser, ative **Enter traduz e envia** (aí o Enter sozinho também traduz)
-- **Aviso perto do ponteiro** mostra um recado discreto na hora da tradução
+No menu do prisma, de cima para baixo:
+
+- **Ligado** pausa o Prism; não fecha o app
+- Um aviso aparece quando falta permissão, com o botão **Corrigir…**
+- **Texto que leio →** e **Texto que escrevo →** definem os idiomas; ao lado fica o provedor, com **Configurar…**
 - **Modo popup** abre um painel com a tradução, em vez de só substituir no campo
+- Em **Mais opções**: **Enter traduz e envia** (o Enter sozinho também traduz) e **Aviso perto do ponteiro** (um recado discreto na hora da tradução)
+- No rodapé: **Configurações**, **Guia de configuração** (reabre o tutorial inicial) e **Sair** (fecha o app)
 
-Em Preferências, **Abrir no login** deixa o Prism pronto quando você entra na conta.
+O **clique direito** no prisma abre um menu rápido do macOS com cinco itens: **Ligado**, **Traduzir área de transferência**, **Traduções recentes** (clique numa delas para copiar de novo), **Configurações…** e **Sair**. Quando falta permissão, **Configurações…** dá lugar a **Corrigir permissões…**.
+
+No painel de tradução, **Copiar** copia o texto e fecha o painel (clique, ⌘C ou Enter quando o texto é só de leitura). **Substituir** (Enter) aparece quando o campo é editável. O par de idiomas no topo do painel abre um menu para traduzir para outro idioma. Esc fecha.
+
+Depois de substituir, o aviso perto do ponteiro mostra **Desfazer** por alguns segundos.
+
+Em **Configurações**, **Abrir no login** deixa o Prism pronto quando você entra na conta, e **Apps ignorados** desliga os atalhos em apps escolhidos, como o Terminal.
 
 ## Outras formas de traduzir
 
-O padrão é a tradução da Apple. Se quiser outra, abra **Preferências**:
+O padrão é a tradução da Apple. Se quiser outra, abra **Configurações → Provedor**:
 
 - **DeepL** ou **Google** — você cola a chave da API
 - **LM Studio** (ou qualquer servidor no estilo OpenAI) — no seu computador

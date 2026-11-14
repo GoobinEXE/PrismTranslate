@@ -8,6 +8,8 @@ struct OpenAICompatibleProvider: TranslationProvider {
     /// When true, empty API key fails fast with a configuration error.
     let requiresAPIKey: Bool
     let extraHeaders: [String: String]
+    let protectedTerms: [String]
+    let tone: TranslationTone
 
     var id: String { kind.rawValue }
     var displayName: String { kind.displayName }
@@ -18,7 +20,9 @@ struct OpenAICompatibleProvider: TranslationProvider {
         model: String,
         apiKey: SensitiveData,
         requiresAPIKey: Bool = false,
-        extraHeaders: [String: String] = [:]
+        extraHeaders: [String: String] = [:],
+        protectedTerms: [String] = [],
+        tone: TranslationTone = .automatic
     ) {
         self.kind = kind
         self.baseURL = baseURL
@@ -26,6 +30,8 @@ struct OpenAICompatibleProvider: TranslationProvider {
         self.apiKey = apiKey
         self.requiresAPIKey = requiresAPIKey
         self.extraHeaders = extraHeaders
+        self.protectedTerms = protectedTerms
+        self.tone = tone
     }
 
     private var logCategory: AppLogCategory { .openAI }
@@ -68,7 +74,13 @@ struct OpenAICompatibleProvider: TranslationProvider {
             extra: apiKey.isEmpty ? "sem API key" : "API key configurada"
         )
 
-        let prompt = AITranslationPrompt.make(text: text, from: from, to: to)
+        let prompt = AITranslationPrompt.make(
+            text: text,
+            from: from,
+            to: to,
+            protectedTerms: protectedTerms,
+            tone: tone
+        )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

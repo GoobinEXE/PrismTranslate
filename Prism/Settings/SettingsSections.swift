@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Geral
 
@@ -9,15 +10,6 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("The On, Enter, HUD, target language, and popup controls are also on the menu bar icon.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("The Translate shortcut replaces in place if the field is editable; for read-only text it opens the panel (Copy). Popup mode (opt-in) opens the panel for any selection.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Section("Translation") {
                 Toggle("On", isOn: appState.settingsBinding(\.isEnabled))
                 Toggle(
@@ -78,19 +70,11 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("More options") {
-                Button("Open Shortcuts…") {
-                    appState.settingsSelection = .shortcuts
-                    appState.rememberSettingsSection(.shortcuts)
-                }
-                .accessibilityLabel("Go to Shortcuts section")
-                .accessibilityHint("Shows the Shortcuts section in this window")
-                Button("Open Provider…") {
-                    appState.settingsSelection = .provider
-                    appState.rememberSettingsSection(.provider)
-                }
-                .accessibilityLabel("Go to Provider section")
-                .accessibilityHint("Shows the Provider section in this window")
+            Section("Ignored apps") {
+                IgnoredAppsEditor()
+                Text("Prism shortcuts do nothing while these apps are in front.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("System") {
@@ -140,27 +124,52 @@ struct ProviderSettingsView: View {
                 }
                 .pickerStyle(.menu)
 
-                HStack(spacing: 6) {
-                    Image(systemName: appState.settings.providerKind.symbolName)
-                        .foregroundStyle(.secondary)
-                    Text(appState.settings.providerKind.displayName)
-                        .font(.subheadline.weight(.medium))
-                    ForEach(appState.settings.providerKind.badges, id: \.self) { badge in
-                        EngineBadgeChip(badge: badge)
+                // O menu do seletor só desenha texto e ícone, então as etiquetas
+                // (Grátis, Pago, IA, Local) ficam visíveis aqui, junto da dica.
+                if !appState.settings.providerKind.badges.isEmpty
+                    || appState.settings.providerKind.setupHint != nil
+                {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if !appState.settings.providerKind.badges.isEmpty {
+                            HStack(spacing: 6) {
+                                ForEach(appState.settings.providerKind.badges, id: \.self) { badge in
+                                    EngineBadgeChip(badge: badge)
+                                }
+                            }
+                        }
+                        if let hint = appState.settings.providerKind.setupHint {
+                            Text(hint)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    Spacer()
-                }
-                .accessibilityElement(children: .combine)
-
-                if let hint = appState.settings.providerKind.setupHint {
-                    Text(hint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .accessibilityElement(children: .combine)
                 }
             }
 
             Section("Configuration") {
                 providerFields
+                if appState.settings.providerKind == .deepl
+                    || appState.settings.providerKind == .openAICompatible
+                {
+                    Picker("Tone", selection: appState.settingsBinding(\.translationTone)) {
+                        ForEach(TranslationTone.allCases) { tone in
+                            Text(tone.label).tag(tone)
+                        }
+                    }
+                    Text("Formal or informal register where the engine supports it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if appState.settings.providerKind == .openAICompatible {
+                Section("Terms to keep") {
+                    ProtectedTermsEditor()
+                    Text("Names and terms that AI engines leave untranslated.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .formStyle(.grouped)
@@ -231,12 +240,6 @@ struct ProviderSettingsView: View {
             }
             .accessibilityHint("Opens System Settings to the translation languages list")
 
-            Text(
-                "Download source and target. The button above asks macOS to download them; if nothing appears, use Settings › General › Language & Region › Translation Languages. With On-Device Mode on, translation stays offline."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
         case .deepl:
             SecureField("DeepL API Key", text: $deeplKey)
                 .help("DeepL API key (Free or Pro account). Stored in the Keychain.")
@@ -247,6 +250,15 @@ struct ProviderSettingsView: View {
             Toggle(
                 "Use Free API (api-free.deepl.com)",
                 isOn: appState.settingsBinding(\.deeplUseFreeAPI))
+            KeyCheckRow(
+                title: "Check key",
+                resetID: "\(deeplKey)|\(appState.settings.deeplUseFreeAPI)"
+            ) {
+                try await DeepLProvider(
+                    apiKey: SensitiveData(deeplKey),
+                    useFreeAPI: appState.settings.deeplUseFreeAPI
+                ).translate("Hello", from: nil, to: appState.settings.outgoingTargetLanguage)
+            }
         case .google:
             SecureField("Google Cloud Translation API Key", text: $googleKey)
                 .help("Google Cloud Translation API key. Stored in the Keychain.")
@@ -254,6 +266,10 @@ struct ProviderSettingsView: View {
                 .onChange(of: googleKey) { _, newValue in
                     scheduleKeychainSave(newValue, for: .googleAPIKey, task: &googleKeySaveTask)
                 }
+            KeyCheckRow(title: "Check key", resetID: googleKey) {
+                try await GoogleTranslateProvider(apiKey: SensitiveData(googleKey))
+                    .translate("Hello", from: nil, to: appState.settings.outgoingTargetLanguage)
+            }
         case .openAICompatible:
             TextField("Base URL", text: appState.settingsBinding(\.openAIBaseURL))
                 .help("OpenAI-compatible endpoint, for example local LM Studio.")
@@ -267,6 +283,17 @@ struct ProviderSettingsView: View {
             Text("Default LM Studio: http://localhost:1234/v1")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            KeyCheckRow(
+                title: "Check connection",
+                resetID: "\(openAIKey)|\(appState.settings.openAIBaseURL)|\(appState.settings.openAIModel)"
+            ) {
+                try await OpenAICompatibleProvider(
+                    kind: .openAICompatible,
+                    baseURL: appState.settings.openAIBaseURL,
+                    model: appState.settings.openAIModel,
+                    apiKey: SensitiveData(openAIKey)
+                ).translate("Hello", from: nil, to: appState.settings.outgoingTargetLanguage)
+            }
         case .customHTTP:
             TextField("URL", text: appState.settingsBinding(\.customHTTPURL))
             TextField("Method", text: appState.settingsBinding(\.customHTTPMethod))
@@ -441,6 +468,144 @@ struct ProviderSettingsView: View {
     }
 }
 
+/// Botão que faz uma tradução mínima real ("Hello") e mostra o resultado ao lado.
+private struct KeyCheckRow: View {
+    let title: LocalizedStringKey
+    /// Muda quando chave/endpoint mudam, para descartar um resultado obsoleto.
+    let resetID: String
+    let run: () async throws -> TranslationOutcome
+
+    private enum CheckState: Equatable {
+        case idle
+        case running
+        case success
+        case failure(String)
+    }
+
+    @State private var state: CheckState = .idle
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(title) {
+                state = .running
+                Task {
+                    do {
+                        _ = try await run()
+                        state = .success
+                    } catch {
+                        state = .failure(error.localizedDescription)
+                    }
+                }
+            }
+            .disabled(state == .running)
+
+            switch state {
+            case .idle:
+                EmptyView()
+            case .running:
+                ProgressView().controlSize(.small)
+            case .success:
+                Label("Key works", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .failure(let message):
+                Label(message, systemImage: "xmark.octagon.fill")
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
+        }
+        .onChange(of: resetID) { _, _ in
+            if state != .running { state = .idle }
+        }
+    }
+}
+
+/// Um termo por linha; grava a lista limpa (sem linhas vazias) a cada edição.
+private struct ProtectedTermsEditor: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var text = ""
+    @State private var didLoad = false
+
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.body)
+            .frame(minHeight: 72)
+            .accessibilityLabel("Terms to keep")
+            .accessibilityHint("One term per line")
+            .onAppear {
+                guard !didLoad else { return }
+                didLoad = true
+                text = appState.settings.protectedTerms.joined(separator: "\n")
+            }
+            .onChange(of: text) { _, newValue in
+                let terms = newValue
+                    .components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                appState.settingsBinding(\.protectedTerms).wrappedValue = terms
+            }
+    }
+}
+
+/// Lista de apps ignorados com ícone/nome, remoção e seletor de .app.
+private struct IgnoredAppsEditor: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        let ids = appState.settings.ignoredAppBundleIDs
+        ForEach(ids, id: \.self) { id in
+            HStack(spacing: 8) {
+                Image(nsImage: Self.icon(for: id))
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                Text(Self.name(for: id))
+                Spacer()
+                Button {
+                    appState.settingsBinding(\.ignoredAppBundleIDs).wrappedValue =
+                        ids.filter { $0 != id }
+                } label: {
+                    Image(systemName: "minus.circle")
+                }
+                .buttonStyle(.borderless)
+                .help("Remove")
+                .accessibilityLabel(Text("Remove \(Self.name(for: id))"))
+            }
+        }
+        Button("Add app…", action: addApp)
+    }
+
+    private func addApp() {
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let id = Bundle(url: url)?.bundleIdentifier
+        else { return }
+        var ids = appState.settings.ignoredAppBundleIDs
+        guard !ids.contains(id) else { return }
+        ids.append(id)
+        appState.settingsBinding(\.ignoredAppBundleIDs).wrappedValue = ids
+    }
+
+    private static func appURL(for id: String) -> URL? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+    }
+
+    private static func name(for id: String) -> String {
+        guard let url = appURL(for: id) else { return id }
+        return FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
+    }
+
+    private static func icon(for id: String) -> NSImage {
+        if let url = appURL(for: id) {
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+        return NSWorkspace.shared.icon(for: .application)
+    }
+}
+
 private struct ApplePackRow: Identifiable, Equatable {
     let source: String
     let target: String
@@ -504,11 +669,21 @@ struct ShortcutsSettingsView: View {
         ]
     }
 
+    private func shortcutLabel(_ title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     var body: some View {
         Form {
             Section("Global shortcuts") {
                 HStack {
-                    Text("Translate")
+                    shortcutLabel("Translate", detail: "Replaces in editable fields; opens the panel for read-only text.")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateOnlyHotkey),
@@ -516,7 +691,7 @@ struct ShortcutsSettingsView: View {
                     )
                 }
                 HStack {
-                    Text("Translate and send")
+                    shortcutLabel("Translate and send", detail: "Same as Translate, then presses Enter.")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.translateAndSendHotkey),
@@ -534,7 +709,7 @@ struct ShortcutsSettingsView: View {
                     isOn: appState.settingsBinding(\.popupModeEnabled)
                 )
                 HStack {
-                    Text("Popup shortcut")
+                    shortcutLabel("Popup shortcut", detail: "Always opens the panel, with Replace when the field is editable.")
                     Spacer()
                     HotkeyRecorderButton(
                         chord: appState.settingsBinding(\.popupHotkey),
@@ -542,19 +717,12 @@ struct ShortcutsSettingsView: View {
                     )
                     .disabled(!appState.settings.popupModeEnabled)
                 }
-                Text(
-                    "Shows the translation in a panel. In editable fields, you can Copy or Replace."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
 
             Section {
-                Text(
-                    "Click the shortcut and press the new combination. Esc cancels. Prefer ⌃⌥ to avoid conflicts. Translate replaces in place (editable field) or opens the panel with Copy only (read-only). The popup shortcut — if on — opens the panel for any selection, with Replace when the field is editable. With “Enter translates and sends”, Enter alone also translates and sends."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("Click a shortcut, then press the new keys. Esc cancels.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -780,41 +948,35 @@ struct AboutSettingsView: View {
         Form {
             // ── Identidade ──────────────────────────────────────────
             Section {
-                HStack(alignment: .center, spacing: 14) {
-                    PrismGlyph(lineWidth: 2.2)
-                        .frame(width: 44, height: 44)
-                        .foregroundStyle(Color.accentColor)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Prism")
-                            .font(QTDesign.Fonts.title)
+                VStack(alignment: .leading, spacing: 10) {
+                    // Lockup da marca Prism, como no site: monograma P, filete vertical e
+                    // PRISM em caixa-alta. O P vem em SVG (versão Marfim no modo escuro).
+                    HStack(alignment: .center, spacing: 12) {
+                        Image("PrismLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 36)
+                            .accessibilityHidden(true)
+                        Rectangle()
+                            .fill(.secondary.opacity(0.6))
+                            .frame(width: 1, height: 36)
+                            .accessibilityHidden(true)
+                        Text(verbatim: "PRISM")
+                            .font(.system(size: 24, weight: .heavy))
+                            .tracking(24 * 0.06)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Prism Translate")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.subheadline.weight(.medium))
                         Text(String(format: String(localized: "Version %@ (%@)"), marketingVersion, buildNumber))
                             .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.vertical, 6)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
                     String(format: String(localized: "Prism Translate, version %@, build %@"), marketingVersion, buildNumber))
-            }
-
-            // ── O App ───────────────────────────────────────────────
-            Section("The App") {
-                Text(
-                    "Translates the focused field in any app — one shortcut, in place, no copy and paste."
-                )
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-
-                Text(
-                    "Engines: Apple Translation on this Mac, DeepL, Google Translate, and local LM Studio. The interface lives in the menu bar — almost invisible."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             }
 
             // ── O Time ──────────────────────────────────────────────

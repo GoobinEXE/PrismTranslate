@@ -52,6 +52,18 @@ struct HotkeyChord: Equatable, Hashable, Codable {
         return modifiers.matches(flags)
     }
 
+    /// Atalhos de edição e janela que todo app usa (⌘C, ⌘V, ⌘Z, ⇧⌘Z…). Gravados como
+    /// atalho global, seriam roubados de todos os apps.
+    var isReservedBySystem: Bool {
+        let reservedKeys: Set<Int> = [
+            kVK_ANSI_A, kVK_ANSI_C, kVK_ANSI_V, kVK_ANSI_X, kVK_ANSI_Z, kVK_ANSI_Q,
+            kVK_ANSI_W, kVK_ANSI_S, kVK_ANSI_N, kVK_ANSI_O, kVK_ANSI_P, kVK_ANSI_F,
+            kVK_ANSI_H, kVK_ANSI_M, kVK_Tab, kVK_Space,
+        ]
+        guard reservedKeys.contains(Int(keyCode)) else { return false }
+        return modifiers == [.command] || modifiers == [.command, .shift]
+    }
+
     /// True when this chord uses Return/Enter (relevant for “Enter traduz e envia”).
     var isReturnKey: Bool {
         keyCode == UInt16(kVK_Return) || keyCode == UInt16(kVK_ANSI_KeypadEnter)

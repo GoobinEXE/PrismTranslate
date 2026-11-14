@@ -5,6 +5,7 @@ struct DeepLProvider: TranslationProvider {
     let displayName = ProviderKind.deepl.displayName
     let apiKey: SensitiveData
     let useFreeAPI: Bool
+    var tone: TranslationTone = .automatic
 
     func translate(_ text: String, from: String?, to: String) async throws -> TranslationOutcome {
         guard !apiKey.isEmpty else {
@@ -36,11 +37,7 @@ struct DeepLProvider: TranslationProvider {
             request.setValue("DeepL-Auth-Key \(key)", forHTTPHeaderField: "Authorization")
         }
 
-        var body = "text=\(formEncode(text))"
-        body += "&target_lang=\(formEncode(Self.apiCode(for: to, isTarget: true)))"
-        if let from, !from.isEmpty {
-            body += "&source_lang=\(formEncode(Self.apiCode(for: from, isTarget: false)))"
-        }
+        let body = formBody(text: text, from: from, to: to)
         request.httpBody = body.data(using: .utf8)
 
         let started = Date()
@@ -96,6 +93,28 @@ struct DeepLProvider: TranslationProvider {
         case "zh", "zh-cn", "zh-hans": return isTarget ? "ZH-HANS" : "ZH"
         case "zh-hant", "zh-tw": return isTarget ? "ZH-HANT" : "ZH"
         default: return code.uppercased()
+        }
+    }
+
+    /// Corpo do POST. Internal para testes.
+    func formBody(text: String, from: String?, to: String) -> String {
+        var body = "text=\(formEncode(text))"
+        body += "&target_lang=\(formEncode(Self.apiCode(for: to, isTarget: true)))"
+        if let from, !from.isEmpty {
+            body += "&source_lang=\(formEncode(Self.apiCode(for: from, isTarget: false)))"
+        }
+        if let formality = Self.formality(for: tone) {
+            body += "&formality=\(formality)"
+        }
+        return body
+    }
+
+    /// `prefer_*` nunca falha em idiomas sem suporte a formalidade (ao contrário de `more`/`less`).
+    static func formality(for tone: TranslationTone) -> String? {
+        switch tone {
+        case .automatic: return nil
+        case .formal: return "prefer_more"
+        case .informal: return "prefer_less"
         }
     }
 

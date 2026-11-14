@@ -87,6 +87,7 @@ struct SettingsView: View {
                     Section(group.title) {
                         ForEach(group.sections) { section in
                             Label(section.title, systemImage: section.symbolName)
+                                .badge(section == .permissions ? appState.missingPermissionCount : 0)
                                 .tag(section)
                         }
                     }

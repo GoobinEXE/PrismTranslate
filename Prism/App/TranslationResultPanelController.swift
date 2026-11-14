@@ -29,6 +29,14 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         let targetApp: NSRunningApplication?
         var onReplace: ((FocusedTextCapture, String, NSRunningApplication?) async -> Void)?
         var onDismissWithoutReplace: (() -> Void)?
+        /// Chamado quando o usuário copia a tradução: o clipboard antigo não volta.
+        var onKeepClipboard: (() -> Void)?
+        /// Código do idioma de destino atual (marca o item no menu de idiomas do painel).
+        var targetLanguageCode: String = ""
+        /// Traduz de novo para outro destino; nil esconde o menu de idiomas.
+        var retranslate: ((String) async throws -> String)? = nil
+        /// Aviso curto no painel (ex.: motor reserva usado).
+        var notice: String? = nil
     }
 
     private var panel: NSPanel?
@@ -61,6 +69,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
 
     nonisolated func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
+            ResultPanelVisibility.shared.set(false)
             self.removeKeyMonitors()
             self.panel = nil
             self.session = nil
@@ -69,6 +78,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
     }
 
     private func closePanelChrome() {
+        ResultPanelVisibility.shared.set(false)
         removeKeyMonitors()
         panel?.delegate = nil
         panel?.orderOut(nil)
@@ -87,8 +97,14 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
             sourceLanguageLabel: session.sourceLanguageLabel,
             targetLanguageLabel: session.targetLanguageLabel,
             pairContextLabel: session.pairContextLabel,
+            targetLanguageCode: session.targetLanguageCode,
+            notice: session.notice,
+            onRetarget: session.retranslate == nil ? nil : { [weak self] code in
+                self?.retarget(to: code)
+            },
             onCopy: { [weak self] in
-                self?.copyTranslated()
+                // Clique: deixa o ✓ «Copiado» visível por um instante antes de fechar.
+                self?.copyAndClose(after: 0.45)
             },
             onReplace: { [weak self] in
                 self?.replaceInPlace()
@@ -145,6 +161,7 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         // Keyboard/VoiceOver still reach controls via Tab (HIG accessibility).
         _ = panel.makeFirstResponder(hostingView)
         self.panel = panel
+        ResultPanelVisibility.shared.set(true)
         installKeyMonitors()
     }
 
@@ -158,8 +175,68 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
+    /// Copiar é uma ação final em qualquer contexto: copia e fecha, seja por clique,
+    /// ⌘C ou ⏎ (somente leitura). O backup do clipboard antigo é descartado antes de
+    /// fechar; senão a restauração do fechamento apagaria a tradução copiada.
+    private func copyAndClose(after delay: TimeInterval) {
+        copyTranslated()
+        pendingClipboardRestore = nil
+        session?.onKeepClipboard?()
+        guard delay > 0 else {
+            close(reason: "copiou a tradução")
+            return
+        }
+        let copiedFrom = panel
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, let copiedFrom, self.panel === copiedFrom else { return }
+            self.close(reason: "copiou a tradução")
+        }
+    }
+
+    /// Troca o idioma de destino sem fechar: traduz de novo e redesenha o painel.
+    private func retarget(to code: String) {
+        guard let current = session, let retranslate = current.retranslate,
+            code != current.targetLanguageCode
+        else { return }
+        Task { @MainActor in
+            do {
+                let text = try await retranslate(code)
+                guard self.session?.original == current.original else { return }
+                var updated = Session(
+                    original: current.original,
+                    translated: text,
+                    canReplace: current.canReplace,
+                    showOriginal: current.showOriginal,
+                    sourceLanguageLabel: current.sourceLanguageLabel,
+                    targetLanguageLabel: LanguageCode.displayName(for: code),
+                    pairContextLabel: current.pairContextLabel,
+                    capture: current.capture,
+                    targetApp: current.targetApp,
+                    onReplace: current.onReplace,
+                    onDismissWithoutReplace: current.onDismissWithoutReplace,
+                    onKeepClipboard: current.onKeepClipboard
+                )
+                updated.targetLanguageCode = code
+                updated.retranslate = retranslate
+                // Mantém a sessão de clipboard: só redesenha, sem restaurar nada.
+                self.session = updated
+                self.closePanelChrome()
+                self.present(updated)
+            } catch {
+                AppLog.error(.resultPanel, "Painel: nova tradução falhou — \(error.localizedDescription)")
+                NSSound.beep()
+            }
+        }
+    }
+
     private func replaceInPlace() {
         guard let current = session, current.canReplace else { return }
+        // Outra tradução em curso: fechar agora perderia esta. O painel fica aberto.
+        if AppState.shared.orchestrator.isBusy {
+            AppLog.warning(.resultPanel, "Substituir adiado — outra tradução ainda está em andamento")
+            NSSound.beep()
+            return
+        }
         AppLog.info(
             .resultPanel,
             "Botão «Substituir» (⏎) — colando \(current.translated.count) caracteres em \(current.targetApp?.localizedName ?? "o app de origem")"
@@ -250,13 +327,19 @@ final class TranslationResultPanelController: NSObject, NSWindowDelegate {
             && !flags.contains(.control)
 
         if commandOnly, event.charactersIgnoringModifiers?.lowercased() == "c" {
-            copyTranslated()
+            copyAndClose(after: 0)
             return true
         }
 
         // Return / keypad Enter
         if session?.canReplace == true, event.keyCode == 36 || event.keyCode == 76 {
             replaceInPlace()
+            return true
+        }
+
+        // Somente leitura: ⏎ aciona a ação principal, que é Copiar.
+        if session?.canReplace == false, event.keyCode == 36 || event.keyCode == 76 {
+            copyAndClose(after: 0)
             return true
         }
 

@@ -19,6 +19,13 @@ final class AppState: ObservableObject {
     @Published var lastErrorMessage: String?
     /// False until the CGEvent tap is installed (needs Input Monitoring).
     @Published var hotkeysActive: Bool = false
+    /// Acessibilidade concedida (ler e substituir texto). Atualizada pelo mesmo watch dos atalhos.
+    @Published var accessibilityTrusted: Bool = Permissions.isAccessibilityTrusted()
+
+    /// Quantas permissões obrigatórias faltam (selo em Ajustes › Permissões e aviso no menu).
+    var missingPermissionCount: Int {
+        (accessibilityTrusted ? 0 : 1) + (hotkeysActive ? 0 : 1)
+    }
 
     /// Seção ativa na sidebar de Preferências.
     @Published var settingsSelection: SettingsSection
@@ -75,6 +82,13 @@ final class AppState: ObservableObject {
 
         orchestrator.onStatusChange = { [weak self] status in
             self?.applyStatus(status)
+        }
+        orchestrator.onTranslated = { [weak self] original, translated in
+            self?.recordTranslation(original: original, translated: translated)
+        }
+        hotkeyMonitor.onShortcutWhilePaused = { [weak self] in
+            guard let self, self.settings.showStatusHUD else { return }
+            self.applyStatus(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
         }
         orchestrator.pressReturnHandler = { [weak self] in
             self?.hotkeyMonitor.withInjection {
@@ -163,6 +177,7 @@ final class AppState: ObservableObject {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             TranslationHostPanelController.shared.install(bridge: self.appleBridge)
+            StatusItemContextMenu.shared.install()
             if self.settings.providerKind == .apple {
                 let pair = AppleTranslationBridge.defaultPackPair(settings: self.settings)
                 self.appleBridge.prewarm(from: pair.source, to: pair.target)
@@ -190,13 +205,35 @@ final class AppState: ObservableObject {
                 guard let self else { return }
                 let tapActive = self.hotkeyMonitor.isTapActive
                 self.hotkeysActive = tapActive
+                let trusted = Permissions.isAccessibilityTrusted()
+                if self.accessibilityTrusted != trusted { self.accessibilityTrusted = trusted }
                 if !tapActive {
                     self.hotkeyMonitor.retryInstallIfNeeded()
+                }
+                if !tapActive || !trusted {
                     _ = try? await Task.sleep(nanoseconds: 2_000_000_000)
                 } else {
                     _ = try? await Task.sleep(nanoseconds: 10_000_000_000)
                 }
             }
+        }
+    }
+
+    /// Últimas traduções (mais recente primeiro), para copiar de novo pelo menu.
+    struct RecentTranslation: Identifiable, Equatable {
+        let id = UUID()
+        let original: String
+        let translated: String
+    }
+
+    @Published private(set) var recentTranslations: [RecentTranslation] = []
+    private static let maxRecentTranslations = 5
+
+    func recordTranslation(original: String, translated: String) {
+        recentTranslations.removeAll { $0.original == original && $0.translated == translated }
+        recentTranslations.insert(RecentTranslation(original: original, translated: translated), at: 0)
+        if recentTranslations.count > Self.maxRecentTranslations {
+            recentTranslations.removeLast(recentTranslations.count - Self.maxRecentTranslations)
         }
     }
 
@@ -292,6 +329,7 @@ final class AppState: ObservableObject {
             popupModeEnabled: settings.popupModeEnabled,
             popup: settings.popupHotkey
         )
+        hotkeyMonitor.setIgnoredBundleIDs(settings.ignoredAppBundleIDs)
     }
 
     private func logSettingsDelta(from previous: AppSettings?, to next: AppSettings) {

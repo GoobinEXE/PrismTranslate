@@ -75,9 +75,15 @@ final class TranslationHostPanelController {
 @available(macOS 15.0, *)
 private struct TranslationHostView: View {
     @ObservedObject var bridge: AppleTranslationBridge
+    @Environment(\.openSettings) private var openSettings
+
     var body: some View {
         Color.clear
             .frame(width: 1, height: 1)
+            .onAppear {
+                // Esta view vive o app inteiro: guarda a ação para o menu de clique direito.
+                SettingsNavigation.openSettingsAction = openSettings
+            }
             .translationTask(bridge.configuration) { session in
                 AppLog.info(.hostPanel, "Sistema entregou uma sessão de tradução (configuration mudou)")
                 await bridge.handle(session: session)

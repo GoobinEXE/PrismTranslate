@@ -5,7 +5,7 @@ import SwiftUI
 final class OnboardingController: NSObject, NSWindowDelegate {
     static let shared = OnboardingController()
 
-    nonisolated private static let completedKey = "didCompleteOnboarding"
+    private nonisolated static let completedKey = "didCompleteOnboarding"
 
     private var panel: NSPanel?
     private var hosting: NSView?
@@ -59,8 +59,9 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         panel.title = String(localized: "Welcome to Prism")
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.isFloatingPanel = false
+        // Nível normal: o tutorial manda abrir os Ajustes do Sistema e não pode ficar por cima deles.
+        panel.level = .normal
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false

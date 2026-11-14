@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Prism Translate — camada 1: fita</title>
+  <g id="bands">
+    <rect x="680" y="312" width="344" height="80" fill="#01ABE8"/>
+    <rect x="680" y="392" width="344" height="80" fill="#AEB932"/>
+    <rect x="680" y="472" width="344" height="80" fill="#F4E412"/>
+    <rect x="680" y="552" width="344" height="80" fill="#E97635"/>
+    <rect x="680" y="632" width="344" height="80" fill="#DA0082"/>
+  </g>
+</svg>

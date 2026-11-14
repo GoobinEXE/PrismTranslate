@@ -7,6 +7,22 @@ import SwiftUI
 enum SettingsNavigation {
     private static let settingsAutosaveName = "com_apple_SwiftUI_Settings_window"
 
+    /// `OpenSettingsAction` capturada da view SwiftUI persistente (host da tradução),
+    /// para abrir Configurações a partir de código AppKit, como o menu de clique direito.
+    static var openSettingsAction: OpenSettingsAction?
+
+    /// Abre Configurações fora de uma view SwiftUI (menu de clique direito).
+    static func openSettings(section: SettingsSection?) {
+        AppState.shared.prepareSettings(section: section, closeMenuBar: true)
+        NSApp.activate(ignoringOtherApps: true)
+        if let openSettingsAction {
+            openSettingsAction()
+        } else {
+            AppLog.warning(.app, "OpenSettingsAction indisponível — usando showSettingsWindow:")
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
+    }
+
     static func closeMenuBarExtra() {
         for window in menuBarExtraWindows() {
             window.close()

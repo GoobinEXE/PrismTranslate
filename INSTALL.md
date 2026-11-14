@@ -54,14 +54,14 @@ O Homebrew baixa o Prism, copia para **Aplicativos** e remove o aviso de quarent
 
 ## 3. Primeira abertura (aviso do macOS)
 
-Como o Prism ainda não usa certificado pago da Apple (Developer ID), o macOS pode mostrar que o app **não foi verificado**:
+A partir da versão 1.1.1, o Prism instalado pelo Homebrew é assinado com Developer ID e notarizado pela Apple. Na primeira abertura o macOS mostra só o aviso de app baixado da internet; clique em **Abrir**.
+
+Se você compilou o Prism a partir do código ou usa uma versão anterior à 1.1.1, o macOS pode dizer que o app **não foi verificado**:
 
 1. Abra **Aplicativos** e dê dois cliques em **Prism**.
 2. Se aparecer que não pode abrir, vá em **Ajustes do Sistema → Privacidade e Segurança**.
 3. Role até o final e clique em **Abrir Mesmo Assim**.
 4. Confirme **Abrir**.
-
-Isso é esperado na edição Community. Um instalador DMG assinado pode vir numa versão futura.
 
 ---
 
@@ -76,7 +76,7 @@ O Prism precisa de duas permissões para ler o texto do campo e reagir aos atalh
 
 **Onde ligar:** Ajustes do Sistema → Privacidade e Segurança → **Acessibilidade** e **Monitoramento de Entrada** → marque **Prism**.
 
-O onboarding do app guia na primeira execução. Se algo não funcionar, **feche e abra o Prism** de novo depois de marcar as caixas.
+Na primeira execução, o tutorial do app tem 4 passos: boas-vindas com os atalhos, as duas permissões na mesma tela, idioma e tradução, e um resumo final. Dá para seguir sem conceder as permissões (**Continuar mesmo assim**), mas os atalhos só funcionam depois delas. Para reabrir o tutorial, use **Guia de configuração** no menu do prisma. Se algo não funcionar, **feche e abra o Prism** de novo depois de marcar as caixas.
 
 Pacotes de idioma da tradução da Apple, se faltarem, o próprio app baixa.
 
@@ -88,10 +88,11 @@ Com o ícone do prisma na barra de menus (canto superior direito):
 
 | Atalho | Ação |
 |--------|------|
-| **⌃⌥T** (Control + Option + T) | Traduz o texto selecionado ou do campo, no lugar |
+| **⌃⌥T** (Control + Option + T) | Traduz o texto selecionado ou do campo, no lugar; em texto só de leitura, abre o painel de tradução |
 | **⌃⌥⏎** (Control + Option + Enter) | Traduz e simula Enter (enviar) |
+| **⌃⌥Y** | Abre o painel de tradução (só com **Modo popup** ligado) |
 
-Dá para mudar os atalhos em **Preferências → Atalhos**.
+Dá para mudar os atalhos em **Configurações → Atalhos**.
 
 ---
 
@@ -127,22 +128,22 @@ Para remover também preferências e dados locais:
 brew uninstall --cask --zap prism-translate
 ```
 
-O `--zap` apaga `~/Library/Preferences/com.marcelopessoa.prism.plist` e `~/Library/Application Support/Prism`.
+O `--zap` apaga `~/Library/Preferences/dev.prism.tradutor.plist` (e o plist legado `com.marcelopessoa.prism`) e `~/Library/Application Support/Prism`.
 
 ### Instalado manualmente (zip)
 
-1. Desligue o Prism no menu da barra de menus (**Ligado** → desmarcado).
+1. Feche o Prism com **Sair**, no rodapé do menu da barra de menus (**Ligado** só pausa o app).
 2. Arraste **Prism** de **Aplicativos** para o Lixo.
 3. Esvazie o Lixo.
 
 ### Limpar permissões e chaves (opcional)
 
 - **Ajustes do Sistema → Privacidade e Segurança:** remova **Prism** de **Acessibilidade** e **Monitoramento de Entrada**.
-- **Chaveiro:** abra o app **Acesso às Chaves**, busque por `com.marcelopessoa.prism` e apague entradas de API se não for reinstalar.
+- **Chaveiro:** abra o app **Acesso às Chaves**, busque por `dev.prism.tradutor` (e, se existir, `com.marcelopessoa.prism`) e apague entradas de API se não for reinstalar.
 
 Se não usou `--zap`, pode apagar manualmente (Finder → **Ir → Ir para a pasta…**, ⌘⇧G):
 
-- `~/Library/Preferences/com.marcelopessoa.prism.plist`
+- `~/Library/Preferences/dev.prism.tradutor.plist`
 - `~/Library/Application Support/Prism`
 
 ---

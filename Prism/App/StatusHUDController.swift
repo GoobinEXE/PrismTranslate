@@ -18,7 +18,32 @@ final class StatusHUDController {
     private var escapeMonitor: Any?
     private var globalEscapeMonitor: Any?
 
+    /// Retângulo do texto selecionado (coordenadas Cocoa). Com ele, o aviso aparece junto
+    /// do texto, e não do ponteiro; sem ele (leitura via clipboard), cai no ponteiro.
+    private var anchorRect: CGRect?
+    /// Ação «Desfazer» oferecida no aviso de sucesso de uma substituição.
+    private var pendingUndo: (() -> Void)?
+    /// Linha extra no aviso de sucesso (ex.: motor reserva usado).
+    private var pendingNote: String?
+
     private init() {}
+
+    func setAnchor(_ rect: CGRect?) {
+        anchorRect = rect.flatMap { $0.isEmpty ? nil : $0 }
+        if let panel {
+            position(panel, size: panel.frame.size)
+        }
+    }
+
+    /// Registra o «Desfazer» para o próximo aviso de sucesso.
+    func offerUndo(_ action: @escaping () -> Void) {
+        pendingUndo = action
+    }
+
+    /// Texto curto mostrado sob «Tradução concluída» no próximo sucesso.
+    func offerNote(_ note: String) {
+        pendingNote = note
+    }
 
     func present(status: AppState.Status, isEnabled: Bool, hudEnabled: Bool = true) {
         guard hudEnabled else {
@@ -45,9 +70,21 @@ final class StatusHUDController {
         hideTask = nil
         closeChrome()
 
+        let undo: (() -> Void)? = if case .success = status { pendingUndo } else { nil }
+        pendingUndo = nil
+        let note: String? = if case .success = status { pendingNote } else { nil }
+        if case .translating = status {} else { pendingNote = nil }
+
         let root = StatusHUDView(
             status: status,
             isEnabled: isEnabled,
+            note: note,
+            onUndo: undo.map { action in
+                { [weak self] in
+                    self?.hide()
+                    action()
+                }
+            },
             onDismiss: { [weak self] in
                 self?.hide()
             },
@@ -64,7 +101,7 @@ final class StatusHUDController {
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         hostingView.frame = contentRect
 
-        let needsClicks = if case .error = status { true } else { false }
+        let needsClicks: Bool = if case .error = status { true } else { undo != nil }
 
         let panel = HUDPanel(
             contentRect: contentRect,
@@ -93,7 +130,7 @@ final class StatusHUDController {
         )
 
         panel.setContentSize(NSSize(width: width, height: height))
-        positionNearCursor(panel, size: NSSize(width: width, height: height))
+        position(panel, size: NSSize(width: width, height: height))
         panel.orderFrontRegardless()
         self.panel = panel
 
@@ -103,7 +140,8 @@ final class StatusHUDController {
         // «Traduzindo…» fica até sucesso/erro. Erros ficam até o usuário dispensar.
         let dismissNanos: UInt64? =
             switch status {
-            case .success: UInt64(1_400_000_000)
+            // Com «Desfazer», tempo suficiente para ler e decidir.
+            case .success: undo == nil && note == nil ? UInt64(1_400_000_000) : UInt64(5_000_000_000)
             case .translating, .error, .idle: nil
             }
 
@@ -182,6 +220,34 @@ final class StatusHUDController {
         panel = nil
     }
 
+    private func position(_ panel: NSPanel, size: NSSize) {
+        if let anchorRect {
+            positionNearSelection(panel, size: size, selection: anchorRect)
+        } else {
+            positionNearCursor(panel, size: size)
+        }
+    }
+
+    /// Logo abaixo do texto selecionado (acima, se não couber), como o painel de resultado.
+    private func positionNearSelection(_ panel: NSPanel, size: NSSize, selection: CGRect) {
+        let gap: CGFloat = 8
+        let screen =
+            NSScreen.screens.first { $0.frame.intersects(selection) }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+        var origin = NSPoint(
+            x: selection.minX,
+            y: selection.minY - gap - size.height
+        )
+        if origin.y < visible.minY + 8 {
+            origin.y = selection.maxY + gap
+        }
+        origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
+        origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
+        panel.setFrameOrigin(origin)
+    }
+
     private func positionNearCursor(_ panel: NSPanel, size: NSSize) {
         let mouse = NSEvent.mouseLocation
         let screen =
@@ -206,6 +272,8 @@ final class StatusHUDController {
 private struct StatusHUDView: View {
     let status: AppState.Status
     let isEnabled: Bool
+    var note: String?
+    var onUndo: (() -> Void)?
     var onDismiss: () -> Void
     var onOpenDetails: () -> Void
 
@@ -233,15 +301,34 @@ private struct StatusHUDView: View {
 
             Spacer(minLength: 0)
 
-            if case .error = status {
-                QTSettingsLink(section: .logs, beforeOpen: onOpenDetails) {
-                    Text("View details")
+            if let onUndo {
+                Button("Undo", action: onUndo)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(QTDesign.Fonts.caption)
+                    .accessibilityHint("Puts the original text back")
+            }
+
+            if case .error(let detail) = status {
+                // Falta de permissão se resolve em Permissões, não lendo logs.
+                if FocusedTextIOError.isPermissionMessage(detail) {
+                    QTSettingsLink(section: .permissions, beforeOpen: onOpenDetails) {
+                        Text("Fix…")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(QTDesign.Fonts.caption)
+                    .accessibilityLabel("Open Settings, Permissions section")
+                } else {
+                    QTSettingsLink(section: .logs, beforeOpen: onOpenDetails) {
+                        Text("View details")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(QTDesign.Fonts.caption)
+                    .accessibilityLabel("Open Settings, Logs section")
+                    .accessibilityHint("Shows the logs for the translation failure")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .font(QTDesign.Fonts.caption)
-                .accessibilityLabel("Open Settings, Logs section")
-                .accessibilityHint("Shows the logs for the translation failure")
 
                 Button {
                     onDismiss()
@@ -288,6 +375,7 @@ private struct StatusHUDView: View {
         if case .error(let message) = status {
             return message
         }
+        if case .success = status { return note }
         return nil
     }
 

@@ -14,5 +14,6 @@ Não precisa do Xcode.
 
 3. Pacotes de idioma da tradução da Apple, se faltarem, o próprio app baixa.
 
-Quem quiser estudar ou modificar o código abre o projeto no Xcode
-(veja BUILDING.md no repositório). Isso é opcional e só para desenvolvimento.
+Quem quiser estudar ou modificar o código clona o repositório e abre
+Prism.xcodeproj no Xcode (macOS 15+, Xcode 16+); veja o README.md.
+Isso é opcional e só para desenvolvimento.
