@@ -25,8 +25,39 @@ final class StatusHUDController {
     private var pendingUndo: (() -> Void)?
     /// Linha extra no aviso de sucesso (ex.: motor reserva usado).
     private var pendingNote: String?
+    /// App em primeiro plano quando um aviso descartável apareceu; trocar de app o fecha.
+    private var dismissibleOwnerPID: pid_t?
+    private var appActivationObserver: NSObjectProtocol?
 
-    private init() {}
+    private init() {
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            let pid = app?.processIdentifier
+            Task { @MainActor in
+                self?.handleAppActivation(pid: pid)
+            }
+        }
+    }
+
+    /// Outro app veio para a frente: o aviso de sucesso ou informativo já não se refere a ele.
+    private func handleAppActivation(pid: pid_t?) {
+        guard let owner = dismissibleOwnerPID, let pid,
+            pid != owner, pid != ProcessInfo.processInfo.processIdentifier
+        else { return }
+        hide()
+    }
+
+    /// Tecla real digitada depois de um aviso descartável (chamado pelo event tap).
+    /// Enviar a mensagem ou continuar escrevendo invalida o «Desfazer»: ⌘Z já não
+    /// desfaria a tradução, e sim o envio ou a digitação.
+    func dismissForUserInput() {
+        guard dismissibleOwnerPID != nil else { return }
+        hide()
+    }
 
     func setAnchor(_ rect: CGRect?) {
         anchorRect = rect.flatMap { $0.isEmpty ? nil : $0 }
@@ -55,20 +86,24 @@ final class StatusHUDController {
         case .idle:
             hide()
             return
-        case .success where TranslationResultPanelController.shared.isVisible:
+        case .success where TranslationResultPanelController.shared.isVisible,
+            .sent where TranslationResultPanelController.shared.isVisible:
             // O painel de resultado já é o feedback de conclusão no modo popup.
             hide()
             return
         case .translating where TranslationResultPanelController.shared.isVisible:
             hide()
             return
-        case .translating, .success, .error:
+        case .translating, .success, .sent, .notice, .error:
             break
         }
 
         hideTask?.cancel()
         hideTask = nil
         closeChrome()
+        // O aviso anterior pode ter armado o fechamento por tecla; este decide de novo abaixo.
+        dismissibleOwnerPID = nil
+        HUDInputDismissal.shared.disarm()
 
         let undo: (() -> Void)? = if case .success = status { pendingUndo } else { nil }
         pendingUndo = nil
@@ -79,6 +114,9 @@ final class StatusHUDController {
             status: status,
             isEnabled: isEnabled,
             note: note,
+            onTurnOn: {
+                AppState.shared.settingsBinding(\.isEnabled).wrappedValue = true
+            },
             onUndo: undo.map { action in
                 { [weak self] in
                     self?.hide()
@@ -101,7 +139,12 @@ final class StatusHUDController {
         let contentRect = NSRect(x: 0, y: 0, width: width, height: height)
         hostingView.frame = contentRect
 
-        let needsClicks: Bool = if case .error = status { true } else { undo != nil }
+        let needsClicks: Bool =
+            switch status {
+            case .error: true
+            case .notice(let notice): notice.offersTurnOn
+            default: undo != nil
+            }
 
         let panel = HUDPanel(
             contentRect: contentRect,
@@ -142,8 +185,19 @@ final class StatusHUDController {
             switch status {
             // Com «Desfazer», tempo suficiente para ler e decidir.
             case .success: undo == nil && note == nil ? UInt64(1_400_000_000) : UInt64(5_000_000_000)
+            case .sent: UInt64(1_200_000_000)
+            case .notice(let notice): notice.offersTurnOn ? UInt64(4_000_000_000) : UInt64(2_500_000_000)
             case .translating, .error, .idle: nil
             }
+
+        // Sucesso e avisos somem na próxima tecla ou troca de app; erros esperam o usuário.
+        switch status {
+        case .success, .sent, .notice:
+            dismissibleOwnerPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            HUDInputDismissal.shared.arm()
+        case .translating, .error, .idle:
+            break
+        }
 
         if let dismissNanos {
             hideTask = Task { [weak self] in
@@ -155,6 +209,8 @@ final class StatusHUDController {
     }
 
     func hide() {
+        dismissibleOwnerPID = nil
+        HUDInputDismissal.shared.disarm()
         hideTask?.cancel()
         hideTask = nil
         removeEscapeMonitor()
@@ -174,6 +230,8 @@ final class StatusHUDController {
             case .idle: isEnabled ? String(localized: "Active") : String(localized: "Paused")
             case .translating: String(localized: "Translating…")
             case .success: String(localized: "Translation complete")
+            case .sent: String(localized: "Translated and sent")
+            case .notice(let notice): notice.message
             case .error: String(localized: "Translation failed")
             }
         let message: String =
@@ -273,6 +331,7 @@ private struct StatusHUDView: View {
     let status: AppState.Status
     let isEnabled: Bool
     var note: String?
+    var onTurnOn: () -> Void
     var onUndo: (() -> Void)?
     var onDismiss: () -> Void
     var onOpenDetails: () -> Void
@@ -290,6 +349,7 @@ private struct StatusHUDView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(QTDesign.Fonts.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let subtitle {
                     Text(subtitle)
                         .font(QTDesign.Fonts.caption)
@@ -307,6 +367,17 @@ private struct StatusHUDView: View {
                     .controlSize(.small)
                     .font(QTDesign.Fonts.caption)
                     .accessibilityHint("Puts the original text back")
+            }
+
+            if case .notice(let notice) = status, notice.offersTurnOn {
+                Button("Turn on") {
+                    onTurnOn()
+                    onDismiss()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .font(QTDesign.Fonts.caption)
+                .accessibilityHint("Turns Prism back on")
             }
 
             if case .error(let detail) = status {
@@ -367,6 +438,8 @@ private struct StatusHUDView: View {
         case .idle: return isEnabled ? String(localized: "Active") : String(localized: "Paused")
         case .translating: return String(localized: "Translating…")
         case .success: return String(localized: "Translation complete")
+        case .sent: return String(localized: "Translated and sent")
+        case .notice(let notice): return notice.message
         case .error: return String(localized: "Translation failed")
         }
     }
@@ -383,7 +456,8 @@ private struct StatusHUDView: View {
         switch status {
         case .idle: return isEnabled ? "globe" : "pause.circle"
         case .translating: return "ellipsis.circle.fill"
-        case .success: return "checkmark.circle.fill"
+        case .success, .sent: return "checkmark.circle.fill"
+        case .notice(let notice): return notice.offersTurnOn ? "pause.circle.fill" : "info.circle.fill"
         case .error: return "exclamationmark.triangle.fill"
         }
     }
@@ -392,8 +466,38 @@ private struct StatusHUDView: View {
         switch status {
         case .idle: return isEnabled ? .green : .secondary
         case .translating: return .blue
-        case .success: return .green
+        case .success, .sent: return .green
+        case .notice: return .secondary
         case .error: return .red
         }
+    }
+}
+
+/// Ponte entre o event tap (thread própria) e o HUD: armada enquanto há um aviso
+/// que deve sumir na próxima tecla real. `consume()` dispara uma única vez.
+final class HUDInputDismissal: @unchecked Sendable {
+    static let shared = HUDInputDismissal()
+    private let lock = NSLock()
+    private var armed = false
+
+    func arm() {
+        lock.lock()
+        armed = true
+        lock.unlock()
+    }
+
+    func disarm() {
+        lock.lock()
+        armed = false
+        lock.unlock()
+    }
+
+    /// True se estava armada (e desarma).
+    func consume() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        let wasArmed = armed
+        armed = false
+        return wasArmed
     }
 }

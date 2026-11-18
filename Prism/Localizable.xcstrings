@@ -251,16 +251,6 @@
         }
       }
     },
-    "Prism is paused. Turn it on in the menu bar." : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O Prism está pausado. Ligue-o na barra de menus."
-          }
-        }
-      }
-    },
     "Prism needs Accessibility and Input Monitoring to work." : {
       "localizations" : {
         "pt-BR" : {
@@ -3465,6 +3455,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Você já está na versão mais recente."
+          }
+        }
+      }
+    },
+    "Prism is paused." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Prism está pausado."
+          }
+        }
+      }
+    },
+    "Turn on" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ligar"
+          }
+        }
+      }
+    },
+    "Notice" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aviso"
+          }
+        }
+      }
+    },
+    "Translated and sent" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Traduzido e enviado"
+          }
+        }
+      }
+    },
+    "Turns Prism back on" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liga o Prism de novo"
           }
         }
       }

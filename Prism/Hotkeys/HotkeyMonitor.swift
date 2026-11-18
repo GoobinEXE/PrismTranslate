@@ -242,6 +242,12 @@ final class HotkeyMonitor {
             return Unmanaged.passUnretained(event)
         }
 
+        // Tecla real (não injetada pelo Prism): o aviso de sucesso/informativo some.
+        // O evento segue normalmente; só o HUD reage.
+        if HUDInputDismissal.shared.consume() {
+            Task { @MainActor in StatusHUDController.shared.dismissForUserInput() }
+        }
+
         // `frontmostApplication` é lido fora da main thread; o NSWorkspace tolera isso para leitura
         // e o pior caso é um evento tratado com o app anterior durante a troca de foco.
         if !ignored.isEmpty,

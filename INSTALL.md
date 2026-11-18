@@ -14,6 +14,8 @@ brew install --cask prism-translate
 
 O `trust` é necessário porque o Prism ainda não está no catálogo oficial do Homebrew. Depois abra **Prism** em Aplicativos e autorize as permissões (seção 4).
 
+**Sem Homebrew:** baixe `Prism-x.y.z.dmg` em [GitHub Releases](https://github.com/GoobinEXE/PrismTranslate/releases/latest), abra o arquivo e arraste o Prism para Aplicativos (veja [Alternativa sem Homebrew](#alternativa-sem-homebrew)).
+
 ---
 
 ## 1. Instalar o Homebrew (só na primeira vez)
@@ -98,11 +100,15 @@ Dá para mudar os atalhos em **Configurações → Atalhos**.
 
 ## Alternativa sem Homebrew
 
-1. Abra [GitHub Releases](https://github.com/GoobinEXE/PrismTranslate/releases).
-2. Baixe o arquivo `Prism-x.y.z.zip` da versão mais recente.
-3. Dê dois cliques no zip para descompactar.
-4. Arraste **Prism** para a pasta **Aplicativos**.
-5. Siga as seções **3** (aviso do macOS) e **4** (permissões) deste guia.
+1. Abra a [versão mais recente no GitHub Releases](https://github.com/GoobinEXE/PrismTranslate/releases/latest).
+2. Em **Assets**, baixe `Prism-x.y.z.dmg`.
+3. Dê dois cliques no DMG. Na janela que abre, arraste **Prism** para o atalho **Aplicativos**.
+4. Ejete o disco "Prism Translate" no Finder.
+5. Abra **Prism** em Aplicativos e siga as seções **3** (aviso do macOS) e **4** (permissões) deste guia.
+
+O `Prism-x.y.z.zip` do mesmo release tem o mesmo app: descompacte e arraste para Aplicativos. O DMG e o zip são assinados com Developer ID e notarizados pela Apple a partir da 1.1.1.
+
+Sem Homebrew, o Prism não se atualiza sozinho: repita estes passos a cada versão nova.
 
 ---
 
@@ -130,7 +136,7 @@ brew uninstall --cask --zap prism-translate
 
 O `--zap` apaga `~/Library/Preferences/dev.prism.tradutor.plist` (e o plist legado `com.marcelopessoa.prism`) e `~/Library/Application Support/Prism`.
 
-### Instalado manualmente (zip)
+### Instalado manualmente (DMG ou zip)
 
 1. Feche o Prism com **Sair**, no rodapé do menu da barra de menus (**Ligado** só pausa o app).
 2. Arraste **Prism** de **Aplicativos** para o Lixo.

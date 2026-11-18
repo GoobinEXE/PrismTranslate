@@ -91,7 +91,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: Prism está desligado. Ligue o interruptor no menu ou em Configurações."
             )
-            onStatusChange?(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
+            onStatusChange?(.notice(.paused))
             AppLog.info(
                 .orchestrator,
                 "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — app desligado ──"
@@ -172,7 +172,7 @@ final class TranslationOrchestrator {
                     .orchestrator,
                     "Nada para traduzir: o campo veio vazio (\(capture.logSummary))"
                 )
-                onStatusChange?(.error(String(localized: "No text in the focused field")))
+                onStatusChange?(.notice(.init(message: String(localized: "No text in the focused field"))))
                 AppLog.info(
                     .orchestrator,
                     "── Tradução \(runID) cancelada em \(AppLog.duration(since: runStarted)) — texto vazio ──"
@@ -213,10 +213,11 @@ final class TranslationOrchestrator {
                 if sendAfter {
                     AppLog.info(.orchestrator, "Texto já em \(language) — sem traduzir, só enviando")
                     pressReturnHandler?()
-                    onStatusChange?(.success)
+                    // Sem tradução, a mensagem enviada é o próprio retorno: nada de aviso.
+                    onStatusChange?(.idle)
                 } else {
                     AppLog.info(.orchestrator, "Texto já em \(language) — nada a traduzir")
-                    onStatusChange?(.error(String(format: String(localized: "The text is already in %@."), language)))
+                    onStatusChange?(.notice(.init(message: String(format: String(localized: "The text is already in %@."), language))))
                 }
                 return
             }
@@ -359,7 +360,7 @@ final class TranslationOrchestrator {
                 }
             }
 
-            onStatusChange?(.success)
+            onStatusChange?(sendAfter ? .sent : .success)
             let ending = sendAfter ? "texto substituído e enviado" : "texto substituído"
             AppLog.info(
                 .orchestrator,
@@ -398,7 +399,7 @@ final class TranslationOrchestrator {
                 .orchestrator,
                 "Ignorado: substituição do painel enquanto outra tradução ainda corre"
             )
-            onStatusChange?(.error(String(localized: "Previous translation still running — wait")))
+            onStatusChange?(.notice(.init(message: String(localized: "Previous translation still running — wait"))))
             return
         }
         isRunning = true
@@ -486,14 +487,14 @@ final class TranslationOrchestrator {
     /// Útil quando não há seleção, por exemplo texto copiado de um PDF protegido.
     func translateClipboard() async {
         guard settings.isEnabled else {
-            onStatusChange?(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
+            onStatusChange?(.notice(.paused))
             return
         }
         guard !isRunning else { return }
         let raw = NSPasteboard.general.string(forType: .string) ?? ""
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            onStatusChange?(.error(String(localized: "The clipboard has no text to translate.")))
+            onStatusChange?(.notice(.init(message: String(localized: "The clipboard has no text to translate."))))
             return
         }
         isRunning = true
@@ -513,7 +514,7 @@ final class TranslationOrchestrator {
         {
             let outgoingTo = settings.outgoingTargetLanguage
             guard LanguageCode.normalize(outgoingTo) != LanguageCode.normalize(to) else {
-                onStatusChange?(.error(String(format: String(localized: "The text is already in %@."), LanguageCode.displayName(for: to))))
+                onStatusChange?(.notice(.init(message: String(format: String(localized: "The text is already in %@."), LanguageCode.displayName(for: to)))))
                 return
             }
             AppLog.info(.orchestrator, "Área de transferência já em \(LanguageCode.displayName(for: detected)) — usando o idioma de escrita")

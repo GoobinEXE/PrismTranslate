@@ -4,8 +4,8 @@
 # O zip vem de `./scripts/release.sh --homebrew` (Developer ID + notarização), que atualiza version e sha256.
 
 cask "prism-translate" do
-  version "1.1.1"
-  sha256 "3aa134b0810303d534a3b9ed2e28696025fb0aa543f9cc9f6c1415378e547060"
+  version "1.1.2"
+  sha256 "8fb1043faf7c9e2128963167753b305fff20335f62bb1323386ef03f871c32a8"
 
   url "https://github.com/GoobinEXE/PrismTranslate/releases/download/v#{version}/Prism-#{version}.zip"
   name "Prism Translate"

@@ -139,7 +139,7 @@ struct OnboardingView: View {
                     .fill(current.symbolColor.opacity(0.14))
                     .frame(width: 88, height: 88)
                 if current.symbolName == "prism" {
-                    PrismGlyph(lineWidth: 2.4)
+                    PrismGlyph()
                         .frame(width: 36, height: 36)
                         .foregroundStyle(current.symbolColor)
                         .accessibilityHidden(true)

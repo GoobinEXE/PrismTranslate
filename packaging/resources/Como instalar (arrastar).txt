@@ -1,0 +1,17 @@
+Prism — como instalar
+=====================
+
+1. Arraste o Prism para a pasta Aplicativos (o atalho está ao lado).
+
+2. Abra o Prism em Aplicativos. Ele é assinado com Developer ID e
+   notarizado pela Apple; o macOS só avisa que foi baixado da internet.
+   Clique em Abrir.
+
+3. Na primeira abertura, autorize Acessibilidade e Monitoramento de
+   Entrada em Ajustes do Sistema → Privacidade e Segurança. Sem isso o
+   Prism não lê nem substitui o texto.
+
+Requer macOS 15 ou mais novo.
+
+Também dá para instalar pelo Homebrew:
+  brew install --cask goobinexe/tap/prism-translate

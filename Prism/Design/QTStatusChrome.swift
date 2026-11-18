@@ -34,7 +34,8 @@ struct QTStatusChip: View {
         switch status {
         case .idle: return isEnabled ? String(localized: "Active") : String(localized: "Paused")
         case .translating: return String(localized: "Translating…")
-        case .success: return String(localized: "Done")
+        case .success, .sent: return String(localized: "Done")
+        case .notice: return String(localized: "Notice")
         case .error: return String(localized: "Error")
         }
     }
@@ -43,7 +44,8 @@ struct QTStatusChip: View {
         switch status {
         case .idle: return isEnabled ? "circle.fill" : "pause.circle.fill"
         case .translating: return "ellipsis.circle.fill"
-        case .success: return "checkmark.circle.fill"
+        case .success, .sent: return "checkmark.circle.fill"
+        case .notice: return "info.circle.fill"
         case .error: return "exclamationmark.triangle.fill"
         }
     }
@@ -52,7 +54,8 @@ struct QTStatusChip: View {
         switch status {
         case .idle: return isEnabled ? .green : .secondary
         case .translating: return .blue
-        case .success: return .green
+        case .success, .sent: return .green
+        case .notice: return .secondary
         case .error: return .red
         }
     }

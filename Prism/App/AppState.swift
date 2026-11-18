@@ -11,7 +11,21 @@ final class AppState: ObservableObject {
         case idle
         case translating
         case success
+        /// Traduzido, colado e enviado com Return: nada mais a desfazer.
+        case sent
+        /// Aviso neutro (texto já no idioma, campo vazio, Prism pausado): não é falha.
+        case notice(Notice)
         case error(String)
+    }
+
+    struct Notice: Equatable {
+        let message: String
+        /// Mostra o botão «Ligar» no aviso (atalho usado com o Prism pausado).
+        var offersTurnOn = false
+
+        static var paused: Notice {
+            Notice(message: String(localized: "Prism is paused."), offersTurnOn: true)
+        }
     }
 
     @Published var settings: AppSettings
@@ -88,7 +102,7 @@ final class AppState: ObservableObject {
         }
         hotkeyMonitor.onShortcutWhilePaused = { [weak self] in
             guard let self, self.settings.showStatusHUD else { return }
-            self.applyStatus(.error(String(localized: "Prism is paused. Turn it on in the menu bar.")))
+            self.applyStatus(.notice(.paused))
         }
         orchestrator.pressReturnHandler = { [weak self] in
             self?.hotkeyMonitor.withInjection {
@@ -289,8 +303,10 @@ final class AppState: ObservableObject {
             return settings.isEnabled ? "globe" : "pause.circle"
         case .translating:
             return "ellipsis.circle"
-        case .success:
+        case .success, .sent:
             return "checkmark.circle"
+        case .notice:
+            return "info.circle"
         case .error:
             return "exclamationmark.triangle"
         }
@@ -468,11 +484,17 @@ final class AppState: ObservableObject {
                 _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
-        case .success:
-            AppLog.info(.app, "Status: sucesso")
+        case .success, .sent:
+            AppLog.info(.app, status == .sent ? "Status: enviado" : "Status: sucesso")
             lastErrorMessage = nil
             statusResetTask = Task {
                 _ = try? await Task.sleep(nanoseconds: 1_200_000_000)
+                if !Task.isCancelled { self.status = .idle }
+            }
+        case .notice(let notice):
+            AppLog.info(.app, "Status: aviso — \(notice.message)")
+            statusResetTask = Task {
+                _ = try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if !Task.isCancelled { self.status = .idle }
             }
         case .translating:

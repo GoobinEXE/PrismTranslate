@@ -6,6 +6,19 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue o [Semantic Versioning](https://semver.org/lang/pt-BR/).
 A seção **Novidades** é o texto da aba Sobre (linguagem para o público). Detalhes técnicos ficam nas seções seguintes.
 
+## [1.1.2] - 2026-11-18
+
+Correções no aviso de tradução e nos status informativos. Build `22`.
+
+### Changed
+
+- Traduzir e enviar mostra "Traduzido e enviado" em vez de "Tradução concluída"; se o texto já estava no idioma de destino e só foi enviado, nenhum aviso aparece
+- Mensagens informativas (texto já no idioma, campo vazio, área de transferência vazia, tradução anterior em andamento, Prism pausado) usam status neutro em vez de erro vermelho; o aviso de pausa tem o botão "Ligar"
+
+### Fixed
+
+- O aviso "Tradução concluída" com "Desfazer" ficava na tela depois do envio; agora fecha na próxima tecla ou quando outro app vai para frente
+
 ## [1.1.1] - 2026-11-14
 
 Redesign da interface (visual nativo do macOS), correções de fluxo e paleta da marca Prism. Build `21`.
